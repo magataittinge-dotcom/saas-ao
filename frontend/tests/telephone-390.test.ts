@@ -57,8 +57,8 @@ test('listes d’AO : le titre est une cible de 44 px au téléphone, la rangée
 
 test('Décider : au téléphone, les catégories d’exigences arrivent repliées', () => {
   const c = code('src/routes/project/StepAnalysis.tsx')
-  assert.match(c, /matchMedia\?\.\('\(max-width: 768px\)'\)/)
-  assert.match(c, /defaultOpen=\{\(sectionIdx === 0 && !auTelephone\)/)
+  // FIN-B1 : repliées à toutes les largeurs (la page faisait 7 000 px à l'ordinateur) ; une recherche les ouvre
+  assert.match(c, /defaultOpen=\{search\.trim\(\)\.length > 0\}/)
 })
 
 test('Rédiger : un tableau du mémoire devient une liste de rangées au téléphone, chaque cellule redit sa colonne (P28)', () => {

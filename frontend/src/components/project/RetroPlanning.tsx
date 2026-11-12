@@ -1,3 +1,4 @@
+import { heureLisible } from '@/lib/carteAO'
 import { useQuery } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
 import { Sigle } from '@/components/common/Sigle'
@@ -57,7 +58,7 @@ export default function RetroPlanning({ projectId }: Props) {
             </span>
             <p className={cn('text-sm font-medium', step.passed ? 'text-fg-3' : 'text-fg')}>{step.label}</p>
             <p className={cn('text-sm', step.passed ? 'text-fg-3' : 'text-fg-2')}>
-              {formatFr(step.date)}{step.heure && ` à ${step.heure}`}
+              {formatFr(step.date)}{step.heure && ` à ${heureLisible(step.heure)}`}
               {step.passed && ' (passée)'}
             </p>
             {step.note && !step.passed && <p className="text-xs text-fg-3">{step.note}</p>}

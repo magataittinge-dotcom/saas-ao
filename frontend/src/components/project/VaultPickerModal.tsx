@@ -83,9 +83,9 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       onOuvert={(ouvert) => { if (!ouvert) onClose() }}
       titre="Choisir une pièce du coffre-fort"
       description={<>Pour : {nom}</>}
+      // Une seule fermeture (la croix) et un seul bouton : déposer. Il est LE geste quand aucune pièce du type demandé n'est au coffre.
       actions={<>
-        <Bouton variante="secondaire" onClick={onClose}>Fermer</Bouton>
-        <Bouton variante="secondaire" disabled={occupe} enCours={uploading} libelleEnCours="Dépôt en cours…" onClick={() => fileInputRef.current?.click()}>
+        <Bouton variante={candidates.length === 0 && !requete.isLoading ? 'principal' : 'secondaire'} disabled={occupe} enCours={uploading} libelleEnCours="Dépôt en cours…" onClick={() => fileInputRef.current?.click()}>
           <Upload aria-hidden size={16} strokeWidth={1.5} />
           Déposer un nouveau fichier
         </Bouton>
@@ -109,7 +109,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       ) : requete.isError && requete.data === undefined ? (
         <EtatErreur
           titre="Le coffre-fort n’a pas pu se charger"
-          detail="Vos pièces ne sont pas touchées. Vous pouvez aussi déposer un nouveau fichier."
+          detail="Vos pièces restent en place. Vous pouvez aussi déposer un nouveau fichier."
           onReessayer={() => { void requete.refetch() }}
           enCours={requete.isFetching}
         />
@@ -117,12 +117,15 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <p className="text-sm text-fg-2">Votre coffre-fort ne contient pas encore de pièce. Déposez le fichier ici : il y sera rangé, puis joint à ce dossier.</p>
       ) : (
         <>
-          <ChampRecherche
-            aria-label="Rechercher une pièce par son nom de fichier"
-            placeholder="Rechercher par nom de fichier"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          {/* La recherche n'apparaît que lorsqu'il y a de quoi chercher */}
+          {(documents.length > 6 || query.trim()) && (
+            <ChampRecherche
+              aria-label="Rechercher une pièce par son nom de fichier"
+              placeholder="Rechercher par nom de fichier"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          )}
           <div className="-mx-2 grid max-h-80 content-start gap-4 overflow-y-auto px-2">
             <Group
               title="Du type demandé"
@@ -130,7 +133,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
               onLink={handleLink}
               linkingId={linking}
               occupe={occupe}
-              emptyText={query.trim() ? 'Aucune pièce de ce type ne porte ce nom.' : 'Aucune pièce de ce type dans votre coffre-fort pour le moment.'}
+              emptyText={query.trim() ? 'Aucune pièce de ce type ne porte ce nom.' : 'Déposez cette pièce ici : elle sera rangée dans votre coffre-fort, puis jointe à ce dossier.'}
             />
             {others.length > 0 && (
               <Group title="Autres pièces du coffre-fort" docs={others} onLink={handleLink} linkingId={linking} occupe={occupe} />
@@ -154,7 +157,7 @@ function Group({
 }) {
   return (
     <section className="grid gap-1.5">
-      <h3 className="text-xs font-medium text-fg-3">{title}</h3>
+      <h3 className="text-sm font-medium text-fg-2">{title}</h3>
       {docs.length === 0 ? (
         emptyText ? <p className="text-sm text-fg-2">{emptyText}</p> : null
       ) : (

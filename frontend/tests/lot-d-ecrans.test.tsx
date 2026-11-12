@@ -234,7 +234,7 @@ test('Mes AO sans AO : la page du système, un seul geste (déposer), Synorix di
   assert.ok(/<h1[^>]*>Mes appels d’offres<\/h1>/.test(html))
   assert.equal(nb(html, /<h1/g), 1)
   assert.equal(nb(html, /bg-accent-fill/g), 1)
-  assert.ok(html.includes('Choisir un fichier'))
+  assert.ok(html.includes('Choisir des fichiers'))   // FIN-B1 : la zone accepte plusieurs fichiers à la fois
   assert.equal(nb(html, /data-synorix-parle/g), 1)
   assert.ok(html.includes(`Synorix lit et rédige${NB}; vous décidez et vous déposez.`))
   const src = sansCommentaires(lire('src/components/mesao/VideMesAO.tsx'))

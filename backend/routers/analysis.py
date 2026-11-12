@@ -85,6 +85,12 @@ def _lots_inconnus(project, lot_ids: list) -> list:
     return [l for l in lot_ids if l not in connus and not _LOT_AJOUTE_A_LA_MAIN.match(l)]
 
 
+def _accord(n: int, singulier: str, pluriel: str) -> str:
+    """« 1 exigence extraite », « 448 exigences extraites » : le nombre et son nom accordé (jamais « exigence(s) extraite(s) »
+    dans un texte renvoyé à l'écran). Zéro s'accorde au singulier, comme en français."""
+    return f"{n} {pluriel if n > 1 else singulier}"
+
+
 @router.post("/{project_id}/analyze", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("5/minute")
 async def trigger_analysis(
@@ -149,14 +155,14 @@ async def trigger_analysis(
         remaining = max(0, limit - status["analyses"]["used"])
         if (org.plan or "free") == "free":
             detail = (
-                f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
-                f"{remaining} analyse(s) restante(s) sur votre essai gratuit. "
+                f"Quota insuffisant : {_accord(len(lot_specs), 'lot demandé', 'lots demandés')}, "
+                f"{_accord(remaining, 'analyse restante', 'analyses restantes')} sur votre essai gratuit. "
                 + quota.upgrade_invitation("free")
             )
         else:
             detail = (
-                f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
-                f"{remaining} analyse(s) restante(s) ce mois. "
+                f"Quota insuffisant : {_accord(len(lot_specs), 'lot demandé', 'lots demandés')}, "
+                f"{_accord(remaining, 'analyse restante', 'analyses restantes')} ce mois. "
                 f"{quota.upgrade_invitation(org.plan)} ou attendez le renouvellement de votre période."
             )
         raise HTTPException(status_code=402, detail=detail)
@@ -820,10 +826,10 @@ def _finalize_analysis(
     warnings_ui = []
     if truncated_files:
         warnings_ui.append(
-            f"{len(set(truncated_files))} document(s) exceptionnellement long(s) tronqué(s) "
+            f"{_accord(len(set(truncated_files)), 'document exceptionnellement long tronqué', 'documents exceptionnellement longs tronqués')} "
             f"au garde-fou de 500 000 caractères : {', '.join(sorted(set(truncated_files))[:3])}")
     if failed_lots:
-        warnings_ui.append(f"{len(failed_lots)} lot(s) en échec — relancez-les.")
+        warnings_ui.append(f"{_accord(len(failed_lots), 'lot en échec — relancez-le.', 'lots en échec — relancez-les.')}")
     project.processing_detail = " · ".join(warnings_ui)
     db.commit()
 
@@ -847,12 +853,12 @@ def _finalize_analysis(
         from services.notifications import notify as _notify
         corps = (
             f"L'analyse du DCE « {project.name} » est terminée : "
-            f"{len(requirements)} exigence(s) extraite(s)"
+            f"{_accord(len(requirements), 'exigence extraite', 'exigences extraites')}"
             + (f" sur {len(lot_specs)} lots" if lot_specs and len(lot_specs) > 1 else "")
             + ". La checklist de candidature est prête."
         )
         if failed_lots:
-            corps += f" {len(failed_lots)} lot(s) à relancer depuis l'écran d'analyse."
+            corps += f" {_accord(len(failed_lots), 'lot', 'lots')} à relancer depuis l'écran d'analyse."
         _notify(
             db, org_id, "analysis_ready",
             titre=f"Analyse terminée — {project.name}",

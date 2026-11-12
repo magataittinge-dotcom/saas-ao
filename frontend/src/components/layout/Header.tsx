@@ -114,11 +114,14 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
           {/* la cloche est dans la barre du haut au téléphone aussi (elle était cachée dans le tiroir « Compte ») */}
           <NotificationBell />
 
-          <Bouton coquille variante={auTrait ? 'secondaire' : 'principal'} data-nouvel-ao={auTrait ? 'trait' : 'plein'} onClick={() => navigate('/projects/new')}
-            className={cn('rounded-pilule max-sm:w-11 max-sm:px-0', parent && 'max-[768px]:hidden')}>
-            <Plus strokeWidth={1.5} aria-hidden />
-            <span className="max-sm:sr-only">Nouvel appel d’offres</span>
-          </Bouton>
+          {/* Sur « Nouvel appel d'offres », le bouton mènerait là où l'on est déjà et concurrencerait « Choisir un fichier » (jury, tour 1). */}
+          {pathname !== '/projects/new' && (
+            <Bouton coquille variante={auTrait ? 'secondaire' : 'principal'} data-nouvel-ao={auTrait ? 'trait' : 'plein'} onClick={() => navigate('/projects/new')}
+              className={cn('rounded-pilule max-sm:w-11 max-sm:px-0', parent && 'max-[768px]:hidden')}>
+              <Plus strokeWidth={1.5} aria-hidden />
+              <span className="max-sm:sr-only">Nouvel appel d’offres</span>
+            </Bouton>
+          )}
 
           {/* le compte (la photo) : au pied de la barre latérale au bureau, ici au téléphone */}
           <CompteTel className="min-[769px]:hidden" />

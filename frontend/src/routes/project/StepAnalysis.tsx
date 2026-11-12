@@ -7,11 +7,9 @@ import { Bouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
 import { ChampRecherche } from '@/components/ui/champ'
 import { EtatErreur, EtatVide } from '@/components/ui/etats'
-import { EffacerFiltres, PuceFiltre } from '@/components/ui/filtre'
+import { EffacerFiltres } from '@/components/ui/filtre'
 import { ListeDeroulante } from '@/components/ui/liste-deroulante'
 import { Message } from '@/components/ui/message'
-import { PastilleEtat } from '@/components/ui/pastille'
-import { Squelette } from '@/components/ui/squelette'
 import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
 import { annoncer } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
@@ -21,8 +19,10 @@ import { CarteAO30sVue, useFaitsAO } from '@/components/project/CarteAO30s'
 import PointsAEclaircir from '@/components/project/PointsAEclaircir'
 import AVerifierAvantEngagement from '@/components/project/AVerifierAvantEngagement'
 import { voirTresorerie } from '@/components/project/TresorerieCard'
-import { GabaritEtape, BandeResume, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, BoutonSuite } from '@/components/etape'
-import { cartesResumeAO, pointsAVerifier, type DateQuestions } from '@/lib/resumeAO'
+import { GabaritEtape, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, BoutonSuite, SqueletteCorpsEtape } from '@/components/etape'
+import { enumerer } from '@/components/etape/LectureNonFaite'
+import { EtapeSansAnalyse } from '@/components/project/EtapeSansAnalyse'
+import { pointsAVerifier } from '@/lib/resumeAO'
 import TresorerieCard from '@/components/project/TresorerieCard'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
@@ -36,7 +36,7 @@ import { useProgressStream } from '@/hooks/useProgressStream'
 import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } from '@/types'
 import { useCompleteStep } from '@/hooks/useProject'
 import { messageErreur } from '@/lib/erreurs'
-import { phraseDocumentsAnalyses, phraseExigences, repartirDocuments } from '@/lib/analyseLibelles'
+import { phraseDocumentsAnalyses, phraseExigences, repartirDocuments, titresDetailDocuments } from '@/lib/analyseLibelles'
 import { PASSAGE_INTROUVABLE, trouverPieceCitee } from '@/lib/pieceCitee'
 import { lectureNonDemarree } from '@/lib/lectureNonDemarree'
 
@@ -59,6 +59,9 @@ const CATEGORY_ORDER: ComplianceCategory[] = [
   'candidature', 'offre', 'technique', 'planning', 'criteres_notation',
 ]
 
+/** Ce que l'écran montrera une fois l'analyse faite (état « analyse non faite »). */
+const VIENDRA = ['La décision', 'Ce qui est à vérifier avant de vous engager', 'Le détail des exigences']
+
 interface Props { project: Project }
 type FilterCategory = 'all' | ComplianceCategory
 
@@ -68,13 +71,12 @@ export default function StepAnalysis({ project }: Props) {
   const queryClient = useQueryClient()
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all')
   const [search, setSearch] = useState('')
-  // Au téléphone, toutes les catégories sont repliées à l'arrivée : la page commence par la liste des catégories et leurs
-  // comptes (448 exigences dépliées faisaient 12 000 px). Lu une fois : n'agit que sur l'état de départ.
-  const auTelephone = useMemo(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches === true, [])
+  // Toutes les catégories sont repliées à l'arrivée : la page commence par la liste des catégories et leurs comptes (448 exigences
+  // dépliées faisaient 12 000 px au téléphone, 7 000 à l'ordinateur).
   const { mutate: completeStep, isPending: isValidating } = useCompleteStep(project.id)
 
   // Charger les documents du projet pour l'ouverture de la source
-  const { data: projectDocs = [] } = useQuery({
+  const { data: projectDocs = [], isSuccess: documentsLus } = useQuery({
     queryKey: ['project-documents', project.id],
     queryFn: async () => {
       const { data } = await api.get<ProjectDocument[]>(`/projects/${project.id}/documents`)
@@ -147,14 +149,6 @@ export default function StepAnalysis({ project }: Props) {
   })
   const { isLoading } = requeteExigences
   const items = useMemo(() => requeteExigences.data ?? [], [requeteExigences.data])
-
-  const counts = useMemo(() => {
-    const map: Partial<Record<ComplianceCategory, number>> = {}
-    for (const item of items) {
-      map[item.category] = (map[item.category] ?? 0) + 1
-    }
-    return map
-  }, [items])
 
   const filtered = useMemo(() => {
     let result = items
@@ -244,12 +238,6 @@ export default function StepAnalysis({ project }: Props) {
     staleTime: 60_000,
     enabled: project.processing_status !== 'analyzing',
   })
-  // Déjà demandée par « Points à éclaircir » (même clé) : une seule requête
-  const { data: dateQuestions } = useQuery<DateQuestions>({
-    queryKey: ['date-questions', project.id],
-    queryFn: async () => (await api.get<DateQuestions>(`/projects/${project.id}/date-limite-questions`)).data,
-    staleTime: 60_000,
-  })
   const aVerifier = useMemo(
     () => pointsAVerifier(critiques?.fields, project.infos_marche, items),
     [critiques, project.infos_marche, items],
@@ -264,10 +252,10 @@ export default function StepAnalysis({ project }: Props) {
   // ── Chargement, puis erreur (jamais « Analyse… 0 % » quand le serveur ne répond pas), puis les états de la lecture ──
   if (isLoading) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <div aria-busy="true" className="grid gap-6">
-        <Squelette className="h-32 w-full rounded-carte" />
-        <Squelette className="h-56 w-full rounded-carte" />
-        <Squelette className="h-56 w-full rounded-carte" />
+      {/* Le squelette du gabarit (une surface au trait, des lignes de longueur de phrase) et ce que Synorix fait : jamais trois pavés muets. */}
+      <div role="status" aria-busy="true" className="space-y-4">
+        <p className="text-sm text-fg-2">Synorix ouvre l’analyse du dossier.</p>
+        <SqueletteCorpsEtape cases={2} />
       </div>
     </GabaritEtape>
   )
@@ -276,7 +264,7 @@ export default function StepAnalysis({ project }: Props) {
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatErreur
         titre="L’analyse du dossier n’a pas pu se charger"
-        detail="Les exigences relevées dans le dossier n’ont pas pu être lues. Votre dossier et son analyse ne sont pas touchés."
+        detail="Les exigences relevées dans le dossier n’ont pas pu être lues. Votre dossier et son analyse restent en place."
         onReessayer={() => { void requeteExigences.refetch() }}
         enCours={requeteExigences.isFetching}
       />
@@ -314,7 +302,18 @@ export default function StepAnalysis({ project }: Props) {
     </GabaritEtape>
   )
 
-  // B1 — aucun traitement en cours, aucune analyse : la lecture n'a pas démarré (lancement en échec).
+  // Un AO sans dossier déposé : rien à analyser, rien à relancer (jury, tour 1 : un AO neuf affichait un dossier
+  // « enregistré » et un bouton pour relancer). Synorix le dit, avec le seul geste juste : déposer le dossier. Sans attendre le délai de grâce.
+  const sansDepot = documentsLus && projectDocs.length === 0
+  if (items.length === 0 && sansDepot && !analysisRunning) return (
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <EtapeSansAnalyse project={project} cas="sans-depot" viendra={VIENDRA}>
+        Aucun dossier n’est déposé pour cet appel d’offres. {enumerer(VIENDRA)} s’afficheront ici une fois le dossier analysé.
+      </EtapeSansAnalyse>
+    </GabaritEtape>
+  )
+
+  // B1 — le dossier est déposé, aucune analyse ne tourne : elle n'a pas été lancée (ou son lancement a échoué). Le geste : choisir les lots.
   if (lectureNonDemarree({
     nbExigences: items.length,
     statutTraitement: project.processing_status,
@@ -322,11 +321,9 @@ export default function StepAnalysis({ project }: Props) {
     donneesAJour: delaiDeGracePasse && !projetEnRelecture,
   })) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <EtatVide
-        titre="L’analyse n’a pas démarré"
-        phrase="Le dossier est bien enregistré, mais aucune analyse n’est en cours. Relancez-la depuis le choix des lots."
-        action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Relancer</Bouton>}
-      />
+      <EtapeSansAnalyse project={project} cas="analyse-non-lancee" viendra={VIENDRA}>
+        Le dossier est déposé, son analyse n’est pas encore lancée. {enumerer(VIENDRA)} s’afficheront ici une fois l’analyse faite.
+      </EtapeSansAnalyse>
     </GabaritEtape>
   )
 
@@ -340,10 +337,11 @@ export default function StepAnalysis({ project }: Props) {
           steps={ANALYSIS_STEPS}
           currentStep={analysisSse.step}
           progress={analysisSse.progress}
-          detail={analysisSse.detail || 'Je lis vos documents et je relève chaque exigence avec sa source.'}
+          detail={analysisSse.detail || 'Analyse de vos documents : chaque exigence est relevée avec sa source.'}
           phase={analysisSse.phase}
           avis={avisAttente}
           onArrierePlan={() => navigate('/dashboard')}
+          libelleArrierePlan="Revenir à l’accueil"
         />
       </Carte>
     </GabaritEtape>
@@ -363,8 +361,9 @@ export default function StepAnalysis({ project }: Props) {
   )
 
   const voirSource = (src: FieldSource) => { void openFieldSource(src) }
-  const marche = faits.filter((f) => ['acheteur', 'oeuvre', 'objet', 'lots', 'criteres', 'delai'].includes(f.id))
-  const categoriesPresentes = CATEGORY_ORDER.filter((cat) => counts[cat])
+  // Les faits du marché, remise des offres et pièces comprises (la bande de quatre cases égales est partie : une date, une
+  // phrase, un compteur et un nombre n'ont pas la même nature, et « 448 exigences » n'est pas ce qui décide).
+  const marche = faits.filter((f) => ['acheteur', 'objet', 'lots', 'remise', 'criteres', 'delai', 'pieces'].includes(f.id))
   const selectionId = selection?.type === 'exigence' ? selection.id : null
 
   // ── Main render ───────────────────────────────────────────────
@@ -386,25 +385,25 @@ export default function StepAnalysis({ project }: Props) {
           La liste des exigences ci-dessous peut être partielle.
         </Message>
       )}
-      resume={<BandeResume cartes={cartesResumeAO(faits, { total: items.length, obligatoires: obligatoireCount }, voirSource, dateQuestions)} libelle="L’AO en 30 secondes" />}
       barre={bottomBar}
     >
-      {/* A2 — l'ordre de la décision : le marché, ce qui est à vérifier, la décision, puis ce qui la prépare et le détail */}
-      {marche.length > 0 && (
-        <SectionEtape titre="Le marché en bref">
-          <CarteAO30sVue faits={marche} titre={null} onOpenSource={voirSource} />
+      {/* L'ordre de l'écran (jury, tour 1 : la décision était la quatrième section, à 1 700 px du haut) : la décision d'abord,
+          avec les faits du marché à côté ; ce qui est à vérifier ; puis ce qui prépare la décision, et le détail replié. */}
+      <div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <SectionEtape titre="Décision">
+          <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} />
         </SectionEtape>
-      )}
+        {marche.length > 0 && (
+          <SectionEtape titre="Le marché en bref">
+            <CarteAO30sVue faits={marche} titre={null} onOpenSource={voirSource} />
+          </SectionEtape>
+        )}
+      </div>
 
       <AVerifierAvantEngagement points={aVerifier} onVoir={voirSource} onVoirPenalites={voirTresorerie} />
 
-      {/* ── FICHE DE DÉCISION (1.7) — conditions vérifiées, puis « On y va » / « On passe » ── */}
-      <SectionEtape titre="Décision">
-        <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} />
-      </SectionEtape>
-
-      {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) ── */}
-      <SectionEtape titre="Trésorerie et calendrier" colonnes={2} classeContenu="md:[&>*:only-child]:col-span-2">
+      {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) : chacune à sa hauteur ── */}
+      <SectionEtape titre="Trésorerie et calendrier" colonnes={2} classeContenu="items-start md:[&>*:only-child]:col-span-2">
         <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
         <RetroPlanning projectId={project.id} />
       </SectionEtape>
@@ -416,8 +415,10 @@ export default function StepAnalysis({ project }: Props) {
         titre="Les exigences du dossier"
         description={
           <>
-            <span className="font-semibold text-fg">{items.length} exigences identifiées</span>
-            {project.selected_lot_name ? ` pour ${project.selected_lot_name}` : ''}. {phraseExigences(items.length, obligatoireCount)}
+            {/* Une analyse arrêtée avant la fin : le compte n'est pas affiché comme certain (jury, tour 1) */}
+            {analysisFailed && <span className="font-medium text-ambre-ink">Liste peut-être partielle (la dernière analyse s’est arrêtée avant la fin). </span>}
+            <span className="font-semibold text-fg">{analysisFailed ? 'Au moins ' : ''}{items.length} exigences identifiées</span>
+            {project.selected_lot_name ? ` pour ${project.selected_lot_name}` : ''}. {phraseExigences(items.length, obligatoireCount)}.
             {lotFilterInfo && phraseDocuments && (
               <>
                 {' '}{phraseDocuments.principale}.{' '}
@@ -430,15 +431,16 @@ export default function StepAnalysis({ project }: Props) {
         }
       >
         {showLotDetails && lotFilterInfo && (
-          <div id={idDetailLot} className="grid gap-3 rounded-lg bg-surface-1 px-4 py-3 text-sm sm:grid-cols-2">
-            <div>
-              <p className="font-medium text-fg">{lotFilterInfo.included.length} pièces analysées pour ce lot</p>
-              <ul className="mt-1 grid gap-0.5 text-xs text-fg-2">{lotFilterInfo.included.map((doc) => <li key={doc.id} className="break-words">{doc.file_name}</li>)}</ul>
+          <div id={idDetailLot} className="grid gap-x-6 gap-y-4 rounded-carte border border-bord bg-surface-0 px-5 py-4 text-sm sm:grid-cols-2">
+            {/* Deux listes bornées (elles ajoutaient 1 200 px à la page) : on défile dans la liste, pas dans l'écran. */}
+            <div className="min-w-0">
+              <p className="font-medium text-fg">{titresDetailDocuments(lotFilterInfo.included.length, lotFilterInfo.excluded.length).analyses}</p>
+              <ul className="mt-1.5 max-h-56 divide-y divide-bord overflow-y-auto text-fg-2">{lotFilterInfo.included.map((doc) => <li key={doc.id} className="break-words py-1">{doc.file_name}</li>)}</ul>
             </div>
             {lotFilterInfo.excluded.length > 0 && (
-              <div>
-                <p className="font-medium text-fg">{lotFilterInfo.excluded.length} pièces laissées de côté</p>
-                <ul className="mt-1 grid gap-0.5 text-xs text-fg-3">{lotFilterInfo.excluded.map((doc) => <li key={doc.id} className="break-words">{doc.file_name}</li>)}</ul>
+              <div className="min-w-0">
+                <p className="font-medium text-fg">{titresDetailDocuments(lotFilterInfo.included.length, lotFilterInfo.excluded.length).ecartes}</p>
+                <ul className="mt-1.5 max-h-56 divide-y divide-bord overflow-y-auto text-fg-2">{lotFilterInfo.excluded.map((doc) => <li key={doc.id} className="break-words py-1">{doc.file_name}</li>)}</ul>
               </div>
             )}
           </div>
@@ -467,19 +469,9 @@ export default function StepAnalysis({ project }: Props) {
               )}
             </div>
 
-            {/* Filtre par catégorie : des puces (une sélection n'est jamais un aplat) */}
-            <div role="group" aria-label="Montrer une catégorie d’exigences" className="flex flex-wrap items-center gap-2">
-              {categoriesPresentes.map((cat) => (
-                <PuceFiltre
-                  key={cat}
-                  libelle={activeFilter === cat ? 'Catégorie' : `${CATEGORY_LABELS[cat]} (${counts[cat]})`}
-                  valeur={activeFilter === cat ? `${CATEGORY_LABELS[cat]} (${counts[cat]})` : null}
-                  onOuvrir={() => setActiveFilter(activeFilter === cat ? 'all' : cat)}
-                  onRetirer={() => setActiveFilter('all')}
-                />
-              ))}
-              <EffacerFiltres actifs={(activeFilter !== 'all' ? 1 : 0) + (search.trim() ? 1 : 0)} onEffacer={() => { setActiveFilter('all'); setSearch('') }} />
-            </div>
+            {/* Les catégories repliables SONT la navigation (jury, tour 1 : cinq puces à compteur juste au-dessus de cinq sections du même
+                nom). Reste, quand une recherche est en cours, de quoi l'effacer. */}
+            <EffacerFiltres actifs={search.trim() ? 1 : 0} onEffacer={() => setSearch('')} />
 
             {filtered.length === 0 ? (
               <EtatVide
@@ -489,14 +481,14 @@ export default function StepAnalysis({ project }: Props) {
               />
             ) : (
               <div className="space-y-3">
-                {Object.entries(grouped).map(([cat, catItems], sectionIdx) => (
+                {Object.entries(grouped).map(([cat, catItems]) => (
                   <ExigenceSection
                     key={cat}
                     category={cat as ComplianceCategory}
                     items={catItems}
                     onOpenSource={openSourceDocument}
                     selectionId={selectionId}
-                    defaultOpen={(sectionIdx === 0 && !auTelephone) || activeFilter !== 'all' || search.trim().length > 0}
+                    defaultOpen={search.trim().length > 0}
                   />
                 ))}
               </div>
@@ -547,10 +539,11 @@ function ExigenceSection({
     },
     {
       cle: 'priorite', titre: 'Portée', tel: true, classe: 'md:w-36',
-      // Ambre = clause du dossier à respecter (le rouge reste aux vraies alertes)
+      // Du texte : 443 exigences sur 448 sont obligatoires, une pastille sur chaque ligne ne distingue rien. L'exception
+      // (« Souhaitée ») se lit en plus clair.
       rendu: (item) => item.priority === 'obligatoire'
-        ? <PastilleEtat sens="ambre">Obligatoire</PastilleEtat>
-        : <PastilleEtat sens="gris" icone={null}>Souhaitée</PastilleEtat>,
+        ? <span className="text-fg">Obligatoire</span>
+        : <span className="text-fg-3">Souhaitée</span>,
     },
   ]
 

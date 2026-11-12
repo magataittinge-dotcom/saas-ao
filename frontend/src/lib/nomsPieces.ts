@@ -43,9 +43,14 @@ function capitaliser(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+/** Le libellé du serveur sans sa note « (N exigences du RC regroupées) ». */
+export const sansNoteDeRegroupement = (texte: string): string => texte.replace(/\s*\(\d+ exigences? du RC regroupées?\)/g, '').trim()
+
 /** `details` : le libellé métier posé par le serveur quand il existe ; sinon le nom connu du type ; sinon le type, mis en forme. */
 export function nomPiece(typeRequis: string, details?: string | null): string {
-  const d = (details ?? '').trim()
+  // « (2 exigences du RC regroupées) » est une note du logiciel posée par le serveur dans le libellé : elle n'a pas sa place dans
+  // le nom d'une pièce (jury, tour 1 : « une mention de machine au niveau le plus fort »).
+  const d = sansNoteDeRegroupement(details ?? '')
   const connu = NOMS[cle(typeRequis)]
   if (d && !/^[a-z0-9_-]+$/i.test(d)) return d
   if (connu) return connu

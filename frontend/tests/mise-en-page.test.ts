@@ -49,8 +49,9 @@ test('S10 : dans la barre, les boutons secondaires sont des BoutonSecondaire (ic
     // seul « Lire ce dossier » est écrit à la main (signature-btn, texte fixe) ; les autres passent par BoutonSuite / BoutonSecondaire
     assert.ok(nus.every((b) => /edge-cta|signature-btn/.test(b)), `${f} : un bouton nu dans la barre : ${nus.join(' ')}`)
   }
-  assert.match(barre('src/routes/project/StepUpload.tsx'), /<BoutonSecondaire libelle="Retour"/)
-  assert.match(barre('src/routes/project/StepLotSelection.tsx'), /<BoutonSecondaire libelle="Retour"/)
+  assert.doesNotMatch(barre('src/routes/project/StepUpload.tsx'), /libelle="Retour"/)   // FIN-B1 : première étape, « retour vers quoi ? »
+  // FIN-B1 : Lots n'a plus de « Retour » dans sa barre (elle ne porte que l'action de l'étape, au téléphone)
+  assert.doesNotMatch(barre('src/routes/project/StepLotSelection.tsx'), /libelle="Retour"/)
 })
 
 test('S10 puis jury, tour 1 : sur l\'export, un seul « Télécharger le dossier » ; plus de menu « … » qui doublait les deux formats ; un message à la fois', () => {

@@ -27,13 +27,14 @@ export function detailConfirmationLecture(illimite: boolean): string {
     : 'Chaque lot analysé décompte 1 unité de votre abonnement. L’analyse démarre dès votre confirmation.'
 }
 
-/** La phrase de coût de l'en-tête de l'écran Lots. */
+/** La phrase de l'en-tête de l'écran Lots : la consigne, puis le coût en unités. En offre illimitée, rien sur l'abonnement
+ *  (jury, tour 1 : « Votre offre est illimitée » est hors sujet ici ; la confirmation le dit au moment de lancer). */
 export function phraseCoutLots(nbLotsDetectes: number, illimite: boolean): string {
   if (nbLotsDetectes > 1) {
-    return `Choisissez le ou les lots sur lesquels votre entreprise répond : Synorix n’analyse que ceux-là.${illimite ? ' Votre offre est illimitée.' : ' Chaque lot analysé décompte 1 unité de votre abonnement.'}`
+    return `Choisissez le ou les lots sur lesquels votre entreprise répond : Synorix n’analyse que ceux-là.${illimite ? '' : ' Chaque lot analysé décompte 1 unité de votre abonnement.'}`
   }
   if (nbLotsDetectes === 1) {
-    return `Un seul lot a été détecté. Confirmez-le ou ajoutez des lots à la main.${illimite ? ' Votre offre est illimitée.' : ' L’analyse décompte 1 unité de votre abonnement.'}`
+    return `Un seul lot a été détecté. Confirmez-le ou ajoutez des lots à la main.${illimite ? '' : ' L’analyse décompte 1 unité de votre abonnement.'}`
   }
-  return `Cet appel d’offres semble être mono-lot : lancez l’analyse du dossier, ou ajoutez les lots à la main.${illimite ? ' Votre offre est illimitée.' : ' Chaque lot analysé décompte 1 unité.'}`
+  return `Cet appel d’offres semble être mono-lot : lancez l’analyse du dossier, ou ajoutez les lots à la main.${illimite ? '' : ' Chaque lot analysé décompte 1 unité.'}`
 }

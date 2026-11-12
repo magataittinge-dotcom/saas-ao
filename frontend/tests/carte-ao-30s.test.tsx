@@ -73,7 +73,8 @@ test('temps restant : demain, aujourd’hui avec l’heure, date passée', () =
   const jour = avec('2026-11-10', '14h00', new Date(2026, 10, 10, 9))
   assert.equal(jour.reste, 'aujourd’hui, avant 14h00')
   assert.equal(jour.action, true)
-  assert.equal(avec('2026-11-01', null, new Date(2026, 10, 10, 9)).reste, 'date de remise passée')
+  // FIN-B1 : une remise passée ne se redit pas dans le fait (le bandeau de l'AO le dit, une fois, avec le geste)
+  assert.equal(avec('2026-11-01', null, new Date(2026, 10, 10, 9)).reste, undefined)
   // sans champ lu dans le RC : l’échéance consolidée de l’AO, sans source
   assert.equal(avec('2026-11-30', null, new Date(2026, 10, 10)).source, null)
 })
@@ -123,8 +124,10 @@ test('lisible à 390 px : une colonne, pas de défilement horizontal, cibles de
 
 test('le résumé est en tête de l’étape Décider, avant tout autre bloc, et le bandeau critique ne double plus les mêmes faits', () => {
   const code = lire('src/routes/project/StepAnalysis.tsx')
-  const i = code.indexOf('resume={<BandeResume')
-  assert.ok(i > 0 && i < code.indexOf('<SectionEtape titre="Le marché en bref"'), 'la bande de résumé précède les sections')
+  // FIN-B1 (jury, tour 1) : plus de bande de quatre cases égales ; la décision vient en tête, les faits du marché à côté
+  assert.ok(!code.includes('<BandeResume'), 'plus de bande de cases sur Décider')
+  const i = code.indexOf('<SectionEtape titre="Décision">')
+  assert.ok(i > 0 && i < code.indexOf('<SectionEtape titre="Le marché en bref"'), 'la décision précède les faits du marché')
   assert.ok(!code.includes('<CriticalBanner'), 'plus de second résumé de la remise, de la visite et du délai')
   assert.ok(!code.includes('HÉROS DE SYNTHÈSE'))
 })

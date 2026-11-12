@@ -23,10 +23,10 @@ test('tant que le projet n’est pas relu (lancement en train de se confirmer), 
   assert.equal(lectureNonDemarree({ ...base, donneesAJour: false }), false)
 })
 
-test('l’écran Décider l’utilise : titre, bouton « Relancer » vers Lots, plus de « 0 % » sans fin', () => {
+test('l’écran Décider l’utilise : le geste est de choisir les lots (jamais « Relancer » quand rien n’a été lancé), plus de « 0 % » sans fin', () => {
   const src = lire('src/routes/project/StepAnalysis.tsx')
   assert.match(src, /lectureNonDemarree\(/)
-  assert.match(src, /L’analyse n’a pas démarré/)
-  assert.match(src, /Relancer/)
-  assert.match(src, /\/lots`/)
+  assert.match(src, /<EtapeSansAnalyse project=\{project\} cas="analyse-non-lancee"/)
+  assert.doesNotMatch(src, /Le dossier est bien enregistré|>Relancer</)
+  assert.match(lire('src/components/project/EtapeSansAnalyse.tsx'), /'analyse-non-lancee': \{ segment: 'lots'/)
 })

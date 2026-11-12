@@ -102,7 +102,7 @@ test('la date limite des questions : calculée avec sa règle, ou « À vérif
 test('points à éclaircir : invitation sans unité décomptée, puis questions sourcées avec « Copier », ou « rien à poser »', () => {
   const avant = renderToStaticMarkup(<PointsAEclaircirVue points={undefined} date={DATE_RELATIVE} preparation={PREP} />)
   assert.match(avant, /Préparer les questions/)
-  assert.match(avant, /Ne décompte aucune unité/)
+  assert.match(avant, /ne décompte rien de votre abonnement/)
   assert.doesNotMatch(avant, /€|euro/i)
   assert.match(avant, /vendredi 12 mars 2027/)
 
@@ -125,8 +125,8 @@ test('l’écran Décider passe par le gabarit : une seule action principale en
   const code = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
   assert.match(code, /<GabaritEtape\s+titre="Décider"/)
   assert.equal((code.match(/actionPrincipale=/g) ?? []).length, 1)
-  // A2 — l'ordre de la décision : le marché, à vérifier, la décision, trésorerie et calendrier, points à éclaircir, exigences
-  const ordre = ['libelle="L’AO en 30 secondes"', 'Le marché en bref', '<AVerifierAvantEngagement', 'titre="Décision"', 'Trésorerie et calendrier', '<PointsAEclaircir ', 'Les exigences du dossier'].map((m) => code.indexOf(m))
+  // FIN-B1 (jury, tour 1) — la décision EN TÊTE, les faits du marché à côté ; puis à vérifier, trésorerie et calendrier, points à éclaircir, exigences
+  const ordre = ['titre="Décision"', 'titre="Le marché en bref"', '<AVerifierAvantEngagement', 'Trésorerie et calendrier', '<PointsAEclaircir ', 'titre="Les exigences du dossier"'].map((m) => code.indexOf(m))
   assert.ok(ordre.every((n, i) => n > 0 && (i === 0 || n > ordre[i - 1])), `ordre des sections : ${ordre}`)
   // A1 — l'action de l'en-tête est la décision : « On y va », la vraie ellipse pendant la validation, puis « Passer aux pièces »
   assert.match(code, /<Bouton variante="principal" onClick=\{handleValidate\} enCours=\{isValidating\} libelleEnCours="Validation…">\s*\{isStepAlreadyDone \? 'Passer aux pièces' : 'On y va'\}/)
@@ -135,7 +135,7 @@ test('l’écran Décider passe par le gabarit : une seule action principale en
   assert.match(code, /aria-expanded=\{open\} aria-controls=\{idContenu\}/)
   assert.match(code, /<div id=\{idContenu\} hidden=\{!open\}>/)
   assert.match(code, /<Tableau\s+libelle=\{`Exigences : \$\{CATEGORY_LABELS\[category\]\}`\}/)
-  assert.match(code, /<PuceFiltre/)
+  assert.doesNotMatch(code, /<PuceFiltre|<BandeResume|<PastilleEtat/, 'ni puces qui doublent les catégories, ni bande de cases, ni pastille « Obligatoire » sur chaque ligne')
   // les états : l'erreur dit son erreur (plus de fenêtre « Analyse… 0 % »), l'attente est dans la page
   assert.match(code, /requeteExigences\.isError && requeteExigences\.data === undefined\) return \(\s*<GabaritEtape[^>]*>\s*<EtatErreur/)
   assert.ok(code.indexOf('<EtatErreur') < code.indexOf('<ProgressDisplay'), 'l’erreur passe avant l’écran d’attente')

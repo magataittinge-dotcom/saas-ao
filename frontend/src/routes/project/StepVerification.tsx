@@ -1,23 +1,24 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Sigle } from '@/components/common/Sigle'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Lock, Download, Upload, RefreshCw } from 'lucide-react'
 import { api } from '@/services/api'
 import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
 import { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
-import { GabaritEtape, BandeResume, BarreEtape, SectionEtape, EtatElement } from '@/components/etape'
+import { EtatDePiece, LignePiece, ListePieces } from '@/components/project/LignePiece'
+import { GabaritEtape, BarreEtape, SectionEtape, ActionsBarreTel } from '@/components/etape'
+import { EtapeSansAnalyse } from '@/components/project/EtapeSansAnalyse'
+import { SqueletteListe } from '@/components/project/SqueletteListe'
+import { actionEtape } from '@/lib/intelligence/action'
 import { Bouton } from '@/components/ui/bouton'
-import { Carte } from '@/components/ui/carte'
-import { EtatErreur, EtatVide } from '@/components/ui/etats'
+import { EtatErreur } from '@/components/ui/etats'
 import { Message } from '@/components/ui/message'
-import { PastilleEtat } from '@/components/ui/pastille'
-import { Squelette } from '@/components/ui/squelette'
 import EntreeFichier from '@/components/depot/EntreeFichier'
-import { cn } from '@/lib/utils'
-import { cartesPieces, comptesDetailles, phraseComptes, phrasePiecesAutres } from '@/lib/resumePieces'
+import { comptesDetailles, phraseComptesUtiles, phraseResumePieces } from '@/lib/resumePieces'
+import { statutPiece } from '@/lib/statutPiece'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import { piecesComptees } from '@/components/project/NonConcerne'
@@ -25,6 +26,7 @@ import { comptesPieces } from '@/lib/statutPiece'
 import { echeanceAO } from '@/lib/echeance'
 import type { Project, ChecklistItem, Document } from '@/types'
 import { messageErreur } from '@/lib/erreurs'
+import { sansNoteDeRegroupement } from '@/lib/nomsPieces'
 import { messageActualisation, type EtatActualisation } from '@/lib/actualisation'
 
 interface Props { project: Project }
@@ -38,6 +40,7 @@ export default function StepVerification({ project }: Props) {
     navigate(`/vault?returnTo=${encodeURIComponent(location.pathname)}`)
   const completeStep = useCompleteStep(project.id)
   const isAlreadyDone = project.completed_steps?.['4'] === true
+  const decisionPrise = project.completed_steps?.['3'] === true || project.status === 'sans_suite'
 
   const requetePieces = useQuery({
     queryKey: ['checklist', project.id],
@@ -85,9 +88,6 @@ export default function StepVerification({ project }: Props) {
   // UN SEUL calcul des comptes (résumé, barre du bas, liste) : prêtes + à joindre + à renouveler = pièces demandées au dépôt
   const comptes = comptesDetailles(scored, echeance)
   const { aJoindre, pretes } = comptesPieces(scored, echeance)
-  const pct = comptes.total > 0 ? Math.round((comptes.pretes / comptes.total) * 100) : 0
-  // La pièce facultative (ou pour l'attribution) se nomme, elle ne se cache pas : même décompte qu'à l'Export (14 demandées + 1).
-  const phraseAutres = phrasePiecesAutres(comptes)
 
   // ── Mutations ───────────────────────────────────────────────────
   // Rafraîchit la liste ET recalcule le score, sans quitter l'étape.
@@ -199,12 +199,7 @@ export default function StepVerification({ project }: Props) {
   // ── Chargement → erreur → rien à montrer → contenu (une erreur n'est jamais « le dossier n'est pas lu ») ──
   if (isLoading) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <div aria-busy="true" className="grid gap-6">
-        <Squelette className="h-32 w-full rounded-carte" />
-        <div className="grid gap-3.5 md:grid-cols-2">
-          {[0, 1, 2, 3].map((i) => <Squelette key={i} className="h-28 rounded-carte" />)}
-        </div>
-      </div>
+      <div aria-busy="true"><SqueletteListe phrase="Synorix ouvre la liste des pièces demandées par le règlement." /></div>
     </GabaritEtape>
   )
 
@@ -212,7 +207,7 @@ export default function StepVerification({ project }: Props) {
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatErreur
         titre="Les pièces n’ont pas pu se charger"
-        detail="La liste des pièces demandées par le règlement n’a pas pu être lue. Vos pièces et votre coffre-fort ne sont pas touchés."
+        detail="La liste des pièces demandées par le règlement n’a pas pu être lue. Vos pièces et votre coffre-fort restent en place."
         onReessayer={() => { void requetePieces.refetch() }}
         enCours={requetePieces.isFetching}
       />
@@ -222,46 +217,34 @@ export default function StepVerification({ project }: Props) {
   // La liste des pièces est établie par Synorix à la fin de la lecture du dossier : vide, c'est que le dossier n'est pas lu.
   if (items.length === 0) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <EtatVide
-        titre="Les pièces à réunir apparaîtront ici"
-        phrase={<>Synorix les relève dans le règlement à l’analyse du <Sigle code="DCE" />.</>}
-        action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Analyser le dossier</Bouton>}
-      />
+      {/* Le même état que Lots et Décider d'un AO sans analyse : Synorix le dit, une action, celle qui fait avancer l'AO. */}
+      <EtapeSansAnalyse project={project} cas={actionEtape(project).segment === 'upload' ? 'sans-depot' : 'analyse-non-lancee'} viendra={['Les pièces à réunir']}>
+        Les pièces à réunir apparaîtront ici : Synorix les relève dans le règlement pendant l’analyse du dossier.
+      </EtapeSansAnalyse>
     </GabaritEtape>
   )
 
-  // ── Barre du bas (composant commun : une ligne au téléphone) ──────
-  const jauge = (classe: string) => (
-    <div role="progressbar" aria-label="Pièces prêtes" aria-valuemin={0} aria-valuemax={comptes.total} aria-valuenow={comptes.pretes} className={cn('h-1 overflow-hidden rounded-pilule bg-surface-2', classe)}>
-      <div className="h-full rounded-pilule bg-accent-ui transition-[width] duration-pop ease-survol motion-reduce:transition-none" style={{ width: `${pct}%` }} />
-    </div>
+  // ── L'action de l'étape : en tête à l'ordinateur, dans la barre du bas au téléphone (la même place qu'à Dépôt, Lots, Décider) ──
+  const suite = () => (
+    <BoutonSuite
+      etape="Plan"
+      onClick={() =>
+        isAlreadyDone
+          ? navigate(`/projects/${project.id}/plan`)
+          : completeStep.mutate(4, {
+              onSuccess: () => navigate(`/projects/${project.id}/plan`),
+            })
+      }
+      enCours={completeStep.isPending}
+      enCoursLibelle="Validation…"
+    />
   )
+  const bilan = phraseComptesUtiles(comptes)
   const bottomBar = (
-    <BarreEtape className="flex-wrap gap-x-4 gap-y-2">
-      <BilanBarre
-        className="gap-3"
-        bureau={<>
-          {jauge('w-32 shrink-0')}
-          <span>{phraseComptes(comptes)}{phraseAutres ? ` · ${phraseAutres}` : ''}</span>
-        </>}
-        tel={<>
-          {jauge('min-w-0 flex-1')}
-          <span className="chiffres shrink-0 text-xs">{comptes.pretes} sur {comptes.total}</span>
-        </>}
-      />
+    <BarreEtape>
+      <BilanBarre bureau={null} tel={bilan ? <span className="truncate">{bilan}</span> : undefined} />
       <ActionsBarre>
-        <BoutonSuite
-          etape="Plan"
-          onClick={() =>
-            isAlreadyDone
-              ? navigate(`/projects/${project.id}/plan`)
-              : completeStep.mutate(4, {
-                  onSuccess: () => navigate(`/projects/${project.id}/plan`),
-                })
-          }
-          enCours={completeStep.isPending}
-          enCoursLibelle="Validation…"
-        />
+        <ActionsBarreTel>{suite()}</ActionsBarreTel>
       </ActionsBarre>
     </BarreEtape>
   )
@@ -274,25 +257,38 @@ export default function StepVerification({ project }: Props) {
         <GabaritEtape
           titre="Réunir les pièces"
           utilite={UTILITE}
-          actionsSecondaires={<>
-            {/* La liste se recalcule à la demande (par exemple après l'ajout d'une pièce au coffre-fort). */}
-            <Bouton variante="secondaire" onClick={() => { void actualiser() }} enCours={actualisation?.etat === 'en_cours'} libelleEnCours="Actualisation…">
-              <RefreshCw aria-hidden size={16} strokeWidth={1.5} />
-              Actualiser
-            </Bouton>
-            <Bouton variante="secondaire" onClick={openVaultPage}>
-              <Lock aria-hidden size={16} strokeWidth={1.5} />
-              Ouvrir le coffre-fort
-            </Bouton>
-          </>}
-          message={messageActualisation(actualisation) && actualisation?.etat !== 'en_cours' && (
+          actionPrincipale={suite()}
+          message={messageActualisation(actualisation) && actualisation?.etat !== 'en_cours' ? (
             <Message ton={actualisation?.etat === 'echec' ? 'erreur' : 'succes'} onFermer={() => setActualisation(null)}>
               {messageActualisation(actualisation)}
             </Message>
-          )}
-          resume={<BandeResume libelle="Les pièces du dossier" cartes={cartesPieces(scored, echeance, { coffre: piecesComptees(vaultItems), formulaires: piecesComptees(templateItems) })} />}
+          ) : undefined}
           barre={bottomBar}
         >
+          {/* Le résumé : une phrase de faits, et les deux gestes rares de la liste en liens (plus de cases « Aucune », plus de jauge vide). */}
+          <div data-resume-pieces="" className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+            <p className="text-base text-fg">{phraseResumePieces(comptes)}</p>
+            <p className="flex flex-wrap items-center gap-x-5">
+              {/* La liste se recalcule à la demande (par exemple après l'ajout d'une pièce au coffre-fort). */}
+              <Bouton variante="lien" onClick={() => { void actualiser() }} enCours={actualisation?.etat === 'en_cours'} libelleEnCours="Actualisation…">
+                <RefreshCw aria-hidden size={14} strokeWidth={1.5} />
+                Actualiser la liste
+              </Bouton>
+              <Bouton variante="lien" onClick={openVaultPage}>
+                <Lock aria-hidden size={14} strokeWidth={1.5} />
+                Ouvrir le coffre-fort
+              </Bouton>
+            </p>
+            {/* La décision n'est pas prise (jury, tour 1 : l'état ne se lisait que dans trois ronds gris du fil) : l'écran le dit,
+                avec le geste. Une phrase du résumé, pas une alerte de plus : une alerte à la fois dans un AO. */}
+            {!decisionPrise && (
+              <p data-decision-a-prendre="" className="flex basis-full flex-wrap items-baseline gap-x-2 text-sm text-fg-2">
+                <span>La décision n’est pas encore prise : vous pouvez déjà réunir les pièces.</span>
+                <Bouton asChild variante="lien"><Link to={`/projects/${project.id}/analysis`}>Revenir à Décider</Link></Bouton>
+              </p>
+            )}
+          </div>
+
           <CandidatureSectionVault
             items={vaultItems}
             onPickFromVault={(item) => setPickerItem(item)}
@@ -358,9 +354,8 @@ function WorkflowSection({
     <SectionEtape
       titre="Tableaux de prix à remplir"
       description={<>Le <Sigle code="DPGF" /> ou le <Sigle code="BPU" /> de l’acheteur : téléchargez la trame, remplissez-la, puis déposez-la ici. Synorix vérifie qu’aucune ligne n’est restée sans prix.</>}
-      colonnes={2}
     >
-      {items.map((i) => <WorkflowRow key={i.id} item={i} onDownload={onDownload} onUpload={onUpload} />)}
+      <ListePieces>{items.map((i) => <WorkflowRow key={i.id} item={i} onDownload={onDownload} onUpload={onUpload} />)}</ListePieces>
     </SectionEtape>
   )
 }
@@ -392,44 +387,47 @@ function WorkflowRow({
   }
 
   return (
-    <Carte data-piece={item.id} className="grid min-w-0 content-start gap-3">
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-        <p className="min-w-0 flex-1 basis-48 break-words text-base font-semibold text-fg">{item.details}</p>
-        {item.lot && <PastilleEtat sens="gris" icone={null}>{libelleLot(item.lot)}</PastilleEtat>}
-      </div>
-      <EtatElement
-        etat={done ? 'pret' : warn ? 'a-verifier' : 'a-couvrir'}
+    <LignePiece
+      id={item.id}
+      nom={sansNoteDeRegroupement(item.details ?? '')}
+      sous={<>
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-fg-2">
+          {item.lot && <span>{libelleLot(item.lot)}</span>}
+          {item.template_project_doc_id && (
+            <Bouton variante="lien" disabled={busy !== null} enCours={busy === 'dl'} libelleEnCours="Téléchargement…"
+              onClick={() => { void run('dl', () => onDownload(item), 'Le téléchargement de la trame n’a pas abouti.') }}>
+              <Download aria-hidden size={14} strokeWidth={1.5} />
+              Télécharger la trame
+            </Bouton>
+          )}
+        </p>
+        <EntreeFichier
+          ref={inputRef}
+          accept=".xlsx,.xls,.xlsm,.ods,.pdf"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) void run('up', () => onUpload(item, f), 'Le dépôt du tableau rempli n’a pas abouti.')
+            e.target.value = ''
+          }}
+        />
+      </>}
+      etat={<EtatDePiece
+        statut={statutPiece({ status: item.status, jointe: done })}
         texte={done ? 'Rempli et vérifié' : warn ? 'À corriger : des lignes sont sans prix' : 'À remplir'}
-      />
-      <EntreeFichier
-        ref={inputRef}
-        accept=".xlsx,.xls,.xlsm,.ods,.pdf"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) void run('up', () => onUpload(item, f), 'Le dépôt du tableau rempli n’a pas abouti.')
-          e.target.value = ''
-        }}
-      />
-      <div className="flex flex-wrap items-center gap-2">
-        {item.template_project_doc_id && (
-          <Bouton variante="secondaire" disabled={busy !== null} enCours={busy === 'dl'} libelleEnCours="Téléchargement…"
-            onClick={() => { void run('dl', () => onDownload(item), 'Le téléchargement de la trame n’a pas abouti.') }}>
-            <Download aria-hidden size={16} strokeWidth={1.5} />
-            Télécharger la trame
-          </Bouton>
-        )}
+      />}
+      actions={(
         <Bouton variante="secondaire" disabled={busy !== null} enCours={busy === 'up'} libelleEnCours="Dépôt en cours…" onClick={() => inputRef.current?.click()}>
           <Upload aria-hidden size={16} strokeWidth={1.5} />
-          {done || warn ? 'Remplacer le tableau' : 'Déposer le tableau rempli'}
+          {done || warn ? 'Remplacer le tableau' : 'Déposer le tableau'}
         </Bouton>
-      </div>
-      {echec && (
+      )}
+      pied={echec && (
         <Message ton="erreur" onFermer={() => setEchec(null)}
           action={<Bouton variante="secondaire" onClick={() => { const relancer = echec.relancer; setEchec(null); relancer() }}>Réessayer</Bouton>}>
           {echec.message}
         </Message>
       )}
-    </Carte>
+    />
   )
 }
 
@@ -438,17 +436,16 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
   if (items.length === 0) return null
   return (
     <SectionEtape titre="Rédigé avec Synorix" description="Ces pièces se préparent à l’étape Rédiger : rien à joindre ici.">
-      <Carte sansMarge>
-        <ul>
-          {items.map((i) => (
-            <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-bord px-5 py-3 last:border-b-0">
-              <span className="min-w-0 flex-1 basis-56 break-words text-sm text-fg">{i.details}</span>
-              {i.lot && <PastilleEtat sens="gris" icone={null}>{libelleLot(i.lot)}</PastilleEtat>}
-              <span className="shrink-0 text-xs text-fg-3">À l’étape Rédiger</span>
-            </li>
-          ))}
-        </ul>
-      </Carte>
+      <ListePieces>
+        {items.map((i) => (
+          <div key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 max-sm:px-4">
+            {/* Le libellé du serveur finit par « — généré par Synorix à l'étape Mémoire » : l'étape s'appelle Rédiger, et la ligne le dit déjà. */}
+            <span className="min-w-0 flex-1 basis-56 break-words font-semibold text-fg">{sansNoteDeRegroupement(i.details ?? '').replace(/\s+[—–-]\s+généré par Synorix.*$/i, '')}</span>
+            {i.lot && <span className="text-sm text-fg-2">{libelleLot(i.lot)}</span>}
+            <span className="shrink-0 text-sm text-fg-2">À l’étape Rédiger</span>
+          </div>
+        ))}
+      </ListePieces>
     </SectionEtape>
   )
 }

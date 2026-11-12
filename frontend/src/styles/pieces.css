@@ -77,19 +77,19 @@
 
 /* ── Carte « L'AO en 30 secondes » ──────────────────────────── */
 .carte-ao-30s {
-  background: var(--carte-fond);
-  border: 1px solid var(--carte-filet);
-  border-radius: var(--radius-lg);
-  padding: 1rem 1.125rem;
+  /* La surface du système (jury, tour 1 : un aplat gris-bleu sans trait à côté de cartes blanches au trait) */
+  background: var(--surface-0);
+  border: 1px solid var(--bord);
+  border-radius: var(--radius-carte, 22px);
+  padding: 1.25rem 1.5rem;
   color: var(--carte-texte);
 }
 .carte-ao-30s__titre {
+  /* jury, tour 1 : un surtitre en capitales forcées. Un titre de carte du système : 17 px, 600, casse de phrase. */
   margin: 0 0 .75rem;
-  font-size: .75rem;
+  font-size: var(--taille-17, 1.0625rem);
   font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--carte-discret);
+  color: var(--carte-titre);
 }
 .carte-ao-30s__faits {
   display: grid;

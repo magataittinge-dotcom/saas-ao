@@ -215,7 +215,8 @@ def test_multilot_402_pro_points_to_business(
     assert resp.status_code == 402
     detail = resp.json()["detail"]
     assert "Business" in detail
-    assert "1 analyse(s) restante(s)" in detail
+    assert "1 analyse restante" in detail
+    assert "(s)" not in detail  # accords écrits, jamais de pluriel entre parenthèses à l'écran
 
 
 def test_analysis_technical_failure_refunds_unit(

@@ -56,3 +56,21 @@ export function phraseExigences(total: number, obligatoires: number): string {
   if (obligatoires === 0) return total === 1 ? 'Souhaitée par l’acheteur' : 'Toutes souhaitées par l’acheteur'
   return `${obligatoires} à respecter impérativement · ${pluriel(souhaitees, 'souhaitée')} par l’acheteur`
 }
+
+/**
+ * Un refus du serveur dit en mots du logiciel (« Service IA momentanément indisponible — réessayez… ») : à l'écran c'est
+ * Synorix qui parle (jury, tour 1 : « Service IA : mot du logiciel ; partout ailleurs c'est Synorix »). Affichage seulement.
+ */
+export function sansJargonIA(message: string): string {
+  return message
+    .replace(/Service IA momentanément indisponible\s*[—–-]\s*r/g, 'Synorix est momentanément indisponible. R')
+    .replace(/Service IA momentanément indisponible/g, 'Synorix est momentanément indisponible')
+}
+
+/** Les titres des deux listes du détail : toujours « documents », le mot de la phrase qui les annonce (jamais « pièces » à dix lignes d'écart). */
+export function titresDetailDocuments(analyses: number, ecartes: number): { analyses: string; ecartes: string } {
+  return {
+    analyses: `${analyses} ${analyses > 1 ? 'documents analysés' : 'document analysé'} pour ce lot`,
+    ecartes: `${ecartes} ${ecartes > 1 ? 'documents laissés' : 'document laissé'} de côté`,
+  }
+}

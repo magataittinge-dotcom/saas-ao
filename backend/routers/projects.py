@@ -2223,7 +2223,8 @@ def get_go_no_go_score(
         ranked = _rank_refs_for_score(org_refs, project.selected_lot_name)
         matched = sum(1 for r in ranked if r["matched"])
         ref_score = min(20, matched * 5)
-        ref_msg = f"{matched} référence(s) directement pertinente(s)"
+        ref_msg = (f"{matched} références directement pertinentes" if matched > 1
+                   else f"{matched} référence directement pertinente")
     elif org_refs:
         ref_score = 10
         ref_msg = f"{len(org_refs)} références au total — pas de filtre lot"

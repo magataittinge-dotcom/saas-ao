@@ -90,7 +90,8 @@ export function dateLongue(iso: string): string {
 function tempsRestant(source: EcheanceSource, maintenant: Date): { texte: string; action: boolean } | null {
   const e = etatEcheance(source, maintenant)
   if (e.etat === 'sans_date') return null
-  if (e.etat === 'passee') return { texte: 'date de remise passée', action: false }
+  // Passée : le bandeau de l'AO le dit, une fois, avec la date et le geste (« Mettre à jour le statut ») ; le fait ne le redit pas.
+  if (e.etat === 'passee') return null
   if (e.etat === 'aujourdhui') {
     return { texte: source.heure ? `aujourd’hui, avant ${source.heure}` : 'aujourd’hui', action: true }
   }
@@ -153,7 +154,9 @@ export function construireCarteAO(e: EntreeCarte): FaitCarte[] {
 
   if (e.pieces && e.pieces.length > 0) {
     const { aJoindre, pretes } = comptesPieces(e.pieces, echeance?.date)
-    faits.push({ id: 'pieces', libelle: 'Pièces', valeur: libelleComptes(aJoindre, pretes), action: aJoindre > 0, comptes: { pretes, aJoindre } })
+    // Jamais un zéro (« 14 pièces à joindre · 0 prête ») : on ne dit que ce qui se compte.
+    const valeur = pretes === 0 && aJoindre > 0 ? `${aJoindre} ${aJoindre > 1 ? 'pièces' : 'pièce'} à joindre` : libelleComptes(aJoindre, pretes)
+    faits.push({ id: 'pieces', libelle: 'Pièces', valeur, action: aJoindre > 0, comptes: { pretes, aJoindre } })
   }
 
   const criteres = (champs?.criteres?.value ?? projet.criteres_jugement ?? []).filter((c) => c && c.nom)
@@ -183,4 +186,9 @@ export function construireCarteAO(e: EntreeCarte): FaitCarte[] {
   }
 
   return faits
+}
+
+/** « 14h00 » → « 14 h », « 9h30 » → « 9 h 30 » : l'heure écrite comme dans le bandeau de l'AO (une seule écriture par page). Affichage. */
+export function heureLisible(texte: string): string {
+  return texte.replace(/\b(\d{1,2})\s?h\s?(\d{2})\b/g, (_, h: string, m: string) => (m === '00' ? `${h}\u00a0h` : `${h}\u00a0h\u00a0${m}`))
 }

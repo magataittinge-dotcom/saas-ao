@@ -21,7 +21,7 @@ test('/projects/new est l’écran de dépôt : une zone ZIP / PDF, plus de for
   assert.ok(!html.includes('Nom du projet'), 'plus de champ « Nom du projet »')
   assert.ok(!html.includes('Créer le projet'), 'plus de bouton « Créer le projet »')
   assert.ok(!html.includes('Retour'), 'pas de lien « Retour » en double du chemin de la barre du haut')
-  assert.equal((html.match(/Choisir un fichier/g) ?? []).length, 1, 'un seul geste : le bouton principal de la zone')
+  assert.equal((html.match(/Choisir des fichiers/g) ?? []).length, 1, 'un seul geste : le bouton principal de la zone')
 })
 
 test('le nom de l’AO est tiré du nom du fichier (extension et séparateurs retirés)', () => {
@@ -36,7 +36,8 @@ test('la zone crée l’AO avec ce seul nom, passe le fichier à l’étape de d
   const zone = sansCommentaires(lire('src/components/onboarding/ZoneDepotAO.tsx'))
   assert.match(zone, /nomAODepuisFichier\(file\.name\)/)
   assert.match(zone, /createProject\(\{ name \}/, 'la charge utile reste { name }')
-  assert.match(zone, /setPendingUpload\(file\)/)
+  assert.match(zone, /setPendingUpload\(fichiers\)/, 'FIN-B1 : tous les fichiers déposés partent à l’étape de dépôt')
+  assert.match(zone, /multiple: true/)
   assert.match(zone, /navigate\(`\/projects\/\$\{project\.id\}\/upload`\)/)
   const bienvenue = sansCommentaires(lire('src/components/onboarding/FirstAOWelcome.tsx'))
   assert.match(bienvenue, /<ZoneDepotAO/, 'l’écran « Bienvenue » utilise la même zone')

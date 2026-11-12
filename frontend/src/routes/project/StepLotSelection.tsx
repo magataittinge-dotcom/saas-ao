@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
 import { etiquettesSourceLot, lotsAAfficher, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Check as CheckIcon, Pencil, Plus, X } from 'lucide-react'
-import { BoutonSecondaire } from '@/components/project/BarreEtape'
-import { GabaritEtape, BandeResume, SectionEtape, EtatElement, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, type CarteResume } from '@/components/etape'
+import { Check as CheckIcon, CircleHelp, Pencil, Plus, X } from 'lucide-react'
+import { GabaritEtape, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
+import { EtapeSansAnalyse } from '@/components/project/EtapeSansAnalyse'
+import { SqueletteListe } from '@/components/project/SqueletteListe'
 import { METIERS } from '@/lib/entreprise/metiers'
 import { metiersDuLot } from '@/lib/lotsMetiers'
 import { repartirDocuments } from '@/lib/analyseLibelles'
@@ -24,18 +25,18 @@ import { Bouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
 import { Champ, ChampNombre, GroupeChamp } from '@/components/ui/champ'
 import { DialogueConfirmation } from '@/components/ui/dialogue'
-import { EtatErreur, EtatVide } from '@/components/ui/etats'
+import { EtatErreur } from '@/components/ui/etats'
 import { Infobulle } from '@/components/ui/infobulle'
 import { MenuElement, MenuPoints } from '@/components/ui/menu'
 import { Message } from '@/components/ui/message'
-import { PastilleEtat } from '@/components/ui/pastille'
-import { Squelette } from '@/components/ui/squelette'
 import type { Project, LotOption } from '@/types'
 import { cn } from '@/lib/utils'
 
 const LOT_DETECTION_STEPS: StepDescriptor[] = [
   { key: 'detecting_lots', label: 'Détection des lots', estimated_s: 30 },
 ]
+
+const UTILITE = 'Choisissez le ou les lots sur lesquels votre entreprise répond : Synorix n’analyse que ceux-là.'
 
 interface Props { project: Project }
 
@@ -67,7 +68,7 @@ function splitLotLabel(label: string): { num: string | null; title: string } {
   return { num: m[1].padStart(2, '0'), title: title || label.trim() }
 }
 
-function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: LotCardProps) {
+export function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: LotCardProps) {
   // We deliberately do NOT show a Synorix-internal sequential number
   // (e.g. "LOT 06") next to the real DCE label — it confused users by
   // implying two competing numbering systems. lot.nom already starts
@@ -97,12 +98,15 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
   }
   const aUnMenu = !isEditing && (onRename || onDelete)
 
+  const tranches = lot.tranches ?? []
+  const tout = lot.id === 'all'
+
+  // UNE ligne de la liste (jury, tour 1 : treize cartes identiques, « Prêt » treize fois) : la case, le numéro, l'intitulé,
+  // les métiers en texte, les pièces lues à droite. Seule l'exception est marquée (« À vérifier », « Ajouté à la main ») ;
+  // d'où vient le lot se lit dans le détail (« Voir »), pas sur chaque ligne.
   return (
-    <div data-lot={lot.id} className={cn(
-      'relative rounded-carte border transition-colors duration-survol ease-survol',
-      selected ? 'border-accent-ring bg-accent-tint' : 'border-bord bg-surface-0 hover:border-bord-champ',
-    )}>
-      {/* Une div à rôle « button » et non un vrai bouton : la carte contient d'autres boutons (« Voir », le menu). Un bouton
+    <div data-lot={lot.id} className={cn('relative transition-colors duration-survol ease-survol', selected ? 'bg-accent-tint' : 'hover:bg-surface-1')}>
+      {/* Une div à rôle « button » et non un vrai bouton : la ligne contient d'autres boutons (« Voir », le menu). Un bouton
           dans un bouton est du HTML invalide (clavier et lecteurs d'écran peu fiables, R7). */}
       <div
         role="button"
@@ -112,9 +116,9 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
         onKeyDown={(e) => {
           if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect() }
         }}
-        className={cn('flex w-full cursor-pointer flex-wrap items-start gap-x-2 gap-y-1 rounded-carte px-4 py-3 text-left', aUnMenu && 'pr-14')}
+        className={cn('flex w-full cursor-pointer flex-wrap items-start gap-x-2 px-4 py-1.5 text-left max-sm:px-3', aUnMenu && 'pr-14 max-sm:pr-12')}
       >
-        {/* Case à cocher dessinée : cible de 44 px, l'état est aussi dit par aria-pressed de la carte */}
+        {/* Case à cocher dessinée : cible de 44 px, l'état est aussi dit par aria-pressed de la ligne */}
         <span aria-hidden="true" className="-ml-2 grid size-11 shrink-0 place-items-center">
           <span className={cn(
             'grid size-5 place-items-center rounded border transition-colors duration-fast ease-survol',
@@ -145,64 +149,84 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
               <Bouton variante="discret" onClick={() => setIsEditing(false)}>Annuler</Bouton>
             </div>
           ) : (
-            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base text-fg">
-              {lotNum && <span className="chiffres shrink-0 font-medium text-fg-2">Lot {lotNum}</span>}
-              <span className="min-w-0 break-words font-semibold">
-                {isGeneric ? <span className="font-medium text-fg-2">Intitulé à préciser</span> : lotNum ? lotTitle : displayedLabel}
-              </span>
-              {lot._manual && <PastilleEtat sens="gris" icone={null}>Ajouté à la main</PastilleEtat>}
-              {lot.tranches && lot.tranches.length > 0 && (
-                <Infobulle texte={lot.tranches.join(' · ')}>
-                  <span tabIndex={0} className="inline-flex rounded-pilule" onClick={(e) => e.stopPropagation()}>
-                    <PastilleEtat sens="gris" icone={null}>{lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}</PastilleEtat>
-                  </span>
-                </Infobulle>
-              )}
-            </p>
-          )}
-        </div>
-
-        {cout && <span className="shrink-0 whitespace-nowrap py-3 text-sm font-medium text-fg-2 max-sm:basis-full max-sm:py-0 max-sm:pl-11">{cout}</span>}
-
-        {/* Sous le titre : métiers reconnus, pièces du lot, état en petit */}
-        <div className="min-w-0 basis-full space-y-1.5 pb-1 pl-11" onClick={(e) => e.stopPropagation()}>
-          {metiers.length > 0 && (
-            <p className="flex flex-wrap items-center gap-1.5 text-sm text-fg-2">
-              <span>{metiers.length > 1 ? 'Métiers reconnus' : 'Métier reconnu'} :</span>
-              {metiers.map((m) => <PastilleEtat key={m} sens="gris" icone={null} className="max-w-full whitespace-normal py-0.5 max-sm:rounded-lg">{m}</PastilleEtat>)}
-            </p>
-          )}
-          {pieces && (
-            <div className="text-sm text-fg-2">
-              <p className="flex flex-wrap items-center gap-x-2">
-                <span>{pieces.length} {pieces.length > 1 ? 'pièces lues' : 'pièce lue'} pour ce lot</span>
-                {pieces.length > 0 && (
-                  <Bouton variante="lien" aria-expanded={voirPieces} onClick={() => setVoirPieces((v) => !v)}>
-                    {voirPieces ? 'Masquer' : 'Voir'}
-                  </Bouton>
-                )}
+            <>
+              <p className="flex items-baseline gap-x-2 text-base text-fg max-sm:flex-wrap">
+                {lotNum && <span className="chiffres shrink-0 font-medium text-fg-2 sm:w-14">Lot {lotNum}</span>}
+                <span className="min-w-0 break-words font-semibold">
+                  {isGeneric ? <span className="font-medium text-fg-2">Intitulé à préciser</span> : lotNum ? lotTitle : displayedLabel}
+                </span>
               </p>
-              {voirPieces && <ul className="mt-1 space-y-0.5 text-xs text-fg-3">{pieces.map((d) => <li key={d.file_name} className="break-words">{d.file_name}</li>)}</ul>}
-            </div>
-          )}
-          {lot.id !== 'all' && (
-            <EtatElement
-              etat={aVerifier ? 'a-verifier' : 'pret'}
-              source={parIA ? { libelle: 'complété par l’IA : vérifiez l’intitulé' } : sources.length > 0 ? { libelle: sources.join(' · ') } : undefined}
-            />
+              {(metiers.length > 0 || tranches.length > 0 || lot._manual || aVerifier) && (
+                <p className={cn('mt-0.5 text-sm text-fg-2', lotNum && 'sm:pl-16')}>
+                  {metiers.length > 0 && (
+                    <span>
+                      <span className="sr-only">{metiers.length > 1 ? 'Métiers reconnus' : 'Métier reconnu'} : </span>
+                      {metiers.join(' · ')}
+                    </span>
+                  )}
+                  {tranches.length > 0 && (
+                    <>
+                      {metiers.length > 0 && ' · '}
+                      <Infobulle texte={tranches.join(' · ')}>
+                        <span tabIndex={0} className="whitespace-nowrap rounded-xs" onClick={(e) => e.stopPropagation()}>
+                          {tranches.length} tranche{tranches.length > 1 ? 's' : ''}
+                        </span>
+                      </Infobulle>
+                    </>
+                  )}
+                  {lot._manual && <span className="whitespace-nowrap">{(metiers.length > 0 || tranches.length > 0) && ' · '}Ajouté à la main</span>}
+                  {/* La seule marque d'état de la liste : l'exception. Un lot sans réserve ne porte rien. */}
+                  {aVerifier && (
+                    <span data-etat="a-verifier" className={cn('inline-flex items-center gap-1.5 whitespace-nowrap align-middle font-medium text-ambre-ink', (metiers.length > 0 || tranches.length > 0 || lot._manual) && 'ml-3')}>
+                      <CircleHelp size={14} aria-hidden />
+                      {parIA ? 'Intitulé à vérifier' : 'À vérifier'}
+                    </span>
+                  )}
+                </p>
+              )}
+            </>
           )}
         </div>
+
+        {/* À droite : les pièces lues pour ce lot (jamais un chiffre tant qu'elles ne sont pas comptées) et le coût */}
+        <div className="flex min-h-11 shrink-0 items-center gap-x-3 whitespace-nowrap text-sm text-fg-2 max-sm:-mt-2 max-sm:min-h-0 max-sm:basis-full max-sm:pl-9" onClick={(e) => e.stopPropagation()}>
+          {pieces && pieces.length > 0 && (
+            <>
+              <span className="chiffres">{pieces.length} {pieces.length > 1 ? 'pièces lues' : 'pièce lue'}{tout ? ' dans le dossier' : ''}</span>
+              <Bouton variante="lien" aria-expanded={voirPieces} onClick={() => setVoirPieces((v) => !v)}>
+                {voirPieces ? 'Masquer' : 'Voir'}
+              </Bouton>
+            </>
+          )}
+          {cout && <span className="font-medium">{cout}</span>}
+        </div>
+
+        {voirPieces && pieces && (
+          <div className="min-w-0 basis-full pb-3 pl-9 text-sm text-fg-2 sm:pl-[6.25rem]" onClick={(e) => e.stopPropagation()}>
+            {!tout && (parIA || sources.length > 0) && (
+              <p>{parIA ? 'Intitulé complété par l’IA : vérifiez-le dans le règlement.' : `Repéré dans ${sources.join(', ')}.`}</p>
+            )}
+            <ul className="mt-1.5 max-h-56 gap-x-6 overflow-y-auto text-xs text-fg-3 sm:columns-2">
+              {pieces.map((d) => <li key={d.file_name} className="break-words py-0.5">{d.file_name}</li>)}
+            </ul>
+          </div>
+        )}
       </div>
 
-      {/* Les gestes rares (renommer, retirer) : dans le menu de la carte, pas sur chaque ligne */}
+      {/* Les gestes rares (renommer, retirer) : dans le menu de la ligne */}
       {aUnMenu && (
-        <MenuPoints libelle={`Autres actions pour ${displayedLabel}`} className="absolute right-1.5 top-2">
+        <MenuPoints libelle={`Autres actions pour ${displayedLabel}`} className="absolute right-1.5 top-1.5">
           {onRename && <MenuElement onSelect={startEdit}><Pencil aria-hidden size={16} strokeWidth={1.5} />Renommer</MenuElement>}
           {onDelete && <MenuElement danger onSelect={onDelete}><X aria-hidden size={16} strokeWidth={1.5} />Retirer de la liste</MenuElement>}
         </MenuPoints>
       )}
     </div>
   )
+}
+
+/** La surface d'une liste de lots : un trait, des lignes séparées par un filet (une liste, pas une grille de cartes). */
+function ListeLots({ children }: { children: ReactNode }) {
+  return <div data-liste-lots="" className="divide-y divide-bord overflow-hidden rounded-carte border border-bord bg-surface-0">{children}</div>
 }
 
 // ─── Manual lot form ──────────────────────────────────────────────────────────
@@ -248,7 +272,6 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function StepLotSelection({ project }: Props) {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   // 1.13 — un lot ne disparaît pas de la liste en un clic
   const [lotARetirer, setLotARetirer] = useState<LotOption | null>(null)
@@ -383,7 +406,8 @@ export default function StepLotSelection({ project }: Props) {
   const [lots, setLots] = useState<(LotOption & { _manual?: boolean })[]>([])
   const [lotsInitialized, setLotsInitialized] = useState(false)
 
-  if (!lotsInitialized && !lotsLoading && allDetected.length > 0) {
+  // Jamais avant que les pièces du dossier soient lues : la liste s'affichait avec « 0 pièce lue » sur chaque lot (jury, tour 1).
+  if (!lotsInitialized && requeteDocuments.isSuccess && !lotsLoading && allDetected.length > 0) {
     setLots(allDetected.filter(l => l.id !== '!!'))
     setLotsInitialized(true)
   }
@@ -482,19 +506,12 @@ export default function StepLotSelection({ project }: Props) {
     </Bouton>
   )
   const peutLire = !sansDepot && !chargementEchoue && !enDetection
-  const cartes: CarteResume[] = [
-    { libelle: 'Lots détectés', valeur: String(lots.length), etat: 'neutre', detail: 'Dans le dossier de l’acheteur.' },
-    { libelle: 'Lots choisis', valeur: String(nbChoisis), etat: nbChoisis > 0 ? 'pret' : 'a-verifier', jauge: { rempli: nbChoisis, total: lots.length }, detail: nbChoisis > 0 ? undefined : 'Cochez au moins un lot pour lancer l’analyse.' },
-    // Offre illimitée : la phrase de l'en-tête le dit déjà, pas de case « Illimité » qui le répète.
-    ...(illimite ? [] : [{ libelle: 'Coût de l’analyse', valeur: libelleUnites(nbChoisis), etat: 'neutre' as const, detail: '1 lot analysé = 1 unité de votre abonnement.' }]),
-    ...(separes ? [{ libelle: 'Dans vos métiers', valeur: String(dansVosMetiers.length), etat: 'neutre' as const, detail: 'Selon les métiers de Mon entreprise.' }] : []),
-  ]
-  const bilan = chargementEchoue ? 'Les lots n’ont pas pu être lus.'
-    : sansDepot ? 'Aucun dossier déposé.'
-    : selectedLotIds.length > 1 ? `${selectedLotIds.length} lots choisis`
+  const bilan = selectedLotIds.length > 1 ? `${selectedLotIds.length} lots choisis`
     : selectedId !== 'all' && selectedName ? `Lot choisi : ${selectedName}`
     : aucunChoix ? 'Aucun lot choisi' : 'Tout le dossier'
   const ecartes = phraseLotsEcartes(lotsData?.ecartes)
+  // Le compte, en une ligne sous le titre de la liste (plus de cases « Lots détectés 13 / Lots choisis 1 » avec une jauge).
+  const compte = `${lots.length} ${lots.length > 1 ? 'lots repérés' : 'lot repéré'} dans le dossier de l’acheteur · ${nbChoisis === 0 ? 'cochez au moins un lot pour lancer l’analyse' : nbChoisis > 1 ? `${nbChoisis} choisis` : '1 choisi'}`
 
   return (
     <>
@@ -525,21 +542,18 @@ export default function StepLotSelection({ project }: Props) {
 
       <GabaritEtape
         titre="Lots"
-        utilite={sansDepot || chargementEchoue
-          ? 'Les lots sur lesquels votre entreprise répond : Synorix n’analyse que ceux que vous choisissez.'
-          : phraseCoutLots(lots.length, illimite)}
+        utilite={enDetection || sansDepot || chargementEchoue ? UTILITE : phraseCoutLots(lots.length, illimite)}
         actionPrincipale={peutLire ? actionLire : undefined}
         message={analysisError && <Message ton="erreur" titre="L’analyse n’a pas démarré">{analysisError}</Message>}
-        resume={lots.length > 0 ? <BandeResume libelle="Les lots du dossier" cartes={cartes} /> : undefined}
-        barre={
+        // La barre du bas n'existe que lorsqu'il y a des lots à choisir : ni en erreur, ni sans dossier, ni pendant le chargement.
+        barre={!peutLire ? undefined : (
           <BarreEtape>
             <BilanBarre bureau={bilan} tel={<span className="truncate">{bilan}</span>} />
             <ActionsBarre>
-              <BoutonSecondaire libelle="Retour" icone={ArrowLeft} onClick={() => navigate(`/projects/${project.id}/upload`)} />
               {peutLire && <ActionsBarreTel>{actionLire}</ActionsBarreTel>}
             </ActionsBarre>
           </BarreEtape>
-        }
+        )}
       >
         {isBackendBusy && (
           <Message ton="info" titre="Synorix finit de lire les pièces du dossier">
@@ -549,13 +563,21 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* Documents illisibles : signalés par fichier, jamais silencieux */}
         {extractionWarnings.length > 0 && (
-          <Message ton="attention" titre={extractionWarnings.length > 1
-            ? `${extractionWarnings.length} documents n’ont pas pu être lus : leurs exigences ne sont pas relevées`
-            : 'Un document n’a pas pu être lu : ses exigences ne sont pas relevées'}>
-            <ul className="space-y-0.5">
+          // Une phrase, les noms, un geste (jury, tour 1 : cinq lignes répétaient « aucune couche texte lisible — exigences non
+          // extraites », sans rien proposer). Le motif du serveur n'est pas recopié : il est dit en mots du métier.
+          <Message ton="info"
+            titre={extractionWarnings.length > 1
+              ? `${extractionWarnings.length} documents n’ont pas pu être lus`
+              : 'Un document n’a pas pu être lu'}
+            action={<Bouton asChild variante="secondaire"><Link to={`/projects/${project.id}/upload`}>Déposer une version lisible</Link></Bouton>}>
+            <p>{extractionWarnings.every((w) => /scann/i.test(w.warning))
+              ? (extractionWarnings.length > 1 ? 'Ce sont des documents scannés, sans texte à lire' : 'C’est un document scanné, sans texte à lire')
+              : 'Synorix n’a pas pu en lire le texte'}
+              {extractionWarnings.length > 1 ? ' : leurs exigences ne sont pas relevées.' : ' : ses exigences ne sont pas relevées.'}</p>
+            <ul className="mt-1 space-y-0.5">
               {extractionWarnings.map((w) => (
                 <li key={w.file_name} className="break-words text-xs">
-                  <span className="font-medium text-fg">{w.file_name}</span> : {w.warning}
+                  <span className="font-medium text-fg">{w.file_name}</span>
                 </li>
               ))}
             </ul>
@@ -574,50 +596,47 @@ export default function StepLotSelection({ project }: Props) {
         {chargementEchoue ? (
           <EtatErreur
             titre="Les lots n’ont pas pu se charger"
-            detail="La liste des lots du dossier n’a pas pu être lue. Votre dossier n’est pas touché."
+            detail="La liste des lots n’a pas pu être lue. Votre dossier reste en place."
             onReessayer={() => { void requeteDocuments.refetch(); void requeteLots.refetch() }}
             enCours={requeteLots.isFetching || requeteDocuments.isFetching}
           />
         ) : sansDepot ? (
-          <EtatVide
-            titre="Les lots du dossier apparaîtront ici"
-            phrase={<>Déposez d’abord le <Sigle code="DCE" />&nbsp;: Synorix y repère les lots et vous choisissez ceux à analyser.</>}
-            action={<Bouton variante={sansDepot ? 'principal' : 'secondaire'} onClick={() => navigate(`/projects/${project.id}/upload`)}>Déposer le dossier</Bouton>}
-          />
+          <EtapeSansAnalyse project={project} cas="sans-depot" viendra={['Les lots du dossier']}>
+            Les lots du dossier apparaîtront ici. Déposez d’abord le <Sigle code="DCE" />&nbsp;: Synorix y repère les lots, et vous choisissez ceux à analyser.
+          </EtapeSansAnalyse>
         ) : lots.length > 0 ? (
           <>
             {separes ? (
               <>
-                <SectionEtape titre="Dans vos métiers" colonnes={2}>{dansVosMetiers.map(carteLot)}</SectionEtape>
+                <SectionEtape titre="Dans vos métiers" description={compte}><ListeLots>{dansVosMetiers.map(carteLot)}</ListeLots></SectionEtape>
                 <SectionEtape
                   titre="Autres lots"
-                  colonnes={2}
                   action={
                     <Bouton variante="lien" aria-expanded={autresVisibles} onClick={() => setAutresOuverts((o) => !o)}>
                       {autresVisibles ? 'Replier' : `Afficher les ${autres.length} autres lots`}
                     </Bouton>
                   }
                 >
-                  {autresVisibles && autres.map(carteLot)}
+                  {autresVisibles && <ListeLots>{autres.map(carteLot)}</ListeLots>}
                 </SectionEtape>
               </>
             ) : (
-              <SectionEtape titre="Lots du dossier" colonnes={2}>{lots.map(carteLot)}</SectionEtape>
+              <SectionEtape titre="Lots du dossier" description={compte}><ListeLots>{lots.map(carteLot)}</ListeLots></SectionEtape>
             )}
             <SectionEtape titre="Ou tout le dossier">
-              <LotCard
-                lot={{ id: 'all', nom: 'Analyser l’ensemble du dossier (tous les lots)' }}
-                selected={selectedIds.has('all')}
-                onSelect={() => toggleLot('all')}
-                cout={illimite ? undefined : libelleUnites(lots.length)}
-                pieces={documents}
-              />
+              <ListeLots>
+                <LotCard
+                  lot={{ id: 'all', nom: 'Analyser l’ensemble du dossier (tous les lots)' }}
+                  selected={selectedIds.has('all')}
+                  onSelect={() => toggleLot('all')}
+                  cout={illimite ? undefined : libelleUnites(lots.length)}
+                  pieces={documents}
+                />
+              </ListeLots>
             </SectionEtape>
           </>
         ) : enDetection ? (
-          <div role="status" aria-label="Synorix repère les lots du dossier" className="grid gap-3.5 md:grid-cols-2">
-            {[0, 1, 2, 3].map((i) => <Squelette key={i} className="h-28 rounded-carte" />)}
-          </div>
+          <SqueletteListe phrase="Synorix repère les lots du dossier et compte les pièces de chacun." />
         ) : (
           <Carte>
             <p className="text-base font-semibold text-fg">Ce dossier n’a pas de lots</p>
@@ -625,7 +644,7 @@ export default function StepLotSelection({ project }: Props) {
           </Carte>
         )}
 
-        {!sansDepot && !chargementEchoue && (showAddForm ? (
+        {peutLire && (showAddForm ? (
           <AddLotForm onAdd={handleAddLot} onCancel={() => setShowAddForm(false)} />
         ) : (
           <div>

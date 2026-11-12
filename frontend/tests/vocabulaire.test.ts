@@ -154,7 +154,8 @@ test('S4 : les étapes s\'appellent Dépôt du dossier, Lots, Décider, Pièces,
 
 test('S4 : « Retour » à la place d\'« Annuler » quand le bouton ne défait rien (dépôt du dossier)', () => {
   const textes = textesAffiches('src/routes/project/StepUpload.tsx').map((t) => t.texte.trim())
-  assert.ok(textes.includes('Retour'))
+  // FIN-B1 : à la première étape, « Retour » ne menait nulle part (jury, tour 1) : le bouton est parti, « Annuler » ne revient pas
+  assert.ok(!textes.includes('Retour'))
   assert.ok(!textes.includes('Annuler'))
 })
 

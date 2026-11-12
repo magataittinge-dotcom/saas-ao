@@ -3,7 +3,7 @@ import { Sigle } from '@/components/common/Sigle'
 import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CloudUpload, Trash2 } from 'lucide-react'
+import { CircleHelp, Pencil, Plus, Trash2 } from 'lucide-react'
 import { api } from '@/services/api'
 import { messageErreur } from '@/lib/erreurs'
 import { uploadService } from '@/services/upload'
@@ -13,10 +13,10 @@ import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { libelleType, optionsType, valeurListe } from '@/lib/typesPieces'
 import { tailleFichier, progressionEnvoi } from '@/lib/tailleFichier'
 import { cn } from '@/lib/utils'
-import BarreEtape, { ActionsBarre, BilanBarre, BoutonSecondaire, BoutonSuite } from '@/components/project/BarreEtape'
+import BarreEtape, { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
 import VaultSavePrompt, { type VaultSuggestion } from '@/components/vault/VaultSavePrompt'
 import { takePendingUpload } from '@/lib/pendingUpload'
-import { GabaritEtape, BandeResume, SectionEtape, ActionsBarreTel } from '@/components/etape'
+import { GabaritEtape, SectionEtape, ActionsBarreTel } from '@/components/etape'
 import { Bouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
 import { DialogueConfirmation } from '@/components/ui/dialogue'
@@ -24,9 +24,10 @@ import { EtatErreur, EtatRequete, EtatVide } from '@/components/ui/etats'
 import { ListeDeroulante } from '@/components/ui/liste-deroulante'
 import { MenuElement, MenuPoints } from '@/components/ui/menu'
 import { Message } from '@/components/ui/message'
-import { Squelette } from '@/components/ui/squelette'
 import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
-import { cartesDepot, ETATS_LECTURE_SERVEUR } from '@/lib/depotDossier'
+import { estAClasser, faitsDepot, ETATS_LECTURE_SERVEUR } from '@/lib/depotDossier'
+import { ZoneDepot, SUITE_DEPOT } from '@/components/depot/ZoneDepot'
+import { SqueletteListe } from '@/components/project/SqueletteListe'
 import CarteLotUnique from '@/components/depot/CarteLotUnique'
 import EntreeFichier from '@/components/depot/EntreeFichier'
 import EcransLecture from '@/components/project/EcransLecture'
@@ -39,7 +40,9 @@ const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'extracting_text', label: 'Indexation des documents', estimated_s: 60 },
 ]
 
-const FORMATS_ACCEPTES = 'PDF, Word, Excel, OpenDocument ou ZIP, jusqu’à 2 Go'
+const FORMATS_ACCEPTES = 'PDF, Word, Excel, OpenDocument ou ZIP, jusqu’à 2 Go par fichier'
+/** Au téléphone, la liste s'ouvre sur ses premières lignes (93 fichiers faisaient 8 000 px) ; « Afficher tout » la déplie. */
+const LIGNES_TEL = 8
 const TOUS = 'tous'
 // L'ordre des groupes de la liste : les pièces du contrat d'abord, puis les plans et les annexes, « Autre » en dernier.
 const ORDRE_TYPES = optionsType('autre').map((o) => o.value)
@@ -76,6 +79,10 @@ export default function StepUpload({ project }: Props) {
   const [suppression, setSuppression] = useState(false)
   const [erreurSuppression, setErreurSuppression] = useState<string | null>(null)
   const [filtreType, setFiltreType] = useState(TOUS)
+  // Le type d'une pièce reconnue se lit en texte ; la liste déroulante ne s'ouvre qu'à la demande (une ligne à la fois).
+  const [typeEnEdition, setTypeEnEdition] = useState<string | null>(null)
+  const auTelephone = useMemo(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches === true, [])
+  const [toutAfficher, setToutAfficher] = useState(!auTelephone)
   const [largeFileNotice, setLargeFileNotice] = useState<{ message: string; tone: 'cyan' | 'orange' } | null>(null)
   const [nextError, setNextError] = useState<string | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -306,7 +313,7 @@ export default function StepUpload({ project }: Props) {
   // récupéré une seule fois au montage et uploadé automatiquement.
   useEffect(() => {
     const pending = takePendingUpload()
-    if (pending) onDrop([pending])
+    if (pending.length > 0) onDrop(pending)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -345,7 +352,6 @@ export default function StepUpload({ project }: Props) {
   }
 
   const hasDocuments = documents.length > 0
-  const totalBytes = documents.reduce((s, d) => s + (d.file_size || 0), 0)
   const anyUploading = Object.values(uploading).some(Boolean)
   const isProcessing = phase !== 'idle' || lectureServeur
   const enLecture = phase === 'uploading' || phase === 'processing' || phase === 'done' || lectureServeur
@@ -384,7 +390,8 @@ export default function StepUpload({ project }: Props) {
 
   // ── La liste des pièces : groupée par type (les pièces du contrat d'abord), filtrable, par pages de 50 ──
   const lignes = useMemo(() => {
-    const rang = (d: ProjectDocument) => { const i = ORDRE_TYPES.indexOf(valeurListe(d.type)); return i === -1 ? ORDRE_TYPES.length : i }
+    // Les fichiers à classer d'abord : c'est le seul geste que l'écran demande (jury, tour 1 : ils étaient en page 2).
+    const rang = (d: ProjectDocument) => { if (estAClasser(d)) return -1; const i = ORDRE_TYPES.indexOf(valeurListe(d.type)); return i === -1 ? ORDRE_TYPES.length : i }
     return [...documents]
       .filter((d) => filtreType === TOUS || valeurListe(d.type) === filtreType)
       .sort((a, b) => rang(a) - rang(b) || a.file_name.localeCompare(b.file_name, 'fr', { numeric: true }))
@@ -402,28 +409,30 @@ export default function StepUpload({ project }: Props) {
     { cle: 'nom', titre: 'Fichier', rendu: (doc) => <span className="block min-w-0 break-words font-medium">{doc.file_name}</span> },
     {
       cle: 'type', titre: 'Reconnu comme', tel: true, classe: 'md:w-72',
-      rendu: (doc) => (
+      // Une pièce reconnue : son type en texte. Une pièce à classer (ou celle dont on change le type) : la liste déroulante.
+      rendu: (doc) => (estAClasser(doc) || typeEnEdition === doc.id ? (
         <ListeDeroulante
           libelle={`Type de ${doc.file_name}`}
           valeur={valeurListe(doc.type)}
-          onChange={(v) => { void updateDocType(doc.id, v as ProjectDocumentType) }}
+          onChange={(v) => { setTypeEnEdition(null); void updateDocType(doc.id, v as ProjectDocumentType) }}
           options={optionsType(doc.type).map(({ value, label: l }) => ({ valeur: value, libelle: l }))}
         />
-      ),
+      ) : <span className="text-fg-2">{libelleType(valeurListe(doc.type))}</span>),
     },
     { cle: 'taille', titre: 'Taille', nombre: true, tel: true, classe: 'md:w-28', rendu: (doc) => tailleFichier(doc.file_size) },
     {
       cle: 'menu', titre: '', classe: 'md:w-16 max-md:!block max-md:absolute max-md:right-2 max-md:top-1',
       rendu: (doc) => (
         <MenuPoints libelle={`Autres actions pour ${doc.file_name}`}>
+          {!estAClasser(doc) && <MenuElement onSelect={() => setTypeEnEdition(doc.id)}><Pencil aria-hidden size={16} strokeWidth={1.5} />Changer le type</MenuElement>}
           <MenuElement danger onSelect={() => setASupprimer({ doc })}><Trash2 aria-hidden size={16} strokeWidth={1.5} />Supprimer du dossier</MenuElement>
         </MenuPoints>
       ),
     },
   ]
+  const nbAClasser = documents.filter(estAClasser).length
+  const lignesVisibles = toutAfficher ? lignes : lignes.slice(0, LIGNES_TEL)
 
-  // Sans réponse du serveur, on ne sait pas s'il n'y a rien : ni « Aucun fichier », ni invitation à déposer.
-  const chargementEchoue = requeteDocuments.isError && requeteDocuments.data === undefined
   const suiteBloquee =!hasDocuments || anyUploading || isProcessing || isNavigating
   // A7 — un seul lot : l'action de l'écran est « Analyser le dossier » (en-tête à l'ordinateur, barre du bas au téléphone).
   const actionLecture = (
@@ -460,36 +469,30 @@ export default function StepUpload({ project }: Props) {
 
       <GabaritEtape
         titre="Dépôt du dossier"
-        utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que Synorix analyse."
+        utilite="Le dossier reçu de l’acheteur, tel que vous l’avez téléchargé : Synorix y reconnaît chaque pièce et chaque lot."
         actionPrincipale={!hasDocuments ? undefined : lotUnique ? actionLecture : (
           <BoutonSuite etape="Lots" onClick={handleNext} disabled={suiteBloquee} />
         )}
         message={erreurAffichee && <Message ton="erreur" titre="L’analyse n’a pas démarré">{erreurAffichee}</Message>}
-        resume={hasDocuments ? <BandeResume cartes={cartesDepot(documents, project, lotUnique)} libelle="Le dossier déposé" /> : undefined}
-        barre={
+        // La barre du bas ne porte que l'action de l'étape, au téléphone ; sans dossier, le geste est dans la zone de dépôt.
+        barre={!hasDocuments ? undefined : (
           <BarreEtape>
-            <BilanBarre
-              bureau={chargementEchoue ? null : hasDocuments
-                ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
-                : 'Déposez le dossier pour continuer.'}
-              tel={chargementEchoue ? null : hasDocuments ? `${documents.length} fichier${documents.length > 1 ? 's' : ''}` : 'Aucun fichier'}
-            />
+            <BilanBarre bureau={null} tel={`${documents.length} fichier${documents.length > 1 ? 's' : ''}`} />
             <ActionsBarre>
-              <BoutonSecondaire libelle="Retour" onClick={() => navigate(-1)} />
               <ActionsBarreTel>
                 {lotUnique ? actionLecture : <BoutonSuite etape="Lots" onClick={handleNext} disabled={suiteBloquee} />}
               </ActionsBarreTel>
             </ActionsBarre>
           </BarreEtape>
-        }
+        )}
       >
         <EtatRequete
           requete={requeteDocuments}
-          squelette={<Squelette className="h-80 w-full rounded-carte" />}
+          squelette={<SqueletteListe phrase="Synorix ouvre le dossier déposé." />}
           erreur={(
             <EtatErreur
               titre="Le dossier n’a pas pu se charger"
-              detail="La liste des fichiers déposés n’a pas pu être lue. Vos fichiers ne sont pas touchés."
+              detail="La liste des fichiers déposés n’a pas pu être lue. Vos fichiers restent en place."
               onReessayer={() => { void requeteDocuments.refetch() }}
               enCours={requeteDocuments.isFetching}
             />
@@ -499,40 +502,22 @@ export default function StepUpload({ project }: Props) {
         >
           {() => (
             <div className="space-y-8">
-              <SectionEtape titre="Le dossier de l’acheteur">
-                <div
-                  {...getRootProps()}
-                  data-zone-depot={hasDocuments ? 'compacte' : 'grande'}
-                  className={cn(
-                    'rounded-carte border border-dashed transition-colors duration-survol ease-survol',
-                    isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-bord-champ bg-surface-1',
-                    hasDocuments ? 'flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4' : 'grid min-h-80 place-items-center px-6 py-12 text-center',
-                  )}
-                >
-                  <EntreeFichier {...getInputProps()} />
-                  {hasDocuments ? (
-                    <>
-                      <CloudUpload aria-hidden size={20} strokeWidth={1.5} className="shrink-0 text-fg-3" />
-                      <div className="min-w-0 flex-1 basis-56">
-                        <p className="text-sm font-semibold text-fg">{isDragActive ? 'Lâchez les fichiers ici' : 'Une pièce de plus, un additif de l’acheteur ?'}</p>
-                        <p className="mt-0.5 text-xs text-fg-3">{FORMATS_ACCEPTES}</p>
-                      </div>
-                      <Bouton variante="secondaire" onClick={open}>Ajouter des fichiers</Bouton>
-                    </>
-                  ) : (
-                    <div className="grid justify-items-center">
-                      <CloudUpload aria-hidden size={28} strokeWidth={1.5} className="text-fg-3" />
-                      <p className="mt-4 text-lg font-semibold text-fg">
-                        {isDragActive ? 'Lâchez les fichiers ici' : <>Déposez le <Sigle code="DCE" /> complet</>}
-                      </p>
-                      <p className="mt-1.5 max-w-md text-sm text-fg-2">
-                        Le ZIP entier suffit : Synorix reconnaît chaque pièce et chaque lot.
-                      </p>
-                      <Bouton variante={enLecture ? 'secondaire' : 'principal'} className="mt-6" onClick={open} disabled={anyUploading}>Choisir des fichiers</Bouton>
-                      <p className="mt-4 text-xs text-fg-3">{FORMATS_ACCEPTES}</p>
-                    </div>
-                  )}
-                </div>
+              <div className="space-y-3">
+                {/* Rien de déposé : LA zone de dépôt, seule (ni titre de section au-dessus, ni phrase redite). Un dossier est là :
+                    la zone se réduit au bouton « Ajouter des fichiers » de la liste, et toute la liste reçoit un glisser. */}
+                {!hasDocuments && (
+                  <ZoneDepot
+                    racine={getRootProps()}
+                    entree={<EntreeFichier {...getInputProps()} />}
+                    survol={isDragActive}
+                    titre={isDragActive ? 'Lâchez les fichiers ici' : 'Glissez ici le dossier de l’acheteur'}
+                    phrase={<>Le <Sigle code="DCE" /> entier en ZIP, tel que vous l’avez téléchargé, ou plusieurs fichiers à la fois.</>}
+                    className="md:min-h-72"
+                    bouton={<Bouton variante={enLecture ? 'secondaire' : 'principal'} onClick={open} disabled={anyUploading}>Choisir des fichiers</Bouton>}
+                    formats={FORMATS_ACCEPTES}
+                    suite={SUITE_DEPOT}
+                  />
+                )}
 
                 {largeFileNotice && phase === 'uploading' && <Message ton="info">{largeFileNotice.message}</Message>}
                 {erreursEnvoi}
@@ -550,7 +535,7 @@ export default function StepUpload({ project }: Props) {
                     onDone={(docId) => setVaultPrompts((prev) => prev.filter(p => p.docId !== docId))}
                   />
                 ))}
-              </SectionEtape>
+              </div>
 
               {lotUnique && (
                 <CarteLotUnique lot={lotUnique} ecartes={ecartes} onOuvrirLots={() => navigate(`/projects/${project.id}/lots`)} />
@@ -576,10 +561,14 @@ export default function StepUpload({ project }: Props) {
 
               {hasDocuments && (
                 <SectionEtape
-                  titre="Pièces reconnues"
-                  description={`${documents.length} fichier${documents.length > 1 ? 's' : ''}, ${tailleFichier(totalBytes)}. Les pièces du contrat d’abord, puis les plans et le reste.`}
+                  titre="Le dossier de l’acheteur"
+                  description={faitsDepot(documents, project, lotUnique)}
                   action={(
                     <div className="flex flex-wrap items-center gap-2">
+                      <Bouton variante="secondaire" onClick={open} disabled={anyUploading}>
+                        <Plus aria-hidden size={16} strokeWidth={1.5} />
+                        Ajouter des fichiers
+                      </Bouton>
                       <ListeDeroulante libelle="Montrer un type de pièce" className="w-64 max-w-full" valeur={filtreType} onChange={setFiltreType} options={optionsFiltre} />
                       {documents.length > 1 && (
                         <MenuPoints libelle="Autres actions pour le dossier">
@@ -589,14 +578,33 @@ export default function StepUpload({ project }: Props) {
                     </div>
                   )}
                 >
-                  <Tableau
-                    libelle="Pièces du dossier"
-                    className="[&_tr]:relative max-md:[&_td:first-child]:pr-12"
-                    colonnes={colonnes}
-                    lignes={lignes}
-                    cle={(doc) => doc.id}
-                    vide={<EtatVide titre="Aucune pièce de ce type" phrase="Aucun fichier du dossier n’est rangé sous ce type." parFiltre={() => setFiltreType(TOUS)} />}
-                  />
+                  {/* La seule marque d'état de l'écran : ce qui reste à classer, en tête de liste. */}
+                  {nbAClasser > 0 && (
+                    <p data-a-classer="" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-2">
+                      <span className="inline-flex items-center gap-1.5 font-medium text-ambre-ink">
+                        <CircleHelp aria-hidden size={14} />
+                        {nbAClasser > 1 ? `${nbAClasser} fichiers à classer` : '1 fichier à classer'}
+                      </span>
+                      <span>{nbAClasser > 1 ? 'Ils sont en tête de liste : indiquez ce qu’ils sont.' : 'Il est en tête de liste : indiquez ce qu’il est.'}</span>
+                    </p>
+                  )}
+                  <div {...getRootProps()} data-zone-depot="liste" className={cn('rounded-carte transition-shadow duration-survol ease-survol', isDragActive && 'ring-2 ring-accent-ring')}>
+                    <EntreeFichier {...getInputProps()} />
+                    <Tableau
+                      libelle="Pièces du dossier"
+                      className="[&_tr]:relative max-md:[&_td:first-child]:pr-12"
+                      colonnes={colonnes}
+                      lignes={lignesVisibles}
+                      cle={(doc) => doc.id}
+                      vide={<EtatVide titre="Aucune pièce de ce type" phrase="Aucun fichier du dossier n’est rangé sous ce type." parFiltre={() => setFiltreType(TOUS)} />}
+                    />
+                  </div>
+                  {!toutAfficher && lignes.length > LIGNES_TEL && (
+                    <div>
+                      <Bouton variante="secondaire" onClick={() => setToutAfficher(true)}>Afficher les {lignes.length} fichiers</Bouton>
+                    </div>
+                  )}
+                  <p className="text-xs text-fg-3 max-md:hidden">Pour ajouter une pièce ou un additif de l’acheteur, glissez-le sur la liste. {FORMATS_ACCEPTES}.</p>
                 </SectionEtape>
               )}
             </div>
