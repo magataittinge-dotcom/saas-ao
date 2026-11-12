@@ -49,3 +49,19 @@ export function allerChezStripe(adresse: unknown): void {
   if (typeof adresse !== 'string' || !adresseStripe(adresse)) throw new Error('Adresse de paiement refusée')
   window.location.href = adresse
 }
+
+/**
+ * P2-4 : une pièce dont le serveur rend une adresse http(s) complète s'ouvre dans un onglet sans lien vers Synorix
+ * (`noopener` : pas de window.opener ; `noreferrer` : pas d'adresse d'origine). Toute autre adresse est refusée.
+ */
+export function ouvrirOngletExterne(adresse: string): boolean {
+  let u: URL
+  try {
+    u = new URL(adresse)
+  } catch {
+    return false
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return false
+  window.open(u.href, '_blank', 'noopener,noreferrer')
+  return true
+}
