@@ -75,7 +75,7 @@ Priorité absolue : Adil doit être **« bluffé »**. L'expérience prime sur l
 
 ## 💶 P1-BUSINESS — Commercialisation (quotas, pricing, onboarding)
 
-- [ ] **BUS-1. Quotas + enforcement `[C1]`** — Deux compteurs mensuels (40 analyses + 40 mémoires Pro ; fair-use Business), unité 1 lot = 1 mémoire ; middleware avant analyse/mémoire ; blocage doux + nudge upgrade (pas d'overage). Fini = la 41ᵉ mémoire du mois sur Pro est bloquée avec message d'upgrade (test) ; Business non bloqué.
+- [ ] **BUS-1. Quotas + enforcement `[C1]`** — Deux compteurs mensuels (grille du 2026-11-11 : Essentiel 5 + 5, Pro 30 + 30, Business 70 + 70), unité 1 lot = 1 mémoire ; middleware avant analyse/mémoire ; blocage doux + nudge upgrade (pas d'overage). Fini = la 31ᵉ mémoire du mois sur Pro est bloquée avec message d'upgrade (test) ; Business bloqué à la 71ᵉ (remise à zéro + relevé sur demande).
 - [ ] **BUS-2. Pricing 349/599 `[B1]`** — Tarifs Stripe + UI abonnement. Fini = checkout Stripe aux nouveaux prix ; page abonnement affiche 349/599.
 - [ ] **BUS-3. SIRET / Sirene INSEE `[C2]`** — `services/insee_service.py` (verify + fetch), appelé au sign-up ; pré-remplit raison sociale/adresse/NAF ; NAF 41/42/43. Fini = un SIRET BTP valide pré-remplit le profil ; un SIRET non-BTP est refusé poliment ; outage INSEE ne bloque pas le sign-up.
 - [ ] **BUS-4. Onboarding wow < 5 min + coffre progressif `[C15][C16]`** — Inscription → SIRET → écran unique « 1er DCE offert » ; bandeau discret « enregistrer ce doc au coffre ? » sur upload perso. Fini = parcours inscription→premier upload < 5 min sans formulaire long ; bandeau coffre apparaît, jamais de relance si refus.

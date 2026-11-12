@@ -42,10 +42,10 @@ export function ResumeMesAOCartes({ comptes, resume, quota }: {
       {/* les unités : la case n'apparaît qu'une fois le quota lu (jamais « Aucune » pendant la lecture) */}
       {unites && (
         <CaseResume etiquette="Unités du mois"
-          valeur={unites.illimite ? 'Illimité' : unites.utilisees}
-          unite={unites.illimite ? undefined : `sur ${unites.total}`}
+          valeur={unites.utilisees}
+          unite={`sur ${unites.total}`}
           rien="Aucune"
-          precision={unites.illimite ? 'En usage raisonnable' : unites.utilisees === 0 ? `${unites.total} disponibles ce mois-ci` : `${unites.restantes} restantes`}
+          precision={unites.utilisees === 0 ? `${unites.total} disponibles ce mois-ci` : `${unites.restantes} restantes`}
           action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir l’abonnement</Link>} />
       )}
     </BandeCases>

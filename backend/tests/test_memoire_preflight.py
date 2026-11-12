@@ -110,9 +110,9 @@ def test_preflight_returns_profile_references_quota(client, db_session, test_org
     # Classement : la première référence listée est une façade
     assert "avalement" in refs[0]["intitule"] or "façade" in refs[0]["intitule"]
 
-    # Rappel quota : consommera 1 mémoire — X/40 ce mois
+    # Rappel quota : consommera 1 mémoire — X/30 ce mois
     assert body["quota"]["used"] == 12
-    assert body["quota"]["limit"] == 40
+    assert body["quota"]["limit"] == 30
 
 
 def test_preflight_cross_org_404(client, db_session, test_org):

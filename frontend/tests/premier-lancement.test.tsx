@@ -50,13 +50,23 @@ test('Paramètres : le rôle s\'affiche en français', () => {
   assert.ok(!/\{user\?\.role \?\? 'admin'\}/.test(src), 'plus d\'identifiant brut')
 })
 
-import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
+import FirstAOWelcome, { ERREUR_SIRET, siretValide } from '@/components/onboarding/FirstAOWelcome'
 import { QuotaRond } from '@/components/layout/QuotaGauge'
 
 test('premier écran : il dit à quoi sert Synorix avant de demander le SIRET', () => {
   const html = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FirstAOWelcome /></MemoryRouter></QueryClientProvider>)
-  assert.ok(/dossier de l’acheteur/.test(html) && /mémoire technique/.test(html), 'dit ce que fait Synorix')
-  assert.ok(html.indexOf('mémoire technique') < html.indexOf('Numéro SIRET'), 'avant le champ SIRET')
+  // jury, tour 1 : une seule phrase, celle du visage (le sous-titre disait la même chose 80 px plus haut)
+  assert.equal((html.match(/Synorix lit/g) ?? []).length, 1, 'ce que fait Synorix est dit une fois')
+  assert.ok(html.indexOf('Synorix lit et rédige') > 0 && html.indexOf('Synorix lit et rédige') < html.indexOf('Numéro SIRET'), 'avant le champ SIRET')
+  // « Valider » n'est plus un aplat éteint : il reste plein, et une saisie qui n'a pas 14 chiffres est dite sous le champ
+  assert.doesNotMatch(html.match(/<button[^>]*>Valider<\/button>/)?.[0] ?? " disabled=", / disabled=/)
+  assert.equal(siretValide('123 456 789 00012'), true)
+  assert.equal(siretValide('1234'), false)
+  assert.equal(siretValide(''), false)
+  assert.ok(/14 chiffres/.test(ERREUR_SIRET) && !/manquant|incomplet|absent|!/.test(ERREUR_SIRET))
+  // le fil des sept étapes est dessiné (un rond numéroté par étape), sous un titre qui dit ce qui vient ensuite
+  assert.equal((html.match(/rounded-pilule border border-bord-2 bg-surface-0/g) ?? []).length, 7)
+  assert.ok(html.includes('Ensuite, les sept étapes') && !html.includes('·</span>'))
   assert.ok(!html.includes('!'), 'sans point d\'exclamation')
 })
 

@@ -194,12 +194,14 @@ export default function Vault() {
           vide={(
             <>
               {/* A10 ; « avant la fin de leur validité » et non « avant qu'elles expirent » : le vocabulaire des pièces reste positif */}
+              {/* jury, tour 1 : la carte se borne à la largeur de lecture (plus trois lignes dans 1 200 px), et la précision
+                  des formats est dans la carte, sous le bouton qu'elle précise */}
               <EtatVide
+                className="page-etroite"
                 titre="Vos attestations (URSSAF, assurance, Kbis) vivent ici."
                 phrase="Synorix les joint à chaque dossier et vous prévient avant la fin de leur validité."
-                action={boutonDeposer}
+                action={<>{boutonDeposer}<p className="basis-full text-xs text-fg-3">{PRECISION_COFFRE}. Vous pouvez aussi glisser vos fichiers sur cette page.</p></>}
               />
-              {precision}
             </>
           )}
         >

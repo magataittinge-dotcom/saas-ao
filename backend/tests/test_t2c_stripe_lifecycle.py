@@ -2,7 +2,7 @@
 
 - checkout refuse une org DÉJÀ abonnée (sinon double souscription Stripe).
 - un changement de plan (ex. downgrade business→pro) RÉ-ANCRE la fenêtre
-  quota : les consommations illimitées de la période business ne bloquent
+  quota : les consommations de la période business (70 par mois) ne bloquent
   pas immédiatement le nouveau plan Pro (402 au premier lot).
 """
 import json

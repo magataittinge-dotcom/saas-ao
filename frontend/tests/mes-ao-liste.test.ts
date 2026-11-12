@@ -97,10 +97,14 @@ test('unités : « 1 analyse · 0 mémoire » ; rien quand le serveur n’a pas 
   assert.equal(texteUnites(undefined), null)
 })
 
-test('l’unité du mois : le cumul des deux compteurs de l’offre, ou « illimité » sans plafond', () => {
-  assert.deepEqual(uniteMois({ plan: 'pro', analyses: { used: 9, limit: 40 }, memoires: { used: 5, limit: 40 } }),
-    { utilisees: 14, total: 80, restantes: 66, part: 14 / 80, illimite: false })
-  assert.equal(uniteMois({ plan: 'business', analyses: { used: 9, limit: null }, memoires: { used: 5, limit: null } })?.illimite, true)
+test('l’unité du mois : le cumul des deux compteurs de l’offre, Business compris (aucune offre illimitée)', () => {
+  assert.deepEqual(uniteMois({ plan: 'pro', analyses: { used: 9, limit: 30 }, memoires: { used: 5, limit: 30 } }),
+    { utilisees: 14, total: 60, restantes: 46, part: 14 / 60 })
+  assert.deepEqual(uniteMois({ plan: 'business', analyses: { used: 9, limit: 70 }, memoires: { used: 5, limit: 70 } }),
+    { utilisees: 14, total: 140, restantes: 126, part: 14 / 140 })
+  // au-delà du nouveau quota (Pro 40 → 30) : jamais de reste négatif, jamais plus de 100 %
+  assert.deepEqual(uniteMois({ plan: 'pro', analyses: { used: 35, limit: 30 }, memoires: { used: 30, limit: 30 } }),
+    { utilisees: 60, total: 60, restantes: 0, part: 1 })
   assert.equal(uniteMois(undefined), null)
 })
 

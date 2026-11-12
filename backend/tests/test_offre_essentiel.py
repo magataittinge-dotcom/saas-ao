@@ -55,8 +55,8 @@ def test_essentiel_sixth_analysis_is_refused_with_pro_invitation(db_session, tes
     assert exc.value.status_code == 402
     detail = exc.value.detail
     assert "5/5 analyses" in detail
-    assert "Pro (40 analyses + 40 mémoires/mois)" in detail
-    assert "Business (illimité)" in detail
+    assert "Pro (30 analyses + 30 mémoires/mois)" in detail
+    assert "Business (70 analyses + 70 mémoires/mois)" in detail
 
 
 def test_essentiel_quota_is_monthly(db_session, test_org):
@@ -78,8 +78,8 @@ def test_free_402_lists_the_three_offers(db_session, test_org):
     detail = exc.value.detail
     assert "essai" in detail
     for attendu in ("Essentiel (5 analyses + 5 mémoires/mois)",
-                    "Pro (40 analyses + 40 mémoires/mois)",
-                    "Business (illimité)"):
+                    "Pro (30 analyses + 30 mémoires/mois)",
+                    "Business (70 analyses + 70 mémoires/mois)"):
         assert attendu in detail
 
 

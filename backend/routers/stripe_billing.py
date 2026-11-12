@@ -310,7 +310,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             break
                 org.stripe_subscription_id = data_object.get("id")
                 # Changement de plan → nouvelle ancre de quotas : les
-                # consommations de la période précédente (illimité business)
+                # consommations de la période précédente (Business 70/mois)
                 # ne bloquent pas le nouveau plan (downgrade business→pro
                 # sinon = 402 immédiat). Même plan → ancre inchangée (pas de
                 # fenêtre offerte à chaque événement Stripe).

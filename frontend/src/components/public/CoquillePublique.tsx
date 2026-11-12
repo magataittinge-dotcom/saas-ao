@@ -13,17 +13,18 @@ export const LIENS_JURIDIQUES = [
   { vers: '/legal/cookies', libelle: 'Cookies' },
 ] as const
 
-/** Le pied des pages publiques : l'année, les cinq documents juridiques. Rien d'autre. */
+const LIEN_PIED = 'inline-flex items-center rounded text-xs text-fg-2 underline-offset-4 transition-colors duration-fast ease-survol hover:text-fg hover:underline max-md:px-2.5 [@media(pointer:coarse)]:min-h-11 max-md:min-h-11'
+
+/** Le pied des pages publiques : l'année, les cinq documents juridiques. Rien d'autre. Au téléphone : deux rangées de trois
+ *  (le copyright est la sixième case), comme le pied de l'appli : jamais « Cookies » seul sur sa ligne. */
 export function PiedPublic() {
   return (
     <footer className="relative border-t border-bord">
-      <div className="conteneur flex flex-col items-start justify-between gap-x-6 gap-y-2 py-5 sm:flex-row sm:items-center">
-        <p className="chiffres text-xs text-fg-2">© {new Date().getFullYear()} Synorix</p>
-        <nav aria-label="Informations légales" className="flex flex-wrap items-center gap-x-5 gap-y-1 max-md:-ml-2.5 max-md:gap-x-0 max-md:gap-y-0">
-          {LIENS_JURIDIQUES.map((l) => (
-            <Link key={l.vers} to={l.vers} className="inline-flex items-center rounded text-xs text-fg-2 underline-offset-4 transition-colors duration-fast ease-survol hover:text-fg hover:underline max-md:px-2.5 [@media(pointer:coarse)]:min-h-11">
-              {l.libelle}
-            </Link>
+      <div className="conteneur flex items-center justify-between gap-x-6 py-5 max-md:grid max-md:grid-cols-[auto_auto_auto] max-md:justify-start max-md:gap-x-1 max-md:py-2">
+        <p className="text-xs text-fg-2 max-md:order-last max-md:inline-flex max-md:min-h-11 max-md:items-center max-md:px-2.5">© {new Date().getFullYear()} Synorix</p>
+        <nav aria-label="Informations légales" className="flex flex-wrap items-center gap-x-5 gap-y-1 max-md:contents">
+          {LIENS_JURIDIQUES.map((l, i) => (
+            <Link key={l.vers} to={l.vers} className={i % 3 === 0 ? `${LIEN_PIED} max-md:-ml-2.5` : LIEN_PIED}>{l.libelle}</Link>
           ))}
         </nav>
       </div>
@@ -54,11 +55,12 @@ export default function CoquillePublique({ children, nav, className }: { childre
   )
 }
 
-/** Les liens de droite du site : Tarifs, Se connecter. Le geste principal (« Créer mon compte ») est dans la page. */
-export function NavSite({ tarifs = true }: { tarifs?: boolean }) {
+/** Les liens de droite du site : Tarifs, Se connecter. Le geste principal (« Créer mon compte ») est dans la page.
+ *  `tarifs="courant"` : sur la page Tarifs, le lien reste et dit qu'on y est (surface neutre, `aria-current`). */
+export function NavSite({ tarifs = true }: { tarifs?: boolean | 'courant' }) {
   return (
     <>
-      {tarifs && <Link to="/pricing" className={classesBouton('discret')}>Tarifs</Link>}
+      {tarifs && <Link to="/pricing" aria-current={tarifs === 'courant' ? 'page' : undefined} className={classesBouton('discret', tarifs === 'courant' ? 'bg-surface-1 text-fg' : undefined)}>Tarifs</Link>}
       <Link to="/login" className={classesBouton('secondaire')}>Se connecter</Link>
     </>
   )

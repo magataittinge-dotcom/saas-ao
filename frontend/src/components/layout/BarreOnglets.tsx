@@ -100,7 +100,7 @@ export function CompteTel({ className }: { className?: string }) {
                   <e.icon size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
                   {e.label}
                 </Link>
-                {e.to === '/settings/billing' && <QuotaRond masquerIllimite />}
+                {e.to === '/settings/billing' && <QuotaRond />}
               </li>
             ))}
           </ul>

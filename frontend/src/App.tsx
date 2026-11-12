@@ -28,6 +28,7 @@ const Billing = lazy(() => import('@/routes/Billing'))
 const Tools = lazy(() => import('@/routes/Tools'))
 const Design = lazy(() => import('@/routes/Design'))
 const CoquillePublique = lazy(() => import('@/components/public/CoquillePublique'))
+const NavSite = lazy(() => import('@/components/public/CoquillePublique').then((m) => ({ default: m.NavSite })))
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
@@ -57,7 +58,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function CoquilleSelonSession() {
   const { isSignedIn, isLoaded } = useAuth()
   if (!isLoaded) return null
-  return isSignedIn ? <Layout /> : <CoquillePublique><AdresseInconnue connecte={false} /></CoquillePublique>
+  return isSignedIn ? <Layout /> : <CoquillePublique nav={<NavSite />}><AdresseInconnue connecte={false} /></CoquillePublique>
 }
 
 /**

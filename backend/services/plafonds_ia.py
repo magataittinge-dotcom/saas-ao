@@ -24,8 +24,8 @@ MSG_PLAFOND_ACTION = "Plafond du jour atteint pour cette action. Il se remet à 
 
 ACTION_IMPORT = "memoire_config.import"
 ACTION_REFORMULER = "memoire_config.reformuler"
-# S-04 — lancements d'analyse et de mémoire par organisation et par jour, TOUTES offres (Business compris : usage
-# raisonnable). Comptés au lancement, refusés et remboursés compris ; l'unité du mois, elle, reste rendue en cas d'échec.
+# S-04 — lancements d'analyse et de mémoire par organisation et par jour, TOUTES offres (Business compris : plafond
+# technique de protection, en plus du quota du mois). Comptés au lancement, refusés et remboursés compris ; l'unité du mois, elle, reste rendue en cas d'échec.
 ACTION_LANCER_ANALYSE = "jour.analyse"
 ACTION_LANCER_MEMOIRE = "jour.memoire"
 MSG_PLAFOND_JOUR = "Plafond du jour atteint, il se remet à zéro demain."
