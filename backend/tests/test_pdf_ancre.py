@@ -227,3 +227,19 @@ def test_calculer_ancres_depuis_un_chemin(tmp_path):
     chemin.write_bytes(_pages(PASSAGE))
     res = anc.calculer_ancres(str(chemin), "d", [{"id": "x", "page": 1, "extrait": PASSAGE}])
     assert res["x"]["niveau"] == "passage"
+
+
+def test_extrait_pris_dans_le_sommaire_surligne_le_titre_dans_le_corps():
+    """Recette finale, point 2 : un ancien extrait n'était qu'une ligne de sommaire (« TITRE ..... 19 ») ;
+    l'écran surlignait le sommaire. Le titre est cherché dans le corps du texte, hors des lignes à
+    points de conduite (texte inventé)."""
+    sommaire = ("SOMMAIRE\n4\nARTICLE 3\nPOSE DES CLOISONS INVENTEES DU BATIMENT ........................ 2\n"
+                "ARTICLE 4\nREPLIS DE CHANTIER IMAGINAIRES ................................ 2")
+    corps = ("ARTICLE 3\nPOSE DES CLOISONS INVENTEES DU BATIMENT\n"
+             "Les cloisons sont posees sur une lisse basse fixee au sol.")
+    octets = _pages(sommaire, corps)
+    extrait = "4\nARTICLE 3\nPOSE DES CLOISONS INVENTEES DU BATIMENT ........................ 2\nARTICLE 4"
+    ancre = _ancre(octets, 1, extrait)
+    assert ancre["niveau"] == "passage" and ancre["page"] == 2
+    assert ancre["citation"]["passage"] == "POSE DES CLOISONS INVENTEES DU BATIMENT"
+    assert "...." not in ancre["citation"]["passage"]

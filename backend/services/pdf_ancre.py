@@ -231,11 +231,59 @@ def _ancre_page(doc_id: str, numero: int, rotation: int) -> dict:
             "rects": [], "niveau": "page", "citation": None}
 
 
+# Fin d'une ligne de sommaire : points ou soulignés de conduite, puis le numéro de page.
+_FIN_SOMMAIRE = re.compile(r"(?:\.{4,}|_{4,}|…{2,}|(?:\.\s){3,}\.?)\s*\d{0,4}\s*$")
+
+
+def _intitule_de_sommaire(extrait: str) -> Optional[tuple[str, Optional[int]]]:
+    """Un extrait pris dans un sommaire (anciennes analyses, avant le rejet des lignes de
+    sommaire à l'ancrage) : son premier intitulé, sans points de conduite, et la page annoncée.
+    None si l'extrait n'a pas de ligne de sommaire assez longue pour être cherchée."""
+    for ligne in extrait.splitlines():
+        ligne = ligne.strip()
+        m = _FIN_SOMMAIRE.search(ligne)
+        if not m:
+            continue
+        titre = ligne[:m.start()].strip()
+        if len(pp.forme_flux(titre)[0]) >= MIN_FLUX_PASSAGE:
+            numero = re.search(r"(\d{1,4})\s*$", ligne)
+            return titre, int(numero.group(1)) if numero else None
+    return None
+
+
+def _titre_dans_le_corps(pdf: pp.LecturePdf, titre: str, page_annoncee: Optional[int]) -> Optional[Trouve]:
+    """Le titre hors des lignes de sommaire ; plusieurs endroits : le plus proche de la page annoncée."""
+    flux, _ = pp.forme_flux(titre)
+    trouves = []
+    for n in range(pdf.nombre_pages):
+        page = pdf.page(n)
+        k = page.flux.find(flux) if page is not None else -1
+        while k >= 0:
+            debut, fin = page.origine[k], page.origine[k + len(flux) - 1]
+            reste = page.texte[fin + 1:].split("\n", 1)[0]
+            if not _FIN_SOMMAIRE.search(reste.strip()):
+                trouves.append(Trouve(n, debut, fin))
+                break
+            k = page.flux.find(flux, k + 1)
+    if not trouves:
+        return None
+    cible = (page_annoncee - 1) if page_annoncee else 0
+    return min(trouves, key=lambda t: abs(t.page - cible))
+
+
 def construire_ancre(pdf: pp.LecturePdf, doc_id: str, page_ia: Optional[int],
                      extrait: Optional[str]) -> Optional[dict]:
     """L'ancre de l'extrait dans ce PDF, ou None (aucune page valable, aucun passage)."""
     page_valide = bool(page_ia) and 1 <= page_ia <= pdf.nombre_pages
-    trouve = chercher_passage(pdf, page_ia, extrait) if extrait and extrait.strip() else None
+    trouve = None
+    sommaire = _intitule_de_sommaire(extrait) if extrait and extrait.strip() else None
+    if sommaire:
+        # recette finale : un extrait de sommaire surlignait le sommaire ; on montre le titre dans le corps
+        trouve = _titre_dans_le_corps(pdf, *sommaire)
+        if trouve is not None:
+            extrait = sommaire[0]
+    if trouve is None:
+        trouve = chercher_passage(pdf, page_ia, extrait) if extrait and extrait.strip() else None
     if trouve is None:
         if not page_valide:
             return None
