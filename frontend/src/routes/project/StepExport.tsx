@@ -30,6 +30,7 @@ import { echeanceAO, etatEcheance, type EcheanceSource } from '@/lib/echeance'
 import { useMedia } from '@/hooks/useMedia'
 import { cn } from '@/lib/utils'
 import { dossierLu } from '@/lib/dossierLu'
+import { etatAO } from '@/lib/etatAO'
 import { lectureDetailExport, lectureScoreExport } from '@/lib/prechargementAO'
 
 const TITRE = 'Export du dossier'
@@ -477,7 +478,7 @@ export default function StepExport({ project }: Props) {
       Synorix rassemble vos pièces et met le mémoire en page. Comptez une vingtaine de secondes : le téléchargement démarre seul, vous pouvez rester sur cette page.
     </Message>
   ) : telecharge ? (
-    <SuiteDepot telecharge={telecharge} phrase={depot} avertissements={avertissementsZip ?? []} onDepose={() => setStatutOuvert(true)} />
+    <SuiteDepot telecharge={telecharge && etatAO(project) !== 'termine'} phrase={depot} avertissements={avertissementsZip ?? []} onDepose={() => setStatutOuvert(true)} />
   ) : aucunePieceJointe ? (
     <Message ton="attention">
       Aucune pièce n’est encore jointe : pour l’instant, le dossier ne contient que {detail.has_memoire ? 'le mémoire technique' : 'ce que vous y déposerez'}. {phrasePieces}

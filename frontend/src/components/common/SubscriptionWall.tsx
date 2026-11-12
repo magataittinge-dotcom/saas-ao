@@ -27,8 +27,8 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
   const [loading, setLoading] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   // Business, offre la plus haute (11/11/2026) : à son quota, rien à « passer » ; le refus du serveur dit la remise à zéro.
+  const business = useAuthStore((st) => st.organization?.plan) === 'business'
   const plan = useAuthStore((st) => st.organization?.plan)
-  const business = plan === 'business'
   const [portail, setPortail] = useState(false)
 
   const handleSubscribe = async (planId: string) => {
@@ -52,7 +52,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
       const { data } = await api.get('/stripe/portal')
       window.location.href = data.url
     } catch {
-      setErreur('Le portail de paiement n’a pas pu s’ouvrir. Votre abonnement n’est pas touché : réessayez dans un instant.')
+      setErreur('Le portail de paiement n’a pas pu s’ouvrir. Votre abonnement n’est pas touché : réessayez dans un instant.')
       setPortail(false)
     }
   }

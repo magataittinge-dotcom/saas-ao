@@ -50,7 +50,7 @@ test('l\'écran Lots confirme avant d\'appeler la lecture ; le bouton « Lire »
   assert.match(code, /\{peutLire && <ActionsBarreTel>\{actionLire\}<\/ActionsBarreTel>\}/)
   // l'erreur : une fois, dans le message de l'étape (sous l'en-tête), jamais dans la barre du bas
   assert.equal((code.match(/\{analysisError\}/g) ?? []).length, 1, 'affichée une fois')
-  assert.match(code, /message=\{analysisError && <Message ton="erreur"/)
+  assert.match(code, /: analysisError && <Message ton="erreur"/, 'après l’échec d’« Ouvrir ce lot » (E2E-2), sinon l’erreur de lecture')
   const barre = code.slice(code.indexOf('<BarreEtape>'), code.indexOf('</BarreEtape>'))
   assert.doesNotMatch(barre, /analysisError|Message/)
 })

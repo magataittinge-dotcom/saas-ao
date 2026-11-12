@@ -461,10 +461,26 @@ export default function StepLotSelection({ project }: Props) {
     setConfirmerLecture(false)
     void lecture.lancer(selectedLotIds, selectedName)
   }
-  const handleLaunch = () => {
-    if (!peutLancer(selectedIds)) return
+  // Un seul lot coché, déjà analysé : « Ouvrir ce lot » le rend lot en cours (POST lots/select), sans le relire ni décompter
+  // d'unité (rapport E2E-2 : l'Export d'un second lot lu n'était atteignable qu'en le relisant). Le relire reste possible.
+  const aOuvrir = lotAOuvrir(selectedIds, project.lots_analyses)
+  const ouverture = useMutation({
+    mutationFn: (lotId: string) => api.post<Project>(`/projects/${project.id}/lots/select`, {
+      lot_id: lotId, lot_name: lots.find((l) => l.id === lotId)?.nom ?? null,
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+      navigate(`/projects/${project.id}/analysis`)
+    },
+  })
+  const analyser = () => {
     if (doitConfirmerLecture(nbChoisis)) setConfirmerLecture(true)
     else lancerLecture()
+  }
+  const handleLaunch = () => {
+    if (!peutLancer(selectedIds)) return
+    if (aOuvrir) { if (!ouverture.isPending) ouverture.mutate(aOuvrir); return }
+    analyser()
   }
 
   // « Dans vos métiers » : les lots rattachés aux métiers déclarés dans Mon entreprise d'abord, les autres repliés
@@ -496,26 +512,11 @@ export default function StepLotSelection({ project }: Props) {
   const chargementEchoue = (requeteLots.isError && lots.length === 0) || (requeteDocuments.isError && requeteDocuments.data === undefined)
   const enDetection = !lotsInitialized && (lotsLoading || requeteDocuments.isLoading || detectPhase === 'detecting' || isBackendBusy)
   const lectureBloquee = isAnalyzing || isSuccess || !peutLancer(selectedIds)
-  // Un seul lot coché, déjà analysé : « Ouvrir ce lot » le rend lot en cours (POST lots/select), sans le relire ni décompter
-  // d'unité (rapport E2E-2 : l'Export d'un second lot lu n'était atteignable qu'en le relisant). Le relire reste possible.
-  const aOuvrir = lotAOuvrir(selectedIds, project.lots_analyses)
-  const ouverture = useMutation({
-    mutationFn: (lotId: string) => api.post<Project>(`/projects/${project.id}/lots/select`, {
-      lot_id: lotId, lot_name: lots.find((l) => l.id === lotId)?.nom ?? null,
-    }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
-      navigate(`/projects/${project.id}/analysis`)
-    },
-  })
-  // Le seul bouton « Lire … » de l'écran : dans l'en-tête à l'ordinateur, dans la barre du bas au téléphone.
-  const actionLire = aOuvrir ? (
-    <Bouton variante="principal" onClick={() => ouverture.mutate(aOuvrir)} disabled={isAnalyzing} enCours={ouverture.isPending} libelleEnCours="Ouverture…">
-      Ouvrir ce lot
-    </Bouton>
-  ) : (
+  // Le seul bouton « Lire … » de l'écran : dans l'en-tête à l'ordinateur, dans la barre du bas au téléphone. Un seul lot coché,
+  // déjà analysé : il dit « Ouvrir ce lot » (handleLaunch, ci-dessus).
+  const actionLire = (
     <Bouton variante="principal" onClick={handleLaunch} disabled={lectureBloquee}>
-      {libelleBoutonLire(nbChoisis)}
+      {aOuvrir ? 'Ouvrir ce lot' : libelleBoutonLire(nbChoisis, lots.length)}
     </Bouton>
   )
   const peutLire = !sansDepot && !chargementEchoue && !enDetection
@@ -558,10 +559,10 @@ export default function StepLotSelection({ project }: Props) {
         utilite={enDetection || sansDepot || chargementEchoue ? UTILITE : phraseCoutLots(lots.length)}
         actionPrincipale={peutLire ? actionLire : undefined}
         actionsSecondaires={peutLire && aOuvrir ? (
-          <Bouton variante="secondaire" onClick={handleLaunch} disabled={lectureBloquee || ouverture.isPending}>{`Analyser de nouveau (${libelleUnites(1)})`}</Bouton>
+          <Bouton variante="secondaire" onClick={analyser} disabled={lectureBloquee || ouverture.isPending}>{`Analyser de nouveau (${libelleUnites(1)})`}</Bouton>
         ) : undefined}
         message={ouverture.isError
-          ? <Message ton="erreur" titre="Le lot ne s’est pas ouvert">La connexion au serveur a échoué. Rien n’a été décompté : réessayez dans un instant.</Message>
+          ? <Message ton="erreur" titre="Le lot ne s’est pas ouvert">La connexion au serveur a échoué. Rien n’a été décompté : réessayez dans un instant.</Message>
           : analysisError && <Message ton="erreur" titre="L’analyse n’a pas démarré">{analysisError}</Message>}
         // La barre du bas n'existe que lorsqu'il y a des lots à choisir : ni en erreur, ni sans dossier, ni pendant le chargement.
         barre={!peutLire ? undefined : (

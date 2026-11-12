@@ -388,13 +388,26 @@ async function parcoursA(nav, dossiers) {
     await page.getByRole('button', { name: VERBES.depose, exact: true }).click()
     await choisirStatut(ctx, VERBES.depose, 'statut-depose')
     await page.getByText(DEPOSE, { exact: true }).first().waitFor({ timeout: 15_000 })
+    // Après le dépôt, l'Export ne garde que « Indiquer le résultat » (le bandeau) : plus « Je l'ai déposé ».
+    try { await page.getByRole('button', { name: VERBES.depose, exact: true }).waitFor({ state: 'hidden', timeout: 10_000 }) } catch {
+      throw new Echec(`export après le dépôt : « ${VERBES.depose} » reste affiché à côté de « ${M.statut} »`)
+    }
+    await capturer(ctx, 'export-apres-depot')
     await ouvrirStatut(ctx)
     await choisirStatut(ctx, M.gagne, 'statut-gagne')
+    // La page d'un AO gagné propose « Corriger le résultat » (D16), qui ouvre le dialogue de statut.
+    const corriger = page.getByRole('button', { name: M.corrigerResultat, exact: true })
+    try { await corriger.waitFor({ timeout: 15_000 }) } catch { throw new Echec(`AO gagné : sa page ne propose pas « ${M.corrigerResultat} »`) }
+    await capturer(ctx, 'ao-gagne')
+    await corriger.click()
+    await page.getByRole('dialog', { name: VERBES.dialogueStatut }).waitFor({ timeout: 10_000 })
+    await page.keyboard.press('Escape')
+    await page.getByRole('dialog', { name: VERBES.dialogueStatut }).waitFor({ state: 'hidden', timeout: 10_000 })
     const s1 = await stats()
     if (s1.projects_gagnes !== s0.projects_gagnes + 1) throw new Echec(`statut : gagnés ${s0.projects_gagnes} → ${s1.projects_gagnes} après « Gagné », attendu +1`)
     const bilan1 = await bilanAccueil(ctx, 'accueil-gagne')
     if (!dit(bilan1, s1)) throw new Echec(`bilan après « Gagné » : l'Accueil dit « ${bilan1} », le serveur ${JSON.stringify(s1)}`)
-    // Un AO gagné n'a plus d'action sur sa page : la correction (D16) passe par Mes AO, menu « … » de sa rangée.
+    // La correction (D16) depuis Mes AO, menu « … » de sa rangée.
     await page.goto(BASE + '/projects', { waitUntil: 'domcontentloaded' })
     const recherche = page.getByRole('search', { name: M.rechercheMesAO })
     await recherche.getByRole('searchbox').or(recherche.getByRole('textbox')).first().fill(`${MARQUE} coffre`)

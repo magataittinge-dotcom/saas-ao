@@ -80,6 +80,7 @@ export const PARCOURS_2 = {
   statut: 'Indiquer le résultat',
   gagne: 'Gagné',
   corrigerPerdu: 'Corriger : Perdu',
+  corrigerResultat: 'Corriger le résultat',
   rechercheMesAO: 'Chercher et filtrer mes appels d’offres',
   menuAO: 'Autres actions pour « ',
   afficherTermines: 'Afficher',
