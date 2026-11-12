@@ -33,8 +33,8 @@ from models.quota_consumption import QuotaConsumption
 
 def advisory_org_lock(db: Session, org_id: str) -> None:
     """Sérialise `check_quota` + `consume` pour une org (anti-TOCTOU R3) :
-    deux requêtes concurrentes ne peuvent plus compter toutes deux 39/40
-    puis consommer 41/40.
+    deux requêtes concurrentes ne peuvent plus compter toutes deux 29/30
+    puis consommer 31/30.
 
     Verrou consultatif transactionnel Postgres — relâché automatiquement au
     commit/rollback. No-op sur SQLite (connexion unique via StaticPool =

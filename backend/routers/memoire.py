@@ -87,7 +87,7 @@ def get_memoire_preflight(
 ):
     """C9a — pre-flight avant génération : profil condensé éditable,
     références classées par pertinence pour CE lot (5-8 pré-cochées),
-    rappel quota (« consommera 1 mémoire — X/40 ce mois »)."""
+    rappel quota (« consommera 1 mémoire — X/30 ce mois » en Pro)."""
     from services.ai.memoire_generator import _rank_references_for_lot
     from services import quota
 

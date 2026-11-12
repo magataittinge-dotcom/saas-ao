@@ -42,7 +42,8 @@ UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 router = APIRouter()
 from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
-# B10 — borne d'UNE action : 40 lots (le quota mensuel Pro, PRD : 40 analyses).
+# B10 — borne d'UNE action : 40 lots (garde de validation de la requête ; le quota
+# du mois, services/quota.py, décide ensuite : Pro 30, Business 70 depuis le 2026-11-11).
 _MAX_LOTS_PAR_ANALYSE = 40
 # Lots ajoutés à la main dans l'écran Lots (AddLotForm : « lot1 » à « lot30 ») :
 # jamais enregistrés dans lots_detectes, mais analysables (filtre par numéro).
