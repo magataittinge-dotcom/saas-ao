@@ -31,13 +31,14 @@ export function lireFonctionsIA(brut: unknown): FonctionsIA {
 }
 
 export function useFonctionsIA(): FonctionsIA {
-  const { data } = useQuery({
+  // Une erreur du serveur n'est pas un vide ici : elle ÉTEINT tout, comme le chargement (F-03 : l'erreur est lue).
+  const { data, isError } = useQuery({
     queryKey: ['fonctions-ia'],
     queryFn: async () => lireFonctionsIA((await api.get('/fonctions-ia')).data),
     staleTime: 5 * 60_000,
     retry: false,
   })
-  return data ?? TOUT_ETEINT
+  return isError || !data ? TOUT_ETEINT : data
 }
 
 /** Le détail d'une erreur du serveur s'il est une phrase, sinon la phrase donnée. */
