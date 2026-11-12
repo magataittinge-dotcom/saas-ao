@@ -450,8 +450,9 @@ export default function StepMemoire({ project }: Props) {
               hasMemoire={hasMemoire}
               enCours={isRunning}
               erreur={genError || echecRedaction
-                ? (genError ?? project.processing_detail ?? 'La rédaction du mémoire n’a pas abouti. Relancez-la quand vous voulez.')
+                ? (genError ?? (project.processing_detail || 'La rédaction du mémoire s’est arrêtée avant la fin. Rien n’a été décompté de votre abonnement.'))
                 : null}
+              echec={echecRedaction && !genError}
               onGenerer={() => {
                 setGenError(null)
                 generate()

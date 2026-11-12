@@ -19,3 +19,12 @@ test('un seul lot coché, déjà analysé : il se rouvre sans être relu (aucune
   assert.match(ecran, /Analyser de nouveau \(\$\{libelleUnites\(1\)\}\)/, 'relire ce lot reste possible, et dit son coût')
   assert.match(lire('src/types/index.ts'), /lots_analyses\?: string\[\]/)
 })
+
+test('rédaction du mémoire en échec : la phrase du produit (rien décompté) et « Relancer la rédaction », comme l’analyse', () => {
+  const formulaire = sansCommentaires(lire('src/components/project/FormulaireMemoire.tsx'))
+  assert.match(formulaire, /echec \? 'Relancer la rédaction' : hasMemoire \? 'Régénérer le mémoire' : 'Rédiger le mémoire'/)
+  const etape = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
+  assert.match(etape, /echec=\{echecRedaction && !genError\}/, 'un refus au lancement (genError) n’est pas un échec de rédaction')
+  assert.match(etape, /Rien n’a été décompté de votre abonnement\./, 'sans phrase du serveur, la même phrase')
+  assert.match(lire('../backend/routers/memoire.py'), /MSG_ECHEC_REDACTION = "La rédaction du mémoire s’est arrêtée avant la fin\. Rien n’a été décompté de votre abonnement\."/)
+})

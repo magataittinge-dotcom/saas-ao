@@ -68,6 +68,8 @@ export const PARCOURS_2 = {
   pieceDuCoffre: 'Décennale',
   preparerQuestions: 'Préparer les questions',
   sourcePoint: 'Source : ',
+  relancerRedaction: 'Relancer la rédaction',
+  rienDecompte: 'Rien n’a été décompté',
   analyserLots: 'Analyser 2 lots',
   confirmerLots: 'Analyser les 2 lots',
   ouvrirLot: 'Ouvrir ce lot',

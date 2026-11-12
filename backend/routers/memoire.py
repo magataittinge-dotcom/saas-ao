@@ -452,6 +452,11 @@ def _run_memoire_job(*args, **kwargs) -> None:
                     reservation=reservation)
 
 
+# Après un échec de la rédaction : ce qui s'est passé et que rien n'est décompté (l'unité « mémoire » ne l'est qu'au succès,
+# `quota.consume` ci-dessous) ; l'écran propose « Relancer la rédaction » (rapport E2E-2).
+MSG_ECHEC_REDACTION = "La rédaction du mémoire s’est arrêtée avant la fin. Rien n’a été décompté de votre abonnement."
+
+
 @chronometre("memoire", lot=lot_du_projet)
 def _run_memoire_job_corps(
     project_id: str, org_id: str, user_id: str, variables: dict,
@@ -551,7 +556,7 @@ def _run_memoire_job_corps(
         logger.error(f"Erreur génération mémoire projet {project_id}: {e}", exc_info=True)
         db.rollback()
         # Le flux porte la phrase du produit (l'écran l'affiche) ; l'erreur technique est au journal, ci-dessus.
-        echec = "La génération du mémoire a échoué. Relancez la génération."
+        echec = MSG_ECHEC_REDACTION
         pipeline_tracker.fail_pipeline(project_id, echec)
         try:
             p = db.query(Project).filter(Project.id == project_id).first()

@@ -20,6 +20,8 @@ interface Props {
   /** Une génération est en cours (ou en reprise après rechargement). */
   enCours: boolean
   erreur: string | null
+  /** La dernière rédaction s'est arrêtée avant la fin (pas un refus au lancement) : le geste devient « Relancer la rédaction ». */
+  echec?: boolean
   onGenerer: () => void
 }
 
@@ -43,7 +45,7 @@ export function LigneProfil({ donnees }: { donnees: DonneesEntreprise | null }) 
  * est dans le repli est facultatif (le titre du repli le dit une fois).
  */
 export default function FormulaireMemoire({
-  projectId, variables, onVariables, onPreflight, hasMemoire, enCours, erreur, onGenerer,
+  projectId, variables, onVariables, onPreflight, hasMemoire, enCours, erreur, echec = false, onGenerer,
 }: Props) {
   // R23 — un seul compte : les informations indispensables de Mon entreprise (identité, moyens, certifications).
   const donnees = useDonneesEntreprise()
@@ -72,7 +74,7 @@ export default function FormulaireMemoire({
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <Bouton variante="principal" onClick={onGenerer} disabled={enCours || !variables.nb_ouvriers || !variables.delai}>
             <Sparkles aria-hidden />
-            {hasMemoire ? 'Régénérer le mémoire' : 'Rédiger le mémoire'}
+            {echec ? 'Relancer la rédaction' : hasMemoire ? 'Régénérer le mémoire' : 'Rédiger le mémoire'}
           </Bouton>
           <QuotaMemoire projectId={projectId} />
         </div>

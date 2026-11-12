@@ -350,10 +350,10 @@ async function parcoursA(nav, dossiers) {
     if (apres.memoires !== avant.memoires) throw new Echec(`panne rédaction : l'unité n'est pas rendue (mémoires ${avant.memoires} → ${apres.memoires})`)
     controlerConsole(ctx, 'panne rédaction')
     unlinkSync(PANNE)
-    // La relance : le bouton que l'écran propose après l'échec (« Relancer » s'il est là, sinon le geste de l'étape).
-    const relancer = (await bouton(page, VERBES.relancer, true).count()) ? bouton(page, VERBES.relancer, true) : bouton(page, VERBES.rediger, true)
-    const nomRelance = (await relancer.innerText()).trim()
-    if (nomRelance !== VERBES.relancer) constat(ctx, `panne rédaction : pas de « ${VERBES.relancer} » après l’échec, la relance passe par « ${nomRelance} » (routes/project/StepMemoire.tsx:452, FormulaireMemoire.tsx:75)`)
+    // La relance : après l'échec, l'écran dit que rien n'est décompté et propose « Relancer la rédaction » (comme l'analyse).
+    if (!texte.includes(M.rienDecompte)) throw new Echec(`panne rédaction : le message ne dit pas « ${M.rienDecompte} » (« ${texte.split('\n')[0].slice(0, 120)} »)`)
+    const relancer = bouton(page, M.relancerRedaction, true)
+    if (!(await relancer.count())) throw new Echec(`panne rédaction : pas de « ${M.relancerRedaction} » après l’échec`)
     await relancer.click()
     const versExport = bouton(page, VERBES.passerExport, true)
     try { await versExport.waitFor({ timeout: 30_000 }) } catch {
