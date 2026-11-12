@@ -48,7 +48,7 @@ Succès : un dossier déposé, puis gagné. Le produit suit le cycle de vie des 
 ## Capabilities and Constraints
 
 **Offre et paiement (confirmés, PRD v3.0 du 2026-07-01)**
-- Grille du 11/11/2026, plus aucune offre illimitée : Essentiel 149 €/mois HT, 5 analyses + 5 mémoires par mois. Pro 349 €/mois HT, 30 analyses + 30 mémoires par mois. Business 599 €/mois HT, 70 analyses + 70 mémoires par mois. 1 AO offert à la création du compte. Source unique : `frontend/src/lib/offres.ts` et `backend/services/quota.py`.
+- Grille du 11/11/2026, plus aucune offre illimitée : Essentiel 149 €/mois HT, 5 analyses + 5 mémoires par mois. Pro 349 €/mois HT, 1 utilisateur, 30 analyses + 30 mémoires par mois. Business 599 €/mois HT, 5 utilisateurs, 70 analyses + 70 mémoires par mois. 1 AO offert à la création du compte. Source unique : `frontend/src/lib/offres.ts` et `backend/services/quota.py`.
 - Dépassement en Pro : blocage doux + proposition de montée en gamme, jamais de facturation à l'unité.
 - Paiement par carte uniquement (Stripe), pas de SEPA en V1.
 
