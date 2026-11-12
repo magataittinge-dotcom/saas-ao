@@ -188,3 +188,6 @@ export function acheteurCourt(maitreOuvrage: string | null | undefined): string 
   if (!brut) return ''
   return brut.split(/\s[–—-]\s|\s\(|,/)[0].trim()
 }
+
+/** « n° 7 » reste d'un seul tenant : l'espace après « n° » (ou « nº ») devient insécable (jury, tour 1 : le numéro tombait seul à la ligne). */
+export const lierNumero = (texte: string): string => texte.replace(/\b(n[°º]) (?=\d)/gi, '$1\u00a0')

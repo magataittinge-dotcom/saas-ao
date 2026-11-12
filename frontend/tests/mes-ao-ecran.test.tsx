@@ -57,7 +57,7 @@ test('les unités : affichées quand le serveur les donne, rien d\'inventé sino
   assert.ok(!sans.includes('analyse'), 'sans avancement, pas de ligne d\'unités')
   assert.ok(html.includes('1 analyse') && html.includes('0 mémoire'))
   assert.ok(!html.includes('data-terminee='), 'les terminés sont repliés par défaut')
-  assert.ok(html.includes('aria-expanded="false"') && html.includes('Déposé 1'))
+  assert.ok(html.includes('aria-expanded="false"') && html.includes('1 déposé'))
 })
 
 test('« Votre premier dossier est offert » : seulement pour un compte à l\'essai intact', () => {

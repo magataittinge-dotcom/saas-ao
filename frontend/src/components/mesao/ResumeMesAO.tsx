@@ -19,11 +19,26 @@ export function ResumeMesAOCartes({ comptes, resume, quota }: {
 }) {
   const unites = uniteMois(quota)
   const lectures = resume.enLecture > 0 ? `dont ${resume.enLecture} dossier${resume.enLecture > 1 ? 's' : ''} en cours d’analyse` : undefined
+  // rien en cours, aucune remise proche : une ligne de faits suffit (jury, tour 1 : des cases « Aucun » plus hautes que la liste)
+  if (comptes.enCours === 0 && resume.remise7.n === 0) {
+    return (
+      <div role="group" aria-label="Résumé de mes appels d’offres" data-resume-ligne="" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-2">
+        <span>Aucun appel d’offres en cours</span>
+        {unites && (
+          <>
+            <span aria-hidden>·</span>
+            <span>Unités du mois{'\u00a0'}: <strong className="font-semibold text-fg">{unites.illimite ? 'Illimité' : `${unites.utilisees} sur ${unites.total}`}</strong></span>
+            <span aria-hidden>·</span>
+            <Link to="/settings/billing" className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>Voir l’abonnement</Link>
+          </>
+        )}
+      </div>
+    )
+  }
   return (
     <BandeCases libelle="Résumé de mes appels d’offres">
       <CaseResume etiquette="En cours" valeur={comptes.enCours} precision={lectures} />
       <CaseResume etiquette="Remise sous 7 jours" valeur={resume.remise7.n} rien="Aucune" precision={resume.remise7.n > 0 ? listeDates(resume.remise7.dates) : undefined} />
-      <CaseResume etiquette="À mettre à jour" valeur={comptes.aMettreAJour} precision={comptes.aMettreAJour > 0 ? 'Remise passée : dites ce qu’ils sont devenus.' : undefined} />
       {/* les unités : la case n'apparaît qu'une fois le quota lu (jamais « Aucune » pendant la lecture) */}
       {unites && (
         <CaseResume etiquette="Unités du mois"
