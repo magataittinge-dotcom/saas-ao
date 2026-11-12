@@ -98,7 +98,7 @@ export default function Landing() {
         <Carte sansMarge className="grid lg:grid-cols-3">
           <div className={COLONNE}>
             <TitreCarte>Chaque exigence garde sa source</TitreCarte>
-            <p className="mt-1.5 text-base text-fg-2">Rien n’est affirmé sans le passage du dossier qui le dit : vous vérifiez d’un clic, dans le document de l’acheteur.</p>
+            <p className="mt-1.5 text-base text-fg-2">Rien n’est affirmé sans le passage du dossier qui le dit : vous vérifiez d’un clic, dans le document de l’acheteur.</p>
             <ul aria-label="Exemple d’exigences relevées" className="mt-auto pt-4">
               {EXIGENCES_ET_SOURCES.map(([exigence, source]) => (
                 <li key={exigence}><RangeeCarte className={RANGEE}>{exigence}<span className="shrink-0 text-xs text-fg-2">{source}</span></RangeeCarte></li>
@@ -107,7 +107,7 @@ export default function Landing() {
           </div>
           <div className={COLONNE}>
             <TitreCarte>Le contrat, lu en clair</TitreCarte>
-            <p className="mt-1.5 text-base text-fg-2">Synorix relève les clauses du <Sigle code="CCAP" /> qui pèsent sur votre trésorerie. Il lit le contrat ; il ne commente jamais vos prix.</p>
+            <p className="mt-1.5 text-base text-fg-2">Synorix relève les clauses du <Sigle code="CCAP" /> qui pèsent sur votre trésorerie. Il lit le contrat ; il ne commente jamais vos prix.</p>
             <ul aria-label="Exemple de clauses relevées" className="mt-auto pt-4">
               {CLAUSES_LUES.map(([clause, lu]) => (
                 <li key={clause}><RangeeCarte className={RANGEE}>{clause}<span className="shrink-0 text-xs text-fg-2">{lu}</span></RangeeCarte></li>

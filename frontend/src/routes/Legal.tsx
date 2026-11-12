@@ -55,7 +55,7 @@ function TableauJuridique({ table }: { table: SegmentTable }) {
   const colonnes = table.entetes.map((titre, k) => ({
     cle: String(k), titre, tel: true,
     classe: k > 0 && table.lignes.every((l) => (l[k] ?? '').length <= 28) ? 'md:whitespace-nowrap' : undefined,
-    rendu: (ligne: string[]) => <>{k > 0 && <span className="text-fg-3 md:hidden">{titre}{' : '}</span>}<Cellule texte={ligne[k] ?? ''} /></>,
+    rendu: (ligne: string[]) => <>{k > 0 && <span className="text-fg-3 md:hidden">{titre}{' : '}</span>}<Cellule texte={ligne[k] ?? ''} /></>,
   }))
   return <Tableau className="my-6" libelle={table.entetes.join(', ')} colonnes={colonnes} lignes={table.lignes} cle={(ligne) => ligne.join('|')} vide={null} />
 }
