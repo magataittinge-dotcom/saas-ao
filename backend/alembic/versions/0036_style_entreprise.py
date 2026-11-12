@@ -25,18 +25,17 @@ def _tables() -> set[str]:
 
 
 def upgrade() -> None:
-    if TABLE in _tables():
-        return
-    op.create_table(
-        TABLE,
-        sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("organization_id", sa.String(), sa.ForeignKey("organizations.id"), nullable=False),
-        sa.Column("style", sa.JSON(), nullable=False),
-        sa.Column("source_fichier", sa.String(255), nullable=False),
-        sa.Column("modele", sa.String(64), nullable=False),
-        sa.Column("lu_le", sa.DateTime(), nullable=False),
-    )
-    op.create_index("ix_styles_entreprise_organization_id", TABLE, ["organization_id"], unique=True)
+    if TABLE not in _tables():
+        op.create_table(
+            "styles_entreprise",
+            sa.Column("id", sa.String(), primary_key=True),
+            sa.Column("organization_id", sa.String(), sa.ForeignKey("organizations.id"), nullable=False),
+            sa.Column("style", sa.JSON(), nullable=False),
+            sa.Column("source_fichier", sa.String(255), nullable=False),
+            sa.Column("modele", sa.String(64), nullable=False),
+            sa.Column("lu_le", sa.DateTime(), nullable=False),
+        )
+        op.create_index("ix_styles_entreprise_organization_id", TABLE, ["organization_id"], unique=True)
 
 
 def downgrade() -> None:
