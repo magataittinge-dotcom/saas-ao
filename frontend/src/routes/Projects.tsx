@@ -76,8 +76,9 @@ export function SqueletteMesAO() {
     <div data-squelette-mes-ao="">
       <Carte sansMarge className="grid gap-3 p-5 md:max-w-md max-md:p-4"><Squelette className="h-3.5 w-24" /><Squelette className="h-6 w-28" /><Squelette className="h-3.5 w-36" /></Carte>
       <div className="mt-10 flex flex-wrap items-center gap-2 max-md:mt-7.5">
-        <Squelette className="h-11 rounded-pilule max-md:basis-full md:w-80" />
-        <Squelette className="h-11 w-56 rounded-lg max-md:w-full md:ml-auto" />
+        {/* la recherche et le tri ne dépendent pas des données : leur contour est déjà là, pas un pavé gris */}
+        <div aria-hidden className="h-11 rounded-pilule border border-bord-champ bg-surface-0 max-md:basis-full md:w-80" />
+        <div aria-hidden className="h-11 w-56 rounded-lg border border-bord-champ bg-surface-0 max-md:w-full md:ml-auto" />
       </div>
       <Squelette className="mb-4 mt-10 h-5 w-36 max-md:mt-7.5" />
       <Carte sansMarge>

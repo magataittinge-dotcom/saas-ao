@@ -22,13 +22,14 @@ export function ResumeMesAOCartes({ comptes, resume, quota }: {
   // rien en cours, aucune remise proche : une ligne de faits suffit (jury, tour 1 : des cases « Aucun » plus hautes que la liste)
   if (comptes.enCours === 0 && resume.remise7.n === 0) {
     return (
-      <div role="group" aria-label="Résumé de mes appels d’offres" data-resume-ligne="" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-2">
+      <div role="group" aria-label="Résumé de mes appels d’offres" data-resume-ligne="" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-2 max-md:flex-col max-md:items-start max-md:gap-y-0">
         <span>Aucun appel d’offres en cours</span>
         {unites && (
           <>
-            <span aria-hidden>·</span>
+            {/* au téléphone, un fait par ligne : aucun point médian en fin de ligne */}
+            <span aria-hidden className="max-md:hidden">·</span>
             <span>Unités du mois{'\u00a0'}: <strong className="font-semibold text-fg">{unites.utilisees} sur {unites.total}</strong></span>
-            <span aria-hidden>·</span>
+            <span aria-hidden className="max-md:hidden">·</span>
             <Link to="/settings/billing" className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>Voir l’abonnement</Link>
           </>
         )}
