@@ -22,6 +22,7 @@ import MentionRecoupe from './MentionRecoupe'
 export default function PartiePlanCarte({
   partie, numero, ouverte, peutMonter, peutDescendre, seulementGardee,
   recoupe, onBasculerFiche, onRenommer, onRetirer, onSupprimer, onMonter, onDescendre, onFiche, onVoirSource,
+  proposition, onIgnorerProposition,
 }: {
   partie: PartiePlan
   numero: number | null
@@ -40,6 +41,9 @@ export default function PartiePlanCarte({
   onDescendre: () => void
   onFiche: (fiche: Partial<FichePlan>) => void
   onVoirSource: (source: SourcePlan) => void
+  /** C3 (FICHE_PROPOSEE) : la proposition reçue pour cette fiche, transmise telle quelle. */
+  proposition?: string | null
+  onIgnorerProposition?: () => void
 }) {
   const idFiche = useId()
   const champ = useRef<HTMLInputElement>(null)
@@ -116,7 +120,7 @@ export default function PartiePlanCarte({
 
       {ouverte && (
         <div id={idFiche}>
-          <FichePartie partie={partie} onChange={onFiche} onVoirSource={onVoirSource} />
+          <FichePartie partie={partie} onChange={onFiche} onVoirSource={onVoirSource} proposition={proposition} onIgnorerProposition={onIgnorerProposition} />
         </div>
       )}
     </li>

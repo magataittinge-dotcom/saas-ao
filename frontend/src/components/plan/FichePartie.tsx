@@ -2,6 +2,7 @@ import { Check } from 'lucide-react'
 import { EtatElement } from '@/components/etape'
 import { CaseACocher } from '@/components/ui/case'
 import { GroupeChamp, ZoneTexte } from '@/components/ui/champ'
+import { PropositionFiche } from './ProposerFiches'
 import {
   MAX_TEXTE_LIBRE, casesCochees, libellePoids, type CaseProposee, type FichePlan, type PartiePlan, type SourcePlan,
 } from '@/lib/planMemoire'
@@ -57,10 +58,13 @@ function ListeCases({ titre, cases, choix, onChange }: {
  * Seul ce que le patron choisit ici est transmis au modèle. Quand « Mon entreprise » n'a rien à proposer, une seule phrase
  * le dit (jamais trois fois la même).
  */
-export default function FichePartie({ partie, onChange, onVoirSource }: {
+export default function FichePartie({ partie, onChange, onVoirSource, proposition, onIgnorerProposition }: {
   partie: PartiePlan
   onChange: (fiche: Partial<FichePlan>) => void
   onVoirSource: (source: SourcePlan) => void
+  /** C3 (FICHE_PROPOSEE) : « Ce que vous voulez dire » proposé, seulement quand le serveur dit la fonction allumée. */
+  proposition?: string | null
+  onIgnorerProposition?: () => void
 }) {
   const { fiche, propose } = partie
   const rienAProposer = propose.references.length + propose.personnes.length + propose.materiel.length === 0
@@ -127,6 +131,13 @@ export default function FichePartie({ partie, onChange, onVoirSource }: {
           placeholder="Une idée, un argument, un chiffre à faire figurer dans cette partie."
         />
       </GroupeChamp>
+      {proposition && onIgnorerProposition && (
+        <PropositionFiche
+          texte={proposition}
+          onUtiliser={() => { onChange({ voulu: proposition.slice(0, MAX_TEXTE_LIBRE) }); onIgnorerProposition() }}
+          onIgnorer={onIgnorerProposition}
+        />
+      )}
     </div>
   )
 }

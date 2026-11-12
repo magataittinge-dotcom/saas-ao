@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
     "e2e": "node e2e/parcours.mjs",
+    "e2e:2": "node e2e/parcours-2.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
