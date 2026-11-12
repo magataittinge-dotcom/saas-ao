@@ -364,29 +364,37 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     # ── customer.subscription.updated → handle plan changes ───────────────────
     elif event_type == "customer.subscription.updated":
         customer_id = data_object.get("customer")
-        if customer_id and data_object.get("status") == "active":
-            org = db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
-            if org:
-                # D23 — abonnement remis en renouvellement depuis le portail : la demande de suppression tombe (sinon
-                # un arrêt d'abonnement des mois plus tard supprimerait le compte).
-                if org.suppression_prevue_le is not None and data_object.get("cancel_at_period_end") is False:
-                    org.suppression_prevue_le = None
-                old_plan = org.plan
-                items = (data_object.get("items") or {}).get("data") or []
-                if items:
-                    product_id = (items[0].get("price") or {}).get("product")
-                    for plan_name, pid in PRODUCTS.items():
-                        if pid == product_id:
-                            org.plan = plan_name
-                            break
-                org.stripe_subscription_id = data_object.get("id")
-                # Changement de plan → nouvelle ancre de quotas : les
-                # consommations de la période précédente (Business 70/mois)
-                # ne bloquent pas le nouveau plan (downgrade business→pro
-                # sinon = 402 immédiat). Même plan → ancre inchangée (pas de
-                # fenêtre offerte à chaque événement Stripe).
-                if org.plan != old_plan:
-                    org.subscription_started_at = datetime.utcnow()
+        org = (db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
+               if customer_id else None)
+        # D23 — abonnement remis en renouvellement depuis le portail : la demande de suppression tombe (sinon un arrêt
+        # d'abonnement des mois plus tard supprimerait le compte). P1-2 (relecture du 12/11) : on ne croit pas le contenu
+        # de l'événement (un événement plus ancien que la demande, réessayé par Stripe après une coupure, dit
+        # `cancel_at_period_end: false` alors que l'abonnement s'arrête bien) : l'état est RELU chez le fournisseur.
+        # Plus sûr que la date de l'événement (`created`, à la seconde, ordre de livraison non garanti) : l'état relu
+        # est ce qui se passera à l'échéance. Vaut aussi pendant un impayé (`past_due`).
+        if (org is not None and org.suppression_prevue_le is not None
+                and data_object.get("cancel_at_period_end") is False):
+            from services import resiliation_compte
+            if resiliation_compte.abonnement_repris(org):
+                org.suppression_prevue_le = None
                 db.commit()
+        if org is not None and data_object.get("status") == "active":
+            old_plan = org.plan
+            items = (data_object.get("items") or {}).get("data") or []
+            if items:
+                product_id = (items[0].get("price") or {}).get("product")
+                for plan_name, pid in PRODUCTS.items():
+                    if pid == product_id:
+                        org.plan = plan_name
+                        break
+            org.stripe_subscription_id = data_object.get("id")
+            # Changement de plan → nouvelle ancre de quotas : les
+            # consommations de la période précédente (Business 70/mois)
+            # ne bloquent pas le nouveau plan (downgrade business→pro
+            # sinon = 402 immédiat). Même plan → ancre inchangée (pas de
+            # fenêtre offerte à chaque événement Stripe).
+            if org.plan != old_plan:
+                org.subscription_started_at = datetime.utcnow()
+            db.commit()
 
     return {"received": True}

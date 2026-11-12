@@ -139,6 +139,19 @@ def abonnement_payant_vivant(org) -> bool:
     return any(s.get("status") in STATUTS_PAYANTS_VIVANTS for s in _abonnements_ouverts(_fournisseur(), org))
 
 
+def abonnement_repris(org) -> bool:
+    """P1-2 — relu chez le fournisseur : un abonnement payant vivant renouvelle-t-il de nouveau (`cancel_at_period_end`
+    faux) ? Seul cet état retire une demande de suppression. Panne du fournisseur, ou état illisible : faux (la demande
+    reste ; le client peut l'annuler depuis Paramètres)."""
+    try:
+        ouverts = _abonnements_ouverts(_fournisseur(), org) if getattr(org, "stripe_customer_id", None) else []
+    except Exception as exc:
+        logger.warning("Reprise d'abonnement non vérifiée (org=%s) : fournisseur injoignable (%s)",
+                       org.id, type(exc).__name__)
+        return False
+    return any(s.get("status") in STATUTS_PAYANTS_VIVANTS and s.get("cancel_at_period_end") is False for s in ouverts)
+
+
 def executer_suppression(db, org_id: str, racine=None) -> dict:
     """Supprime l'organisation (une transaction), puis ses fichiers, puis ses comptes Clerk. Lève si la base refuse
     (après rollback : rien n'est effacé). Rend le bilan de `suppression_compte.supprimer_organisation`."""

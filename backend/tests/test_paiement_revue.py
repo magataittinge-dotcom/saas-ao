@@ -296,3 +296,53 @@ def test_p1_1_fin_de_l_abonnement_de_l_organisation_avec_demande_supprime(client
     _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
     assert _org(db_session) is None
     assert clerk.appels == ["https://api.clerk.com/v1/users/user_clerk_invente"]
+
+
+# ── P1-2 : un événement « updated » arrivé dans le désordre n'efface pas la demande de suppression ───────────────
+
+def _repris(statut="active"):
+    return {"id": "sub_invente", "customer": "cus_invente", "status": statut, "cancel_at_period_end": False}
+
+
+def test_p1_2_evenement_ancien_livre_apres_la_demande_ne_l_efface_pas(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement()])
+    clerk = poser(f)
+    assert client.delete("/api/users/me").json()["deleted"] is False
+    assert f.abonnements[0]["cancel_at_period_end"] is True           # chez le fournisseur : arrêt à l'échéance
+    # Un événement émis AVANT la demande (réessai de Stripe après une coupure) arrive après elle.
+    assert _webhook(client, "customer.subscription.updated", _repris()).status_code == 200
+    assert _org(db_session).suppression_prevue_le is not None         # la demande tient : l'état relu le dit
+    # À l'échéance, la suppression se fait.
+    f.abonnements = [_abonnement(status="canceled")]
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
+    assert _org(db_session) is None
+    assert db_session.get(Project, "p-revue") is None
+    assert clerk.appels == ["https://api.clerk.com/v1/users/user_clerk_invente"]
+
+
+def test_p1_2_reprise_depuis_le_portail_retire_la_demande(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement()])
+    poser(f)
+    client.delete("/api/users/me")
+    f.abonnements[0]["cancel_at_period_end"] = False                  # le client reprend dans le portail
+    _webhook(client, "customer.subscription.updated", _repris())
+    assert _org(db_session).suppression_prevue_le is None
+
+
+def test_p1_2_reprise_pendant_un_impaye_retire_aussi_la_demande(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement()])
+    poser(f)
+    client.delete("/api/users/me")
+    f.abonnements[0].update(status="past_due", cancel_at_period_end=False)
+    _webhook(client, "customer.subscription.updated", _repris("past_due"))
+    assert _org(db_session).suppression_prevue_le is None
+
+
+def test_p1_2_fournisseur_injoignable_la_demande_reste(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement()])
+    poser(f)
+    client.delete("/api/users/me")
+    f.abonnements[0]["cancel_at_period_end"] = False
+    f.panne = True
+    assert _webhook(client, "customer.subscription.updated", _repris()).status_code == 200
+    assert _org(db_session).suppression_prevue_le is not None
