@@ -28,14 +28,15 @@ const CommandDialog = ({
   children,
   titre = "Rechercher dans Synorix",
   description = 'Tapez le nom d’un appel d’offres ou d’une page, puis Entrée.',
+  filter,
   ...props
-}: DialogProps & { titre?: string; description?: string }) => {
+}: DialogProps & { titre?: string; description?: string; filter?: React.ComponentProps<typeof Command>['filter'] }) => {
   return (
     <Dialog {...props}>
       <DialogContent className="top-[14vh] w-[calc(100%-2rem)] max-w-xl translate-y-0 overflow-hidden rounded-carte border-bord bg-surface-pop p-0 shadow-flottant data-[state=closed]:!slide-out-to-top-2 data-[state=open]:!slide-in-from-top-2 max-sm:rounded-carte [&>button]:hidden">
         <DialogTitle className="sr-only">{titre}</DialogTitle>
         <DialogDescription className="sr-only">{description}</DialogDescription>
-        <Command className="[&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-14 [&_[cmdk-item]_svg]:h-[18px] [&_[cmdk-item]_svg]:w-[18px]">
+        <Command filter={filter} className="[&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-14 [&_[cmdk-item]_svg]:h-[18px] [&_[cmdk-item]_svg]:w-[18px]">
           {children}
         </Command>
       </DialogContent>

@@ -116,6 +116,7 @@ export default function Billing() {
           if (organization) {
             setOrganization({ ...organization, plan: data.plan as Organization['plan'] })
           }
+          void quota.refetch()   // les unités du nouveau plan (sinon celles de l'essai, « 1 sur 1 », jusqu'au rechargement)
           setTimeout(() => setShowSuccess(false), 8000)
           return
         }

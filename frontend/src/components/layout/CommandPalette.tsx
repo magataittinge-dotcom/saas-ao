@@ -9,6 +9,7 @@ import { Bouton } from '@/components/ui/bouton'
 import { useProjects } from '@/hooks/useProject'
 import { aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
 import { acheteurCourt } from '@/lib/mesAO'
+import { scorePalette } from '@/lib/recherchePalette'
 import { ACCES_PALETTE } from './navigation'
 
 /** Raccourci affiché : ⌘K sur Mac, Ctrl K ailleurs. */
@@ -54,7 +55,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
   const autres = aoDansEtat(projects, 'termine')
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog open={open} onOpenChange={onOpenChange} filter={scorePalette}>
       <CommandInput placeholder="Rechercher un AO, une page…" value={saisie} onValueChange={setSaisie} />
       <CommandList className="max-h-[min(440px,60vh)] min-h-40 pb-1.5">
         {/* les mêmes mots que la recherche de Mes AO, alignés à gauche comme le reste du panneau */}
@@ -62,7 +63,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         {enCours.length > 0 && (
           <CommandGroup heading="En cours">
             {enCours.map((p) => (
-              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.id}`} onSelect={() => aller(lienAO(p))}>
+              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.selected_lot_name ?? ''} ${p.id}`} onSelect={() => aller(lienAO(p))}>
                 <FileText strokeWidth={1.8} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p.name}</span>
@@ -79,7 +80,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         {aMettreAJour.length > 0 && (
           <CommandGroup heading={'À mettre à jour\u00a0: dire ce qu’ils sont devenus'}>
             {aMettreAJour.map((p) => (
-              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.id}`} onSelect={() => aller(lienAO(p))}>
+              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.selected_lot_name ?? ''} ${p.id}`} onSelect={() => aller(lienAO(p))}>
                 <FileText strokeWidth={1.8} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p.name}</span>
@@ -92,7 +93,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         {autres.length > 0 && (
           <CommandGroup heading="Terminés">
             {autres.map((p) => (
-              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.id}`} onSelect={() => aller(`/projects/${p.id}`)}>
+              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.selected_lot_name ?? ''} ${p.id}`} onSelect={() => aller(`/projects/${p.id}`)}>
                 <FileText strokeWidth={1.8} />
                 <span className="min-w-0 flex-1 truncate">{p.name}</span>
                 {p.maitre_ouvrage && <span className="ml-3 max-w-[40%] shrink-0 truncate text-sm text-fg-3">{acheteurCourt(p.maitre_ouvrage)}</span>}
@@ -102,7 +103,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         )}
         <CommandSeparator />
         <CommandGroup heading="Aller à">
-          <CommandItem value={`Nouvel AO déposer un dossier ${LEXIQUE.DCE.sigle}`} onSelect={() => aller('/projects/new')}>
+          <CommandItem value={`Nouvel AO nouvel appel d’offres déposer un dossier ${LEXIQUE.DCE.sigle}`} onSelect={() => aller('/projects/new')}>
             <Plus strokeWidth={1.8} />
             Nouvel appel d’offres
           </CommandItem>
