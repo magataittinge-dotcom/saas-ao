@@ -33,7 +33,6 @@ function constat(ctx, texte) {
 }
 /** Écrans connus sans exactement un bouton principal visible (largeur:écran:nombre → constat du rapport). */
 const PRINCIPAL_CONNUS = {
-  'telephone:decider:0': 'StepAnalysis.tsx:376 — au téléphone, l’écran Décider n’a aucun bouton principal : l’action de l’en-tête, montée mais cachée, fait céder l’aplat à « Suivant : Pièces » (StepAnalysis.tsx:356)',
 }
 /**
  * Erreurs de console CONNUES, déjà portées au rapport (constats à corriger dans l'appli, pas dans le test) : tolérées mais

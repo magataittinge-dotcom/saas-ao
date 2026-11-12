@@ -140,8 +140,11 @@ test('l’écran Décider passe par le gabarit : une seule action principale en
   assert.match(code, /requeteExigences\.isError && requeteExigences\.data === undefined\) return \(\s*<GabaritEtape[^>]*>\s*<EtatErreur/)
   assert.ok(code.indexOf('<EtatErreur') < code.indexOf('<ProgressDisplay'), 'l’erreur passe avant l’écran d’attente')
   assert.doesNotMatch(code, /variant="modal"|createPortal|<button\b|<input\b|<select\b|style=\{\{|font-mono|Geist Mono|💡/)
-  // l'action principale n'est pas doublée sur ordinateur : la barre ne la porte qu'au téléphone
-  assert.match(code, /<ActionsBarreTel>\s*<BoutonSuite\s+etape="Pièces"/)
+  // l'action principale n'est pas doublée sur ordinateur : la barre ne la porte qu'au téléphone ; là, l'en-tête ne monte pas la
+  // sienne (montée cachée, elle faisait céder l'aplat : aucun bouton principal, E2E du 12/11), et la barre porte la décision
+  // tant qu'elle n'est pas prise, puis « Suivant : Pièces »
+  assert.match(code, /actionPrincipale=\{tel \? undefined : boutonDecision\}/)
+  assert.match(code, /<ActionsBarreTel>\s*\{tel && !isStepAlreadyDone \? boutonDecision : <BoutonSuite\s+etape="Pièces"/)
   // aucune question ni donnée de prix côté écran
   for (const f of ['src/components/project/PointsAEclaircir.tsx', 'src/components/project/AVerifierAvantEngagement.tsx', 'src/lib/resumeAO.ts']) {
     assert.doesNotMatch(sansCommentaires(lire(f)), /#[0-9a-fA-F]{3,8}\b|rgba?\(/, `${f} : aucune couleur écrite`)

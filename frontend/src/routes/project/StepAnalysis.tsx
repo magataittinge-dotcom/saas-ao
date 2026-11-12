@@ -33,6 +33,7 @@ import { precharger, abandonner } from '@/services/sources'
 import { useVisible } from '@/hooks/useVisible'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
+import { useMedia } from '@/hooks/useMedia'
 import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } from '@/types'
 import { useCompleteStep } from '@/hooks/useProject'
 import { messageErreur } from '@/lib/erreurs'
@@ -74,6 +75,9 @@ export default function StepAnalysis({ project }: Props) {
   // Toutes les catégories sont repliées à l'arrivée : la page commence par la liste des catégories et leurs comptes (448 exigences
   // dépliées faisaient 12 000 px au téléphone, 7 000 à l'ordinateur).
   const { mutate: completeStep, isPending: isValidating } = useCompleteStep(project.id)
+  // Au téléphone, la barre du bas porte l'action de l'écran : l'en-tête ne monte pas la sienne (montée cachée, elle faisait
+  // céder l'aplat de la barre : aucun bouton principal).
+  const tel = useMedia('(max-width: 768px)')
 
   // Charger les documents du projet pour l'ouverture de la source
   const { data: projectDocs = [], isSuccess: documentsLus } = useQuery({
@@ -354,12 +358,19 @@ export default function StepAnalysis({ project }: Props) {
 
   // ── Barre du bas : le bilan à l'ordinateur ; au téléphone elle porte l'action de l'étape ───────
   const bilan = `${items.length} exigences dont ${obligatoireCount} à respecter impérativement`
+  // L'action de l'écran, écrite une fois : dans l'en-tête sur ordinateur ; au téléphone, dans la barre du bas tant que la
+  // décision n'est pas prise, puis « Suivant : Pièces ».
+  const boutonDecision = (
+    <Bouton variante="principal" onClick={handleValidate} enCours={isValidating} libelleEnCours="Validation…">
+      {isStepAlreadyDone ? 'Passer aux pièces' : 'On y va'}
+    </Bouton>
+  )
   const bottomBar = (
     <BarreEtape>
       <BilanBarre bureau={bilan} tel={`${items.length} exigences`} />
       <ActionsBarre>
         <ActionsBarreTel>
-          <BoutonSuite etape="Pièces" onClick={handleValidate} enCours={isValidating} enCoursLibelle="Validation…" />
+          {tel && !isStepAlreadyDone ? boutonDecision : <BoutonSuite etape="Pièces" onClick={handleValidate} enCours={isValidating} enCoursLibelle="Validation…" />}
         </ActionsBarreTel>
       </ActionsBarre>
     </BarreEtape>
@@ -378,11 +389,7 @@ export default function StepAnalysis({ project }: Props) {
       titre="Décider"
       utilite={UTILITE}
       // A1 — l'action de l'écran est la décision : « On y va » (même validation), puis « Passer aux pièces » une fois l'étape faite.
-      actionPrincipale={
-        <Bouton variante="principal" onClick={handleValidate} enCours={isValidating} libelleEnCours="Validation…">
-          {isStepAlreadyDone ? 'Passer aux pièces' : 'On y va'}
-        </Bouton>
-      }
+      actionPrincipale={tel ? undefined : boutonDecision}
       // Une lecture en échec se dit, même quand une lecture précédente a laissé des exigences à l'écran.
       message={analysisFailed && (
         <Message ton="attention" titre="La dernière analyse s’est arrêtée avant la fin"
