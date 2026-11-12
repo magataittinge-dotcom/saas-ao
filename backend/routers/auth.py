@@ -68,6 +68,13 @@ def _verifier_azp(payload: dict) -> None:
         raise HTTPException(status_code=401, detail="Votre session n’est plus reconnue. Reconnectez-vous.")
 
 
+# Tolérance d'horloge (secondes) sur `iat`, `nbf` et `exp` : l'horloge du serveur peut retarder de
+# quelques secondes sur celle de Clerk ; sans elle, un jeton tout juste émis est refusé
+# (`ImmatureSignatureError`, vu une connexion sur dix sur le banc). 5 s : la valeur par défaut du SDK
+# de Clerk (`clockSkewInMs`). Jamais plus : au-delà, un jeton expiré resterait utilisable.
+TOLERANCE_HORLOGE_S = 5
+
+
 def _decode_clerk_token(token: str) -> dict:
     """Decode and validate a Clerk JWT using the JWKS endpoint."""
     try:
@@ -77,6 +84,7 @@ def _decode_clerk_token(token: str) -> dict:
             signing_key.key,
             algorithms=["RS256"],
             options={"verify_aud": False},
+            leeway=TOLERANCE_HORLOGE_S,
         )
     except jwt.ExpiredSignatureError:
         logger.warning("Auth failed: token expiré")
