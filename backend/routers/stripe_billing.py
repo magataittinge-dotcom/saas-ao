@@ -278,10 +278,17 @@ def verify_session(
     return {"plan": plan, "updated": True}
 
 
+async def _corps_brut(request: Request) -> bytes:
+    """Le corps exact de la requête (la signature de Stripe porte sur ces octets), lu sur la boucle d'événements."""
+    return await request.body()
+
+
 @router.post("/webhook")
 @limiter.limit("100/minute")
-async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-    payload = await request.body()
+def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: Session = Depends(get_db)):
+    # P2-1 (relecture du 12/11) — `def`, pas `async def` : FastAPI sert la route dans un fil. Les appels bloquants
+    # qu'elle fait (Stripe : jusqu'à 80 s de délai par défaut, base, effacement des fichiers, Clerk : 10 s par
+    # utilisateur) ne gèlent plus la boucle d'événements de l'unique processus de l'API.
     sig_header = request.headers.get("stripe-signature", "")
 
     billing = get_billing_provider()

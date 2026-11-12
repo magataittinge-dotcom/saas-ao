@@ -412,3 +412,48 @@ def test_p1_3_la_memoire_de_la_demande_est_celle_de_l_organisation(client, abonn
     db_session.commit()
     client.post("/api/users/me/annuler-suppression")
     assert f.repris == ["sub_invente"]
+
+
+# ── P2-1 : le webhook ne gèle plus l'API (appels bloquants hors de la boucle d'événements) ───────────────────────
+
+def test_p2_1_le_webhook_est_servi_dans_un_fil():
+    import inspect
+
+    import routers.stripe_billing as sb
+    routes = [r for r in sb.router.routes if getattr(r, "path", "").endswith("/webhook")]
+    assert len(routes) == 1
+    assert not inspect.iscoroutinefunction(routes[0].endpoint)
+
+
+@pytest.mark.asyncio
+async def test_p2_1_un_webhook_lent_ne_bloque_pas_les_autres_requetes(client, abonne, poser):
+    import asyncio
+    import time
+
+    import httpx
+
+    from main import app
+
+    class Lent(FauxFournisseur):
+        def list_subscriptions(self, customer_id):
+            time.sleep(1.5)                       # Stripe lent (délai par défaut de la bibliothèque : 80 s)
+            return super().list_subscriptions(customer_id)
+
+    poser(Lent([_abonnement(), _abonnement(id_="sub_ancien", status="canceled")]))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
+        async def webhook():
+            return await ac.post("/api/stripe/webhook", headers={"stripe-signature": "t=1,v1=ok"},
+                                 json={"type": "customer.subscription.deleted",
+                                       "data": {"object": {"id": "sub_ancien", "customer": "cus_invente"}}})
+
+        async def sonde():
+            await asyncio.sleep(0.3)
+            debut = time.monotonic()
+            r = await ac.get("/api/health")
+            return r, time.monotonic() - debut
+
+        r_webhook, (r_sonde, duree) = await asyncio.gather(webhook(), sonde())
+    assert r_webhook.status_code == 200, r_webhook.text
+    assert r_sonde.status_code == 200
+    assert duree < 0.8, f"/api/health a attendu le webhook ({duree:.2f} s)"
