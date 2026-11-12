@@ -111,6 +111,9 @@ export function cartesRedaction({ version, completionPct, rattachement, nbARefai
 
 interface Props { project: Project }
 
+/** Après l'échec d'une rédaction : ce qui s'est passé et que rien n'est décompté (même phrase que le serveur, routers/memoire.py). */
+const ECHEC_REDACTION = 'La rédaction du mémoire s’est arrêtée avant la fin. Rien n’a été décompté de votre abonnement.'
+
 export default function StepMemoire({ project }: Props) {
   const navigate = useNavigate()
   const avisAttente = useAvisAttente('mémoire')
@@ -125,6 +128,8 @@ export default function StepMemoire({ project }: Props) {
   const [showEditor, setShowEditor] = useState(false)
   const [editedContent, setEditedContent] = useState<MemoireContent | null>(null)
   const [genError, setGenError] = useState<string | null>(null)
+  // La rédaction lancée s'est arrêtée avant la fin (pas un refus au lancement) : le geste devient « Relancer la rédaction ».
+  const [echecRun, setEchecRun] = useState(false)
   // Run DÉTACHÉ : `running` couvre le lancement local ; après un reload,
   // project.processing_status === 'generating' reprend le relais (même
   // architecture que l'analyse).
@@ -324,7 +329,8 @@ export default function StepMemoire({ project }: Props) {
   useEffect(() => {
     if (memoireSse.phase === 'error') {
       setRunning(false)
-      setGenError(memoireSse.detail || 'La rédaction du mémoire n’a pas abouti. Relancez-la quand vous voulez.')
+      setEchecRun(true)
+      setGenError(memoireSse.detail || ECHEC_REDACTION)
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -450,11 +456,12 @@ export default function StepMemoire({ project }: Props) {
               hasMemoire={hasMemoire}
               enCours={isRunning}
               erreur={genError || echecRedaction
-                ? (genError ?? (project.processing_detail || 'La rédaction du mémoire s’est arrêtée avant la fin. Rien n’a été décompté de votre abonnement.'))
+                ? (genError ?? (project.processing_detail || ECHEC_REDACTION))
                 : null}
-              echec={echecRedaction && !genError}
+              echec={echecRun || (echecRedaction && !genError)}
               onGenerer={() => {
                 setGenError(null)
+                setEchecRun(false)
                 generate()
               }}
             />
