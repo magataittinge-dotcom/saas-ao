@@ -11,6 +11,16 @@ export function raisonSociale(organisation: { name?: string | null; siret_verifi
   return nom
 }
 
+/**
+ * Le nom à écrire en tête du menu et de la feuille du compte : la raison sociale vérifiée ; sinon `sansRaison`
+ * (« Votre compte » par défaut ; null : rien, quand le prénom est déjà écrit). « Mon entreprise » est le nom d'une page :
+ * il ne sert pas de nom de compte (jury, tour 1).
+ */
+export function nomDuCompte(organisation: Parameters<typeof raisonSociale>[0], sansRaison: string | null = 'Votre compte'): string | null {
+  const nom = raisonSociale(organisation)
+  return nom === RAISON_SOCIALE_PAR_DEFAUT ? sansRaison : nom
+}
+
 /** L'initiale du compte : celle du prénom affichable (lib/prenom.ts), sinon rien (le rond montre alors une icône de personne).
  *  Jamais un tiret, jamais l'initiale de l'e-mail. */
 export function initialeDuPrenom(prenom: string | null | undefined): string | null {

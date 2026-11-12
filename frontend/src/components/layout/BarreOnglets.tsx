@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 import { libelleUrgents } from '@/lib/echeance'
 import { prenomAffichable } from '@/lib/prenom'
-import { raisonSociale } from '@/lib/raisonSociale'
+import { nomDuCompte } from '@/lib/raisonSociale'
 import { ENTREES_TIROIR, ONGLETS_TEL, ONGLET_CERVEAU, estActif, libelleBarre } from './navigation'
 import { QuotaRond } from './QuotaGauge'
 import { useTonUrgence, useUrgents } from './useUrgents'
@@ -91,7 +91,7 @@ export function CompteTel({ className }: { className?: string }) {
         <SheetContent side="bottom" className="rounded-t-section pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <SheetHeader className="px-3 text-left">
             <SheetTitle className="font-sans">Mon compte</SheetTitle>
-            <SheetDescription>{[prenom, raisonSociale(organization), user?.email].filter(Boolean).join(' · ')}</SheetDescription>
+            <SheetDescription>{[prenom, nomDuCompte(organization, prenom ? null : undefined), user?.email].filter(Boolean).join(' · ')}</SheetDescription>
           </SheetHeader>
           <ul className="mt-3 grid gap-1 border-t border-bord pt-3">
             {ENTREES_TIROIR.map((e) => (
