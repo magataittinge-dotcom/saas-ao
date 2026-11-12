@@ -40,7 +40,6 @@ export interface Organization {
   materiel?: string
   fournisseurs?: string
   plan: PlanType
-  stripe_customer_id?: string
   trial_granted?: boolean  // C15 — pilote l'écran « premier DCE offert »
   created_at: string
 }

@@ -36,7 +36,8 @@ export function useSyncUser(): boolean {
     if (!isLoaded) return
 
     // User signed out or switched accounts → clear stale persisted state
-    if (!isSignedIn) return
+    // P2-2 : session fermée (ailleurs, ou expirée) → l'état gardé disparaît du navigateur
+    if (!isSignedIn) { if (user) logout(); return }
     if (user && userId && user.clerk_id !== userId) {
       logout() // clear stale org/plan from different account
     }
