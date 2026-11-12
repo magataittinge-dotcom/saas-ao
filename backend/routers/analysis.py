@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import threading
+from collections import OrderedDict
 from pathlib import Path
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -813,6 +814,12 @@ def _finalize_analysis(
     # (une relance d'analyse sur un autre lot n'écrase pas ceux-ci)
     from services.critical_fields import build_critical_fields
     fields = build_critical_fields(infos_marche, criteres_jugement, all_docs)
+    # D-05 — la page de chaque source est cherchée ICI (travail détaché), plus par le GET (qui ne range plus rien).
+    try:
+        from services.critical_fields_pages import resoudre_pages
+        fields = resoudre_pages(db, project_id, fields) or fields
+    except Exception as exc:                      # jamais bloquant : la lecture cherchera la page
+        logger.warning("Pages des champs critiques non rangées (%s)", type(exc).__name__)
     existing_cf = dict(project.critical_fields or {})
     for lot_key in ([s_["lot_id"] for s_ in (lot_specs or [])] or [project.selected_lot or "_all"]):
         existing_cf[lot_key] = fields
@@ -921,6 +928,43 @@ def _safe_priority(value: str | None) -> str:
     return value if value in ("obligatoire", "souhaitée") else "obligatoire"
 
 
+# D-05 — un GET n'écrit plus. Les champs critiques d'un lot jamais analysé, ou dont la recherche des pages date d'une
+# version antérieure, sont calculés à la lecture et gardés dans un petit cache du processus (clé : projet, lot,
+# empreinte des données lues), pour ne pas relire les PDF à chaque appel.
+_LECTURES_CF: "OrderedDict[tuple, dict]" = OrderedDict()
+_LECTURES_CF_MAX = 256
+_LECTURES_CF_GARDE = threading.Lock()
+
+
+def _champs_critiques_lus(db: Session, project: Project, avec_pages: bool = False) -> dict:
+    """Champs critiques du lot courant, sans écrire : ceux rangés par l'analyse, sinon calculés depuis
+    infos_marche/criteres + RC/CCAP ; `avec_pages` : la page des sources pas encore cherchée l'est (PDF)."""
+    lot_key = project.selected_lot or "_all"
+    ranges = (project.critical_fields or {}).get(lot_key)
+    if ranges is not None and not avec_pages:
+        return ranges
+    empreinte = hashlib.sha1(json.dumps([ranges, project.infos_marche, project.criteres_jugement],
+                                        sort_keys=True, default=str).encode()).hexdigest()
+    cle = (project.id, lot_key, avec_pages, empreinte)
+    with _LECTURES_CF_GARDE:
+        if cle in _LECTURES_CF:
+            _LECTURES_CF.move_to_end(cle)
+            return _LECTURES_CF[cle]
+    champs = ranges
+    if champs is None:
+        from services.critical_fields import build_critical_fields
+        docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project.id).all()
+        champs = build_critical_fields(project.infos_marche, project.criteres_jugement, docs)
+    if avec_pages:
+        from services.critical_fields_pages import resoudre_pages
+        champs = resoudre_pages(db, project.id, champs) or champs
+    with _LECTURES_CF_GARDE:
+        _LECTURES_CF[cle] = champs
+        while len(_LECTURES_CF) > _LECTURES_CF_MAX:
+            _LECTURES_CF.popitem(last=False)
+    return champs
+
+
 @router.get("/{project_id}/critical-fields")
 def get_critical_fields(
     project_id: str,
@@ -929,31 +973,10 @@ def get_critical_fields(
 ):
     """C5 — champs critiques structurés du lot courant (bandeau d'analyse).
 
-    Calcul paresseux pour les projets analysés avant l'existence du bandeau :
-    reconstruit depuis infos_marche/criteres + RC/CCAP, puis persiste sous la
-    clé du lot."""
+    D-05 : lecture pure (aucune écriture). Les champs et la page de chaque source (R14 : « Voir dans le dossier »
+    ouvre la bonne page) sont rangés à la fin de l'analyse ; sinon calculés à la lecture (`_champs_critiques_lus`)."""
     project = _get_project_or_404(project_id, user.organization_id, db)
-    lot_key = project.selected_lot or "_all"
-    cache = dict(project.critical_fields or {})
-    if lot_key not in cache:
-        from services.critical_fields import build_critical_fields
-        docs = db.query(ProjectDocument).filter(
-            ProjectDocument.project_id == project_id,
-        ).all()
-        cache[lot_key] = build_critical_fields(
-            project.infos_marche, project.criteres_jugement, docs,
-        )
-        project.critical_fields = cache
-        db.commit()
-    # R14 : la page de chaque source est cherchée dans le PDF (une fois, puis rangée avec le champ),
-    # pour que « Voir dans le dossier » ouvre la bonne page au lieu de la pièce entière.
-    from services.critical_fields_pages import resoudre_pages
-    avec_pages = resoudre_pages(db, project_id, cache[lot_key])
-    if avec_pages is not None:
-        cache[lot_key] = avec_pages
-        project.critical_fields = cache
-        db.commit()
-    return {"lot": project.selected_lot, "fields": cache[lot_key]}
+    return {"lot": project.selected_lot, "fields": _champs_critiques_lus(db, project, avec_pages=True)}
 
 
 @router.get("/{project_id}/tresorerie")
@@ -982,22 +1005,11 @@ def get_retroplanning(
     db: Session = Depends(get_db),
 ):
     """C20 — rétro-planning du lot courant, dérivé des champs critiques (C5)."""
-    from services.critical_fields import build_critical_fields
     from services.retroplanning import build_retroplanning
 
     project = _get_project_or_404(project_id, user.organization_id, db)
-    lot_key = project.selected_lot or "_all"
-    cache = dict(project.critical_fields or {})
-    if lot_key not in cache:
-        docs = db.query(ProjectDocument).filter(
-            ProjectDocument.project_id == project_id,
-        ).all()
-        cache[lot_key] = build_critical_fields(
-            project.infos_marche, project.criteres_jugement, docs,
-        )
-        project.critical_fields = cache
-        db.commit()
-    return {"lot": project.selected_lot, "steps": build_retroplanning(cache[lot_key])}
+    champs_critiques = _champs_critiques_lus(db, project)   # D-05 : lecture pure
+    return {"lot": project.selected_lot, "steps": build_retroplanning(champs_critiques)}
 
 
 @router.get("/{project_id}/synorix-score")
@@ -1010,21 +1022,10 @@ def get_synorix_score(
 
     Déterministe, aucun LLM, aucun commentaire de prix."""
     from models.memoire_config import MemoireConfig
-    from services.critical_fields import build_critical_fields
     from services.synorix_score import build_score
 
     project = _get_project_or_404(project_id, user.organization_id, db)
-    lot_key = project.selected_lot or "_all"
-    cache = dict(project.critical_fields or {})
-    if lot_key not in cache:
-        docs = db.query(ProjectDocument).filter(
-            ProjectDocument.project_id == project_id,
-        ).all()
-        cache[lot_key] = build_critical_fields(
-            project.infos_marche, project.criteres_jugement, docs,
-        )
-        project.critical_fields = cache
-        db.commit()
+    champs_critiques = _champs_critiques_lus(db, project)   # D-05 : lecture pure
 
     memoire_config = db.query(MemoireConfig).filter(
         MemoireConfig.organization_id == user.organization_id,
@@ -1042,7 +1043,7 @@ def get_synorix_score(
         vault_docs=vault_docs,
         compliance_items=compliance_items,
         criteres_jugement=project.criteres_jugement,
-        critical_fields=cache[lot_key],
+        critical_fields=champs_critiques,
         infos_marche=project.infos_marche,
     )
     result["lot"] = project.selected_lot
