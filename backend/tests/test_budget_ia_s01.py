@@ -36,6 +36,7 @@ ROUTES_IA = {
     ("POST", "/api/projects/{project_id}/memoire/proposer-paragraphe"),
     ("POST", "/api/projects/{project_id}/memoire/reecrire-trois"),
     ("POST", "/api/projects/{project_id}/plan-memoire/proposer-voulu"),
+    ("POST", "/api/entreprise/style"),
 }
 
 

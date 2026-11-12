@@ -272,3 +272,60 @@ async def proposer_fiches(parties: list[dict], profil: str) -> dict[str, str]:
     brut = await asyncio.to_thread(_appeler, HAIKU, P.FICHE_PROPOSEE_SYSTEM, message, FICHE_MAX_JETONS,
                                    "fiche_proposee")
     return valider_fiches(brut, {p["cle"] for p in parties[:FICHE_MAX_PARTIES]})
+
+
+# ── C4 — « Le style de mon entreprise », lu dans un ancien mémoire (Haiku 4.5), lecture seule ─────────────────────
+
+STYLE_MAX_CARACTERES = 48_000     # ≈ 15 000 jetons : le début du mémoire suffit à lire une façon d'écrire
+STYLE_MIN_CARACTERES = 1_000
+STYLE_MAX_JETONS = 900
+_CHAMPS_STYLE = ("ton", "personne", "longueur_phrases", "structure", "vocabulaire", "exemples")
+
+
+def extrait_pour_style(texte: str) -> str:
+    """Le texte lu, blancs resserrés, borné au début du document."""
+    propre = re.sub(r"[ \t]+", " ", texte or "")
+    propre = re.sub(r"\n{3,}", "\n\n", propre).strip()
+    return propre[:STYLE_MAX_CARACTERES]
+
+
+def _plie_blancs(t: str) -> str:
+    return re.sub(r"\s+", " ", t or "").strip()
+
+
+def valider_style(brut: str, texte_lu: str) -> dict:
+    """Les six clés, et rien d'autre ; phrases bornées ; 3 à 8 termes ; les exemples sont gardés seulement s'ils sont
+    COPIÉS du texte (rien d'inventé), 1 à 3. Aucune phrase ne parle de prix."""
+    from services.points_eclaircir import parle_de_prix
+    donnees = _json(brut)
+    if set(donnees) != set(_CHAMPS_STYLE):
+        raise SortieIllisible("clés inattendues")
+    style: dict[str, Any] = {}
+    for cle in ("ton", "personne", "longueur_phrases", "structure"):
+        valeur = donnees[cle]
+        if not isinstance(valeur, str) or not valeur.strip() or len(valeur) > 300:
+            raise SortieIllisible(cle)
+        style[cle] = _plie_blancs(valeur)
+    vocabulaire = donnees["vocabulaire"]
+    if not isinstance(vocabulaire, list) or not all(isinstance(v, str) for v in vocabulaire):
+        raise SortieIllisible("vocabulaire")
+    style["vocabulaire"] = list(dict.fromkeys(_plie_blancs(v) for v in vocabulaire if v.strip() and len(v) <= 80))[:8]
+    if len(style["vocabulaire"]) < 3:
+        raise SortieIllisible("vocabulaire trop court")
+    exemples = donnees["exemples"]
+    if not isinstance(exemples, list) or not all(isinstance(v, str) for v in exemples):
+        raise SortieIllisible("exemples")
+    lu = _plie_blancs(texte_lu)
+    style["exemples"] = [e for e in dict.fromkeys(_plie_blancs(v) for v in exemples)
+                         if 0 < len(e) <= 200 and e in lu][:3]
+    if parle_de_prix(*(style[c] for c in ("ton", "personne", "longueur_phrases", "structure"))):
+        raise SortieIllisible("prix")
+    return style
+
+
+async def lire_style(texte: str) -> dict:
+    """C4 : un appel Haiku 4.5 sur le début du mémoire (thread), puis la validation."""
+    extrait = extrait_pour_style(texte)
+    brut = await asyncio.to_thread(_appeler, HAIKU, P.STYLE_ENTREPRISE_SYSTEM, f"ANCIEN MÉMOIRE :\n{extrait}",
+                                   STYLE_MAX_JETONS, "style_entreprise")
+    return valider_style(brut, extrait)

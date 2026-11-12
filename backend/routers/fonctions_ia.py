@@ -14,7 +14,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -165,3 +165,75 @@ async def proposer_voulu(request: Request, project_id: str, user: User = Depends
     propositions = await _avec_cout(user, "fiche_proposee", project.id, ligne, db,
                                     lambda: fonctions_c.proposer_fiches(parties, profil))
     return {"propositions": propositions}
+
+
+# ── C4 — « Le style de mon entreprise », lu dans un ancien mémoire, montré dans Mon entreprise (lecture seule) ──────
+
+def _style_en_dict(ligne) -> dict:
+    return {"style": ligne.style, "source_fichier": ligne.source_fichier,
+            "lu_le": ligne.lu_le.isoformat() if ligne.lu_le else None}
+
+
+@router.get("/entreprise/style", dependencies=[Depends(F.exiger("style_entreprise"))])
+def lire_style_entreprise(user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
+    """Le style enregistré de l'organisation, ou {"style": null}. Jamais celui d'une autre organisation."""
+    from models.style_entreprise import StyleEntreprise
+    ligne = db.query(StyleEntreprise).filter(StyleEntreprise.organization_id == user.organization_id).first()
+    return _style_en_dict(ligne) if ligne else {"style": None, "source_fichier": None, "lu_le": None}
+
+
+@router.delete("/entreprise/style", dependencies=[Depends(F.exiger("style_entreprise"))])
+def effacer_style_entreprise(user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
+    from models.style_entreprise import StyleEntreprise
+    db.query(StyleEntreprise).filter(StyleEntreprise.organization_id == user.organization_id).delete(
+        synchronize_session=False)
+    db.commit()
+    return {"style": None, "source_fichier": None, "lu_le": None}
+
+
+@router.post("/entreprise/style",
+             dependencies=[Depends(F.exiger("style_entreprise")), Depends(exiger_budget_ia)])
+@limiter.limit("3/minute")
+async def lire_style_d_un_memoire(request: Request, file: UploadFile = File(...),
+                                  user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
+    """C4 — lit la façon d'écrire d'un ancien mémoire (.docx ou .pdf, mêmes contrôles que l'import d'un mémoire) avec
+    Haiku 4.5, et l'enregistre pour l'organisation (une ligne, remplacée à chaque lecture). Le fichier n'est pas gardé.
+    LECTURE SEULE (décision D5) : rien ici n'est lu par le générateur du mémoire."""
+    from models.style_entreprise import StyleEntreprise
+    from routers.memoire_config import _IMPORT_EXTENSIONS, _IMPORT_MAX_SIZE, _texte_pdf_importe
+    from services import extraction_processus
+    from services.document_processor import DocumentProcessor
+    from services.upload_validation import RegleDepot, recevoir_fichier
+
+    if F.demandes_24h(db, user.organization_id, (F.ACTION_STYLE_ENTREPRISE,)) >= F.STYLE_MAX_PAR_JOUR:
+        raise HTTPException(status_code=429, detail=(
+            f"Vous avez fait lire {F.STYLE_MAX_PAR_JOUR} mémoires dans les dernières 24 heures : c'est le plafond du "
+            "jour. Vous pourrez en faire lire un autre demain."))
+    nom = (file.filename or "memoire")[-255:]
+    with await recevoir_fichier(request, file, RegleDepot(_IMPORT_EXTENSIONS, _IMPORT_MAX_SIZE, "DOCX ou PDF")) as recu:
+        contenu = await recu.octets()
+    if nom.lower().endswith(".pdf") and extraction_processus.actif():
+        texte = await asyncio.to_thread(_texte_pdf_importe, contenu, nom)
+    else:
+        texte, _ = await asyncio.to_thread(DocumentProcessor().extract, contenu, nom)
+    if not texte or len(texte.strip()) < fonctions_c.STYLE_MIN_CARACTERES:
+        raise HTTPException(status_code=422, detail=(
+            "Ce document ne contient pas assez de texte pour y lire une façon d'écrire. "
+            "Déposez un mémoire rédigé, en Word ou en PDF texte."))
+
+    ligne = F.compter(db, user, F.ACTION_STYLE_ENTREPRISE, target_type="organization",
+                      target_id=user.organization_id, extra={"chars": min(len(texte), fonctions_c.STYLE_MAX_CARACTERES)})
+    style = await _avec_cout(user, "style_entreprise", user.organization_id, ligne, db,
+                             lambda: fonctions_c.lire_style(texte))
+    enregistre = db.query(StyleEntreprise).filter(StyleEntreprise.organization_id == user.organization_id).first()
+    if enregistre is None:
+        enregistre = StyleEntreprise(organization_id=user.organization_id, style=style, source_fichier=nom,
+                                     modele=fonctions_c.HAIKU)
+        db.add(enregistre)
+    else:
+        enregistre.style, enregistre.source_fichier, enregistre.modele = style, nom, fonctions_c.HAIKU
+        from datetime import datetime
+        enregistre.lu_le = datetime.utcnow()
+    db.commit()
+    db.refresh(enregistre)
+    return _style_en_dict(enregistre)

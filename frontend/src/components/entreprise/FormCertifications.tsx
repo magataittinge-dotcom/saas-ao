@@ -17,6 +17,8 @@ import { CA_VIDE } from '@/lib/entreprise/charges'
 import { AfficherPlus, BLOC_LISTE, BoutonAjout, BoutonRetrait, ChampNombre, Field, Groupe, Pleine } from './champs'
 import CadreFormulaire from './CadreFormulaire'
 import { ImportDialog } from './ImportMemoire'
+import StyleEntreprise from './StyleEntreprise'
+import { useFonctionsIA } from '@/lib/fonctionsIA'
 import { useFormulaireRubrique } from './useFormulaireRubrique'
 import { useLignesEditables } from './useLignesEditables'
 import { cn } from '@/lib/utils'
@@ -45,6 +47,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
   const queryClient = useQueryClient()
   const [dialogue, setDialogue] = useState(false)
   const [importe, setImporte] = useState<number | null>(null)
+  const { style_entreprise: styleAllume } = useFonctionsIA()   // C4, éteinte par défaut côté serveur
   const qualifications = useLignesEditables<Qualification>(donnees.qualifications as Qualification[] | null)
   const references = useLignesEditables<Reference>(donnees.references as Reference[] | null)
   const f = useFormulaireRubrique('certifications', donnees, {
@@ -186,6 +189,11 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
           </Pleine>
         </Groupe>
       </AfficherPlus>
+      {styleAllume && (
+        <Groupe titre="Le style de mon entreprise" aide="Votre façon d’écrire, lue dans un ancien mémoire. Lecture seule.">
+          <Pleine><StyleEntreprise /></Pleine>
+        </Groupe>
+      )}
     </CadreFormulaire>
   )
 }
