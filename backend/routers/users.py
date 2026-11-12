@@ -155,10 +155,19 @@ def delete_my_account(
     org_id = user.organization_id
     # S-03 — le fournisseur de paiement d'abord : un échec ne change rien.
     org = db.query(Organization).filter(Organization.id == org_id).first()
+    # REVUE-2 P1-1 — une demande déjà enregistrée (2e onglet, double clic, réponse perdue puis « Réessayez ») rend la
+    # même réponse sans toucher au fournisseur ni réécrire sa trace.
+    if org is not None and org.suppression_prevue_le is not None:
+        return {"deleted": False, "suppression_prevue_le": _date_iso(org.suppression_prevue_le)}
     arretes: list[str] = []
     try:
-        fin = resiliation_compte.programmer_ou_resilier(org, arretes) if org is not None else None
-    except resiliation_compte.ResiliationImpossible:
+        fin = (resiliation_compte.programmer_ou_resilier(org, arretes, resiliation_compte.abonnements_tentes(db, org))
+               if org is not None else None)
+    except resiliation_compte.ResiliationImpossible as exc:
+        # REVUE-2 P1-1 — l'arrêt a pu être appliqué malgré l'erreur : un réessai saura qu'il vient de cette demande.
+        if exc.tentes and org is not None:
+            resiliation_compte.noter_tentative(db, org, user.id, exc.tentes)
+            db.commit()
         raise HTTPException(status_code=502, detail="L’abonnement n’a pas pu être résilié : rien n’a été supprimé. "
                                                     "Réessayez dans quelques minutes ou écrivez-nous.")
     if fin is not None:

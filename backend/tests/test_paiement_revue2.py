@@ -79,3 +79,76 @@ def test_p0_1_annuler_apres_la_date_tant_que_l_organisation_existe(client, abonn
     assert r.status_code == 200, r.text
     assert r.json()["abonnement_repris"] is True and f.repris == ["sub_invente"]
     assert _org(db_session).suppression_prevue_le is None
+
+
+# ── P1-1 : une seconde demande ne fait rien ; la mémoire de l'arrêt n'est jamais écrasée ; réessai après un 502 ─────
+
+def test_p1_1_une_seconde_demande_rend_la_meme_reponse_sans_rien_reecrire(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement()])
+    poser(f)
+    premiere = client.delete("/api/users/me")
+    seconde = client.delete("/api/users/me")                              # 2e onglet, double clic, « Réessayez »
+    assert seconde.status_code == 200 and seconde.json() == premiere.json()
+    assert f.resilies == [("sub_invente", True)]                         # le fournisseur n'est touché qu'une fois
+    lignes = _lignes(db_session, "compte.suppression_programmee")
+    assert [l.extra["abonnements_arretes"] for l in lignes] == [["sub_invente"]]
+    assert client.get("/api/users/me/suppression").json()["abonnement_repris"] is True
+    r = client.post("/api/users/me/annuler-suppression")
+    assert r.status_code == 200 and r.json()["abonnement_repris"] is True
+    assert f.repris == ["sub_invente"] and f.abonnements[0]["cancel_at_period_end"] is False
+
+
+def test_p1_1_une_trace_vide_n_efface_pas_la_memoire_de_l_arret(client, abonne, db_session):
+    """Données d'avant ce correctif : une 2e trace `[]` après la vraie. L'union des traces de la demande en cours."""
+    from services import resiliation_compte
+    org = _org(db_session)
+    resiliation_compte.noter_demande(db_session, org, None, ["sub_invente"])
+    db_session.commit()
+    resiliation_compte.noter_demande(db_session, org, None, [])
+    db_session.commit()
+    assert resiliation_compte.abonnements_arretes_par_la_demande(db_session, org) == ["sub_invente"]
+    # Après une annulation, une nouvelle demande repart de zéro (l'ancienne trace n'est plus lue).
+    resiliation_compte.retirer_demande(db_session, org, "annulee")
+    db_session.commit()
+    assert resiliation_compte.abonnements_arretes_par_la_demande(db_session, org) is None
+    resiliation_compte.noter_demande(db_session, org, None, [])
+    db_session.commit()
+    assert resiliation_compte.abonnements_arretes_par_la_demande(db_session, org) == []
+
+
+class FournisseurQuiAppliquePuisExpire(FauxFournisseur):
+    """Le fournisseur applique l'arrêt, mais sa réponse se perd (délai réseau) : le serveur reçoit une erreur."""
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.premier = True
+
+    def cancel_subscription(self, subscription_id, at_period_end=True):
+        super().cancel_subscription(subscription_id, at_period_end)
+        if self.premier:
+            self.premier = False
+            raise RuntimeError("délai dépassé")
+
+
+def test_p1_1_reponse_perdue_502_puis_reessai_l_annulation_reprend_l_abonnement(client, abonne, poser, db_session):
+    f = FournisseurQuiAppliquePuisExpire([_abonnement()])
+    poser(f)
+    assert client.delete("/api/users/me").status_code == 502             # « rien n'a été supprimé »
+    assert f.abonnements[0]["cancel_at_period_end"] is True              # mais l'arrêt est appliqué
+    assert _org(db_session).suppression_prevue_le is None
+    assert client.delete("/api/users/me").json()["deleted"] is False     # le client réessaie
+    lignes = _lignes(db_session, "compte.suppression_programmee")
+    assert [l.extra["abonnements_arretes"] for l in lignes] == [["sub_invente"]]
+    r = client.post("/api/users/me/annuler-suppression")
+    assert r.status_code == 200 and r.json()["abonnement_repris"] is True
+    assert f.repris == ["sub_invente"] and f.abonnements[0]["cancel_at_period_end"] is False
+
+
+def test_p1_1_reessai_n_attribue_pas_a_la_demande_un_arret_fait_par_le_client(client, abonne, poser, db_session):
+    """Sans tentative échouée, un abonnement déjà arrêté reste celui du client (P1-3 de la première relecture)."""
+    f = FauxFournisseur([_abonnement(cancel_at_period_end=True)])
+    poser(f)
+    assert client.delete("/api/users/me").json()["deleted"] is False
+    assert [l.extra["abonnements_arretes"] for l in _lignes(db_session, "compte.suppression_programmee")] == [[]]
+    assert client.post("/api/users/me/annuler-suppression").json()["abonnement_repris"] is False
+    assert f.repris == []

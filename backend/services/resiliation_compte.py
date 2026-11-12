@@ -20,7 +20,8 @@
      (`retirer_demande`).
    - Reprise depuis le portail du fournisseur (webhook `customer.subscription.updated` avec `cancel_at_period_end`
      faux) : la demande est retirée, sinon un arrêt d'abonnement des mois plus tard supprimerait le compte.
-   Un échec du fournisseur lève `ResiliationImpossible` : la route répond 502 et rien ne change.
+   Un échec du fournisseur lève `ResiliationImpossible` : la route répond 502 et rien ne change (sauf une trace des
+   arrêts tentés, `noter_tentative`, lue par un réessai : REVUE-2 P1-1). Une demande déjà posée n'est pas refaite.
 3. APRÈS la suppression des données : l'utilisateur est supprimé chez Clerk (API Backend). Un échec est journalisé
    (sans adresse ni identifiant Clerk) et la suppression reste acquise : à sa prochaine connexion, Clerk reconnaîtrait
    encore la personne et `/api/auth/sync` lui recréerait une organisation VIDE (aucune donnée ancienne), avec l'essai
@@ -50,7 +51,12 @@ _REPLI_FIN_DE_PERIODE = timedelta(days=31)
 
 
 class ResiliationImpossible(Exception):
-    pass
+    """Échec du fournisseur. `tentes` : les abonnements dont l'arrêt à l'échéance a été DEMANDÉ avant l'échec (la
+    réponse a pu se perdre alors que l'arrêt est appliqué : REVUE-2 P1-1)."""
+
+    def __init__(self, *args, tentes: list[str] | None = None):
+        super().__init__(*args)
+        self.tentes = list(tentes or [])
 
 
 def _fournisseur():
@@ -101,13 +107,19 @@ def apercu_fin_de_periode(org) -> datetime | None:
     return _fin_des_payants(payants) if payants else None
 
 
-def programmer_ou_resilier(org, arretes: list[str] | None = None) -> datetime | None:
+def programmer_ou_resilier(org, arretes: list[str] | None = None,
+                           deja_tentes: list[str] | None = None) -> datetime | None:
     """Avec un abonnement payant vivant : met en arrêt à l'échéance chaque abonnement ouvert qui renouvelait encore
     (P1-3 : un abonnement que le client avait déjà arrêté n'est pas touché), ajoute leurs identifiants à `arretes`, et
     rend la date de fin de la période payée (la plus tardive) ; sinon résilie tout de suite les abonnements ouverts et
-    rend None (suppression immédiate). Ne touche pas à la base. Lève ResiliationImpossible."""
+    rend None (suppression immédiate). Ne touche pas à la base. Lève ResiliationImpossible.
+
+    REVUE-2 P1-1 — `deja_tentes` : abonnements qu'une demande précédente, tombée en échec (502), a tenté d'arrêter.
+    Relu déjà arrêté chez le fournisseur, un tel abonnement l'a été par cette tentative (réponse perdue) : il est noté
+    dans `arretes`, pour que l'annulation le reprenne."""
     if not getattr(org, "stripe_subscription_id", None) and not getattr(org, "stripe_customer_id", None):
         return None
+    tentes: list[str] = []
     try:
         fournisseur = _fournisseur()
         ouverts = _abonnements_ouverts(fournisseur, org)
@@ -118,14 +130,17 @@ def programmer_ou_resilier(org, arretes: list[str] | None = None) -> datetime | 
             return None
         for sub in ouverts:
             if sub.get("cancel_at_period_end") is True:
+                if deja_tentes and sub["id"] in deja_tentes and arretes is not None:
+                    arretes.append(sub["id"])
                 continue
+            tentes.append(sub["id"])
             fournisseur.cancel_subscription(sub["id"], at_period_end=True)
             if arretes is not None:
                 arretes.append(sub["id"])
         return _fin_des_payants(payants)
     except Exception as exc:
         logger.error("Suppression du compte : abonnement non résilié (org=%s, %s)", org.id, type(exc).__name__)
-        raise ResiliationImpossible() from exc
+        raise ResiliationImpossible(tentes=tentes) from exc
 
 
 # P1-3 — la demande se souvient des abonnements qu'elle a elle-même mis en arrêt : une ligne du journal d'audit
@@ -152,16 +167,50 @@ def retirer_demande(db, org, raison: str, user_id: str | None = None) -> None:
                     target_id=org.id, extra={"raison": raison}))
 
 
-def abonnements_arretes_par_la_demande(db, org) -> list[str] | None:
-    """Les abonnements que la dernière demande de l'organisation a mis en arrêt ; None si aucune trace."""
+# REVUE-2 P1-1 — une demande tombée en échec (502) note les abonnements dont elle a DEMANDÉ l'arrêt : la réponse du
+# fournisseur a pu se perdre alors que l'arrêt est appliqué. Lue seulement par un réessai dans les 24 heures.
+ACTION_TENTATIVE = "compte.suppression_tentee"
+_DUREE_TENTATIVE = timedelta(hours=24)
+
+
+def noter_tentative(db, org, user_id: str | None, tentes: list[str]) -> None:
+    """Ajoute à la session (sans valider) la trace d'une demande tombée en échec après avoir demandé des arrêts."""
     from models.audit_log import AuditLog
-    ligne = (db.query(AuditLog)
-             .filter(AuditLog.organization_id == org.id, AuditLog.action == ACTION_DEMANDE)
-             .order_by(AuditLog.created_at.desc()).first())
-    if ligne is None:
+    db.add(AuditLog(user_id=user_id, organization_id=org.id, action=ACTION_TENTATIVE, target_type="organization",
+                    target_id=org.id, extra={"abonnements_tentes": list(tentes)}))
+
+
+def _traces_de_la_demande_en_cours(db, org) -> list:
+    """Les traces (demande, tentative) écrites depuis le dernier retrait de la demande (annulation, reprise, filet)."""
+    from models.audit_log import AuditLog
+    lignes = (db.query(AuditLog)
+              .filter(AuditLog.organization_id == org.id,
+                      AuditLog.action.in_((ACTION_DEMANDE, ACTION_TENTATIVE, ACTION_RETRAIT)))
+              .order_by(AuditLog.created_at.asc()).all())
+    retraits = [i for i, ligne in enumerate(lignes) if ligne.action == ACTION_RETRAIT]
+    return lignes[retraits[-1] + 1:] if retraits else lignes
+
+
+def _ids(ligne, cle: str) -> list[str]:
+    ids = (ligne.extra or {}).get(cle)
+    return [i for i in ids if isinstance(i, str)] if isinstance(ids, list) else []
+
+
+def abonnements_arretes_par_la_demande(db, org) -> list[str] | None:
+    """Les abonnements que la demande en cours a mis en arrêt ; None si elle n'a laissé aucune trace (demande d'avant
+    P1-3). REVUE-2 P1-1 : l'UNION de ses traces, jamais la dernière seule (une trace vide n'efface pas la mémoire)."""
+    demandes = [l for l in _traces_de_la_demande_en_cours(db, org) if l.action == ACTION_DEMANDE]
+    if not demandes:
         return None
-    ids = (ligne.extra or {}).get("abonnements_arretes")
-    return [i for i in ids if isinstance(i, str)] if isinstance(ids, list) else None
+    return list(dict.fromkeys(i for ligne in demandes for i in _ids(ligne, "abonnements_arretes")))
+
+
+def abonnements_tentes(db, org) -> list[str]:
+    """Les abonnements qu'une demande tombée en échec (24 dernières heures, depuis le dernier retrait) a tenté d'arrêter."""
+    depuis = datetime.utcnow() - _DUREE_TENTATIVE
+    return list(dict.fromkeys(i for ligne in _traces_de_la_demande_en_cours(db, org)
+                              if ligne.action == ACTION_TENTATIVE and ligne.created_at >= depuis
+                              for i in _ids(ligne, "abonnements_tentes")))
 
 
 def _a_reprendre(fournisseur, org, arretes: list[str] | None) -> dict | None:
