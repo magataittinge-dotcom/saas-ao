@@ -7,6 +7,7 @@ import { api } from '@/services/api'
 import GrilleOffres, { PHRASE_RESILIATION } from '@/components/offres/GrilleOffres'
 import { useAuthStore } from '@/stores/authStore'
 import { estRefusSiret } from '@/lib/refus'
+import { allerChezStripe } from '@/lib/adresseSure'
 
 interface Props {
   open: boolean
@@ -32,7 +33,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
     setErreur(null)
     try {
       const { data } = await api.post('/stripe/create-checkout-session', { plan: planId })
-      window.location.href = data.url
+      allerChezStripe(data.url)
     } catch (e) {
       const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
       setErreur(typeof detail === 'string' ? detail : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.")

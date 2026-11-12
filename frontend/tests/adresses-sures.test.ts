@@ -70,3 +70,17 @@ test('les autres navigations qui reçoivent une adresse dynamique passent par la
   // retour après connexion (Login, PublicRoute) : retourApresConnexion → adresseDeRetourValide → cheminInterne
   assert.match(sansCommentaires(lire('src/lib/sessionExpiree.ts')), /cheminInterne\(/)
 })
+
+test('redirection vers Stripe (adresse rendue par le serveur) : seulement checkout.stripe.com et billing.stripe.com en https', async () => {
+  const { adresseStripe } = await import('@/lib/adresseSure')
+  for (const a of ['https://checkout.stripe.com/c/pay/cs_test_a1', 'https://billing.stripe.com/p/session/test_b2']) assert.equal(adresseStripe(a), true, a)
+  for (const a of [...HOSTILES, null, undefined, '', 'http://checkout.stripe.com/c/pay/x', 'https://checkout.stripe.com.tiers.example/x',
+    'https://tiers.example/?https://checkout.stripe.com/', 'https://checkout.stripe.com@tiers.example/', 'https://stripe.com/', '/settings/billing']) {
+    assert.equal(adresseStripe(a), false, JSON.stringify(a))
+  }
+  for (const f of ['src/routes/Billing.tsx', 'src/components/common/SubscriptionWall.tsx']) {
+    const src = sansCommentaires(lire(f))
+    assert.doesNotMatch(src, /window\.location\.href\s*=/, `${f} : jamais d’affectation directe d’une adresse du serveur`)
+    assert.match(src, /allerChezStripe\(data\.url\)/, f)
+  }
+})

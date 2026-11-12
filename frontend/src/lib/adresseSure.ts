@@ -30,3 +30,22 @@ const ETAPE_AO = new RegExp(`^/projects/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9
 export function adresseEtapeAO(adresse: string | null | undefined): adresse is string {
   return cheminInterne(adresse) && ETAPE_AO.test(adresse)
 }
+
+const HOTES_STRIPE = new Set(['checkout.stripe.com', 'billing.stripe.com'])
+
+/** Une page de paiement ou d'abonnement de Stripe (adresse rendue par /stripe/create-checkout-session ou /stripe/portal). */
+export function adresseStripe(adresse: string | null | undefined): adresse is string {
+  if (typeof adresse !== 'string') return false
+  try {
+    const u = new URL(adresse)
+    return u.protocol === 'https:' && HOTES_STRIPE.has(u.hostname) && !u.username && !u.password && !u.port
+  } catch {
+    return false
+  }
+}
+
+/** Mène le client chez Stripe ; une autre adresse lève une erreur (l'écran montre son message d'échec habituel). */
+export function allerChezStripe(adresse: unknown): void {
+  if (typeof adresse !== 'string' || !adresseStripe(adresse)) throw new Error('Adresse de paiement refusée')
+  window.location.href = adresse
+}
