@@ -40,7 +40,7 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
     >
       <Groupe titre="Coordonnées légales" aide={sirene ? "Pré-remplies depuis le répertoire Sirene à l’inscription." : undefined}>
         <Field label="Nom de l’entreprise" rempli={texte(org.name)} source={sirene}>
-          <Champ value={org.name ?? ''} onChange={(e) => f.poserOrganisation('name', e.target.value)} autoComplete="organization" />
+          <Champ value={org.name ?? ''} onChange={(e) => f.poserOrganisation('name', e.target.value)} autoComplete="organization" placeholder="Raison sociale" />
         </Field>
         <ChampSiret ref={siret} siret={donnees.organisation?.siret} verifie={donnees.organisation?.siret_verified} />
         <Field label="Forme juridique" rempli={texte(forme)} source={sirene}>
@@ -48,23 +48,23 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
             options={[...(forme && !(FORMES_JURIDIQUES as readonly string[]).includes(forme) ? [forme] : []), ...FORMES_JURIDIQUES].map((x) => ({ valeur: x, libelle: x }))} />
         </Field>
         <Field label="Adresse du siège" rempli={texte(adresse)} source={sirene}>
-          <Champ value={adresse} onChange={(e) => f.poserOrganisation('address', e.target.value)} autoComplete="street-address" />
+          <Champ value={adresse} onChange={(e) => f.poserOrganisation('address', e.target.value)} autoComplete="street-address" placeholder="Numéro, rue, code postal, ville" />
         </Field>
         <CarteSiege adresse={donnees.organisation?.address} />
       </Groupe>
 
       <Groupe titre="Dirigeant et contacts">
         <Field label="Nom du dirigeant" rempli={texte(profil.gerant_nom)}>
-          <Champ value={profil.gerant_nom ?? ''} onChange={(e) => f.poserProfil('gerant_nom', e.target.value)} />
+          <Champ value={profil.gerant_nom ?? ''} onChange={(e) => f.poserProfil('gerant_nom', e.target.value)} placeholder="Prénom et nom" />
         </Field>
         <Field label="Fonction du dirigeant" rempli={texte(profil.gerant_titre)}>
           <Champ value={profil.gerant_titre ?? ''} onChange={(e) => f.poserProfil('gerant_titre', e.target.value)} placeholder="Gérant, PDG, directeur…" />
         </Field>
         <Field label="E-mail de l’entreprise" rempli={texte(org.email_contact)}>
-          <Champ type="email" value={org.email_contact ?? ''} onChange={(e) => f.poserOrganisation('email_contact', e.target.value)} autoComplete="email" />
+          <Champ type="email" value={org.email_contact ?? ''} onChange={(e) => f.poserOrganisation('email_contact', e.target.value)} autoComplete="email" placeholder="contact@entreprise.fr" />
         </Field>
         <Field label="Téléphone" rempli={texte(org.telephone)}>
-          <Champ type="tel" value={org.telephone ?? ''} onChange={(e) => f.poserOrganisation('telephone', e.target.value)} autoComplete="tel" />
+          <Champ type="tel" value={org.telephone ?? ''} onChange={(e) => f.poserOrganisation('telephone', e.target.value)} autoComplete="tel" placeholder="01 23 45 67 89" />
         </Field>
       </Groupe>
 
@@ -80,10 +80,10 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
       <AfficherPlus>
         <Groupe titre="Informations légales">
           <Field label="Année de création" rempli={texte(profil.date_creation)}>
-            <Champ value={profil.date_creation ?? ''} onChange={(e) => f.poserProfil('date_creation', e.target.value)} inputMode="numeric" />
+            <Champ className="max-w-32" value={profil.date_creation ?? ''} onChange={(e) => f.poserProfil('date_creation', e.target.value)} inputMode="numeric" placeholder="2005" />
           </Field>
           <Field label="Ville du greffe" rempli={texte(org.greffe_rcs)} aide="Registre du commerce ou des métiers">
-            <Champ value={org.greffe_rcs ?? ''} onChange={(e) => f.poserOrganisation('greffe_rcs', e.target.value)} maxLength={80} />
+            <Champ value={org.greffe_rcs ?? ''} onChange={(e) => f.poserOrganisation('greffe_rcs', e.target.value)} maxLength={80} placeholder="Reims" />
           </Field>
           <Field label="Capital social (€)" rempli={typeof org.capital_social === 'number'}>
             <ChampNombre className="max-w-56" valeur={typeof org.capital_social === 'number' ? org.capital_social : null} max={10_000_000_000} onChange={(v) => f.poserOrganisation('capital_social', v)} />
@@ -92,8 +92,9 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
         <Groupe titre="Métiers et présentation">
           <Pleine>
             <Field label="Métiers exercés" groupe>
-              <div className="grid gap-x-4 gap-y-1 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]">
-                {METIERS.map((m) => (
+              {/* par ordre alphabétique, en colonnes : on cherche son métier en descendant, pas case par case */}
+              <div className="gap-x-4 sm:columns-2 lg:columns-3 [&>*]:break-inside-avoid">
+                {[...METIERS].sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr')).map((m) => (
                   <CaseACocher key={m.code} libelle={m.libelle} coche={metiers.includes(m.code)}
                     onChange={(coche) => f.poserProfil('metiers', coche ? [...metiers, m.code] : metiers.filter((c) => c !== m.code))} />
                 ))}
@@ -105,11 +106,12 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
               value={departements ?? (profil.departements_intervention ?? []).join(', ')}
               onChange={(e) => { setDepartements(e.target.value); f.poserProfil('departements_intervention', lireDepartements(e.target.value)) }}
               onBlur={() => setDepartements(null)}
+              placeholder="51, 02, 08"
             />
           </Field>
           <Pleine>
             <Field label="Présentation en quelques lignes" rempli={texte(org.presentation)}>
-              <ZoneTexte className="resize-none" rows={4} value={org.presentation ?? ''} onChange={(e) => f.poserOrganisation('presentation', e.target.value)} />
+              <ZoneTexte className="resize-none" rows={4} value={org.presentation ?? ''} onChange={(e) => f.poserOrganisation('presentation', e.target.value)} placeholder="Entreprise générale de bâtiment, nous intervenons en…" />
             </Field>
           </Pleine>
           <Pleine>
