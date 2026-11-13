@@ -537,13 +537,13 @@ export default function StepAnalysis({ project }: Props) {
 function SqueletteDecider() {
   return (
     <div aria-hidden="true" data-squelette-decider="" className="space-y-8">
-      <div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid grid-cols-1 items-start gap-x-6 gap-y-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <div className="space-y-3">
           <Squelette className="h-5 w-24" />
           <div className="divide-y divide-bord rounded-carte border border-bord bg-surface-0">
-            <div className="grid gap-2.5 px-5 py-4 sm:px-6"><Squelette className="h-5 w-28" /><Squelette className="h-3.5 w-96 max-w-full" /></div>
+            <div className="grid grid-cols-1 gap-2.5 px-5 py-4 sm:px-6"><Squelette className="h-5 w-28" /><Squelette className="h-3.5 w-96 max-w-full" /></div>
             {['w-44', 'w-52', 'w-48', 'w-24'].map((l) => (
-              <div key={l} className="grid gap-2.5 px-5 py-4 sm:px-6">
+              <div key={l} className="grid grid-cols-1 gap-2.5 px-5 py-4 sm:px-6">
                 <Squelette className={`h-4 ${l}`} />
                 <Squelette className="h-3.5 w-full max-w-md" />
                 <Squelette className="h-3.5 w-64 max-w-[70%]" />
@@ -554,9 +554,9 @@ function SqueletteDecider() {
         </div>
         <div className="space-y-3">
           <Squelette className="h-5 w-40" />
-          <div className="grid gap-4 rounded-carte border border-bord bg-surface-0 px-6 py-5">
+          <div className="grid grid-cols-1 gap-4 rounded-carte border border-bord bg-surface-0 px-6 py-5">
             {['w-56', 'w-full', 'w-48', 'w-36', 'w-64', 'w-52'].map((l) => (
-              <div key={l} className="grid gap-2"><Squelette className="h-3 w-20" /><Squelette className={`h-4 max-w-full ${l}`} /></div>
+              <div key={l} className="grid grid-cols-1 gap-2"><Squelette className="h-3 w-20" /><Squelette className={`h-4 max-w-full ${l}`} /></div>
             ))}
           </div>
         </div>
