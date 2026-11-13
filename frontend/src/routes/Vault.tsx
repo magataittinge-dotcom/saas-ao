@@ -61,11 +61,21 @@ const exemples = (categorie: VaultCategory) =>
 /** L'attente a la forme du coffre-fort chargé : un titre de section et sa surface de rangées, deux fois. */
 function SqueletteCoffre() {
   return (
-    <div className="grid gap-4">
-      <Squelette className="h-6 w-32" />
-      <Squelette className="h-[70px] rounded-carte" />
-      <Squelette className="mt-6 h-6 w-32" />
-      <Squelette className="h-[330px] rounded-carte" />
+    <div aria-hidden="true">
+      {/* des rangées dans leur surface à filets, comme le contenu : plus de dalle grise */}
+      {[1, 6].map((rangees, bloc) => (
+        <div key={bloc} className={ESPACE_SECTION}>
+          <Squelette className="titre-section h-6 w-32" />
+          <div className="rounded-carte border border-bord bg-surface-0 px-5 shadow-card sm:px-6">
+            {Array.from({ length: rangees }, (_, i) => (
+              <div key={i} className="flex min-h-[60px] items-center gap-3 border-t border-bord py-2 first:border-t-0">
+                <div className="grid flex-1 gap-2"><Squelette className="h-3.5 w-56 max-w-full" /><Squelette className="h-3 w-40 max-w-full" /></div>
+                <Squelette className="h-3.5 w-16" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -150,6 +160,27 @@ export default function Vault() {
   const visibles = ordonnees.slice(courante * LIGNES_PAR_PAGE, (courante + 1) * LIGNES_PAR_PAGE)
   const aDeposer = VAULT_CATEGORY_ORDER.filter((categorie) => !documents.some((d) => d.category === categorie))
 
+  // Ce qu'il reste à fournir. Au-delà d'une page de pièces (50), la section passe AVANT la liste : elle n'est plus à
+  // 3 000 px de défilement (jury, tour 3).
+  const sectionADeposer = aDeposer.length > 0 && (
+                <section aria-labelledby="coffre-a-deposer" className={ESPACE_SECTION}>
+                  <TitreSection id="coffre-a-deposer">À déposer</TitreSection>
+                  <Carte sansMarge className="px-5 sm:px-6">
+                    {aDeposer.map((categorie) => (
+                      <RangeeCarte key={categorie} className="justify-between gap-x-6 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-fg">{VAULT_CATEGORY_LABELS[categorie]}</p>
+                          <p className="text-pretty text-sm text-fg-2">{exemples(categorie) || 'Toute autre pièce utile à vos dossiers'}</p>
+                        </div>
+                        <Bouton variante="lien" className="shrink-0 text-sm" onClick={open}>
+                          Déposer<span className="sr-only"> : {VAULT_CATEGORY_LABELS[categorie]}</span>
+                        </Bouton>
+                      </RangeeCarte>
+                    ))}
+                  </Carte>
+                </section>
+              )
+
   return (
     <div {...getRootProps({ className: 'min-h-[60vh] outline-none' })}>
       <Champ {...getInputProps()} aria-label="Documents à déposer au coffre-fort" />
@@ -188,6 +219,7 @@ export default function Vault() {
           squelette={<SqueletteCoffre />}
           erreur={(
             <EtatErreur
+              className="max-w-xl"
               titre="Le coffre-fort n’a pas pu s’ouvrir"
               detail={<span className="block text-pretty">La connexion au serveur a échoué. Vos pièces sont toujours là : rien n’a été modifié.</span>}
               onReessayer={() => { void requete.refetch() }}
@@ -224,6 +256,7 @@ export default function Vault() {
               {ordonnees.length === 0 && (
                 <p className="text-sm text-fg-2">Aucune pièce ne porte ce nom. Essayez un autre mot, ou effacez la recherche.</p>
               )}
+              {pages > 1 && sectionADeposer}
               {ORDRE.map((categorie) => {
                 const pieces = visibles.filter((d) => d.category === categorie)
                 if (pieces.length === 0) return null
@@ -249,24 +282,7 @@ export default function Vault() {
                 </nav>
               )}
 
-              {aDeposer.length > 0 && (
-                <section aria-labelledby="coffre-a-deposer" className={ESPACE_SECTION}>
-                  <TitreSection id="coffre-a-deposer">À déposer</TitreSection>
-                  <Carte sansMarge className="px-5 sm:px-6">
-                    {aDeposer.map((categorie) => (
-                      <RangeeCarte key={categorie} className="justify-between gap-x-6 py-2.5">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-fg">{VAULT_CATEGORY_LABELS[categorie]}</p>
-                          <p className="text-pretty text-sm text-fg-2">{exemples(categorie) || 'Toute autre pièce utile à vos dossiers'}</p>
-                        </div>
-                        <Bouton variante="lien" className="shrink-0 text-sm" onClick={open}>
-                          Déposer<span className="sr-only"> : {VAULT_CATEGORY_LABELS[categorie]}</span>
-                        </Bouton>
-                      </RangeeCarte>
-                    ))}
-                  </Carte>
-                </section>
-              )}
+              {pages <= 1 && sectionADeposer}
               {precision}
             </>
           )}
