@@ -81,14 +81,15 @@ const heure = heureCourteParis
 export const jourCourt = (d: Date): string => { const m = momentParis(d); return `${m.jour} ${MOIS_COURTS[m.mois - 1]}` }
 const jourMois = (iso: string) => jourCourtParis(iso)
 
-/** « ven. 6 nov., 12 h » ; sans heure connue, le jour seul ; null sans date. */
+/** « ven. 6 nov., 12 h » ; sans heure connue, le jour seul ; null sans date. Espaces insécables : la date ne se coupe jamais
+ *  (jury, tour 3 : « jeu. 3 déc., 14 » puis « h » seul à la ligne). */
 export function quandCourt(p: Project): string | null {
   const source = echeanceAO(p)
   const limite = momentLimite(source)
   if (!limite) return null
   const m = momentParis(limite)
   const jour = `${JOURS_COURTS[new Date(Date.UTC(m.an, m.mois - 1, m.jour)).getUTCDay()]} ${m.jour} ${MOIS_COURTS[m.mois - 1]}`
-  return source?.heure ? `${jour}, ${heure(limite)}` : jour
+  return (source?.heure ? `${jour}, ${heure(limite)}` : jour).replace(/ /g, '\u00a0')
 }
 
 export interface ResumeMesAO {

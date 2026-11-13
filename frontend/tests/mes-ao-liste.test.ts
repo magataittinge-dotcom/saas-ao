@@ -141,9 +141,9 @@ test('l’avis d’origine : le lien de la veille, seulement s’il est sûr', (
 })
 
 test('« vendredi 6 nov., 12 h » : le jour et l’heure de la remise', () => {
-  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '12h00' } })), 'ven. 6 nov., 12 h')
-  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '17h30' } })), 'ven. 6 nov., 17 h 30')
-  assert.equal(quandCourt(projet({ deadline: '2026-11-06' })), 'ven. 6 nov.')
+  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '12h00' } })), 'ven.\u00a06\u00a0nov.,\u00a012\u00a0h')
+  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '17h30' } })), 'ven.\u00a06\u00a0nov.,\u00a017\u00a0h\u00a030')
+  assert.equal(quandCourt(projet({ deadline: '2026-11-06' })), 'ven.\u00a06\u00a0nov.')
   assert.equal(quandCourt(projet()), null)
 })
 

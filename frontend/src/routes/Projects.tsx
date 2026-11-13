@@ -18,7 +18,7 @@ import { Squelette } from '@/components/ui/squelette'
 import { Tableau } from '@/components/ui/tableau'
 import { annoncer } from '@/components/ui/toast'
 import { ALaUne } from '@/components/mesao/ALaUne'
-import { colonnesAMettreAJour, colonnesEnCours } from '@/components/mesao/LigneAO'
+import { colonnesAMettreAJour, colonnesEnCours, TABLEAU_EN_COURS } from '@/components/mesao/LigneAO'
 import { ResumeMesAOCartes, type FiltreMesAO } from '@/components/mesao/ResumeMesAO'
 import { Termines } from '@/components/mesao/Termines'
 import { VideMesAO } from '@/components/mesao/VideMesAO'
@@ -190,7 +190,7 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
       {enCours.length > 0 && (
         <section aria-labelledby="titre-en-cours" className="mt-10 max-md:mt-7.5">
           <TitreSection id="titre-en-cours">En cours <span className="font-normal text-fg-3">{enCours.length}</span></TitreSection>
-          <Tableau libelle="Appels d’offres en cours" colonnes={colonnesEnCours(gestes)} lignes={enCours} cle={(p) => p.id} vide={null} />
+          <Tableau libelle="Appels d’offres en cours" colonnes={colonnesEnCours(gestes)} lignes={enCours} cle={(p) => p.id} vide={null} className={TABLEAU_EN_COURS} />
         </section>
       )}
 

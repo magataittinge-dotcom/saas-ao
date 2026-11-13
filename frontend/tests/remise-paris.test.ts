@@ -74,7 +74,7 @@ test('les écrans disent la remise et les dates du serveur à l’heure de Paris
   const { dateTerminee } = await import('@/components/mesao/Termines')
   const { libelleActualisation } = await import('@/components/veille/VeilleAccueil')
   const projet = (extra: object) => ({ id: 'p', name: 'AO', status: 'en_cours', updated_at: '2026-11-03T23:30:00', ...extra }) as never
-  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '12h00' } })), 'ven. 6 nov., 12 h')
+  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '12h00' } })), 'ven.\u00a06\u00a0nov.,\u00a012\u00a0h')
   assert.equal(jourCourt(utc('2026-11-05T23:30:00Z')), '6 nov.')                         // 0:30 le 6 à Paris
   assert.equal(dateTerminee(projet({ status: 'soumis', depose_at: '2026-11-03T23:30:00' })), 'déposé le 4 nov.')
   assert.equal(dateTerminee(projet({ status: 'perdu' })), 'mis à jour le 4 nov.')

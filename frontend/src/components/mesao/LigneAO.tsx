@@ -40,9 +40,10 @@ export function CelluleAO({ projet, detail = true, large = false, sansLien = fal
       {/* l'acheteur se coupe, le lot reste (jury, tour 1 : le lot, ce qui distingue les lignes, disparaissait) ; au téléphone la ligne passe à la ligne */}
       {(acheteur || lot) && (
         <span className="flex min-w-0 text-sm text-fg-2 max-md:flex-wrap max-md:gap-x-1">
-          {acheteur && <span className="min-w-0 break-words max-md:line-clamp-1 md:truncate">{acheteur}</span>}
+          {/* jury, tour 3 : l'acheteur se lit d'abord (jusqu'à la moitié de la ligne), le lot prend le reste et se coupe par « … » */}
+          {acheteur && <span className={cn('min-w-0 break-words max-md:line-clamp-1 md:truncate', lot && 'md:max-w-[55%] md:shrink-0')}>{acheteur}</span>}
           {acheteur && lot && <span aria-hidden className="shrink-0 max-md:hidden">&nbsp;·&nbsp;</span>}
-          {lot && <span className="min-w-0 break-words max-md:line-clamp-1 md:max-w-[65%] md:shrink-0 md:truncate">{lot}</span>}
+          {lot && <span className="min-w-0 break-words max-md:line-clamp-1 md:truncate">{lot}</span>}
         </span>
       )}
       {questions > 0 && <PastilleEtat sens="ambre" icone={HelpCircle} className="w-fit">{questions} question{questions > 1 ? 's' : ''} à poser à l’acheteur</PastilleEtat>}
@@ -69,8 +70,9 @@ function CelluleEtape({ projet }: { projet: Project }) {
   }
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <FilPoints fil={filDeLAO(projet)} className="max-w-[210px]" />
-      <span className="whitespace-nowrap text-sm text-fg-2"><strong className="font-semibold text-fg">{nom}</strong> · étape {etape} sur {total}</span>
+      <FilPoints fil={filDeLAO(projet)} className="max-w-[210px] max-md:max-w-none" />
+      {/* le fil montre déjà où en est l'AO : le nom de l'étape seul, le rang est lu (jury, tour 3 : « étape 7 sur 7 » écrit 50 fois) */}
+      <span className="whitespace-nowrap text-sm text-fg-2"><strong className="font-semibold text-fg">{nom}</strong><span className="sr-only"> · étape {etape} sur {total}</span></span>
     </div>
   )
 }
@@ -87,7 +89,7 @@ function CelluleRemise({ projet, maintenant }: { projet: Project; maintenant: Da
     <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
       <PastilleRemise libelle={e.libelle} niveau={niveauRemise(projet, maintenant)}
         ariaLibelle={e.etat === 'aujourdhui' ? 'Remise aujourd’hui' : `Remise dans ${e.jours} jour${(e.jours ?? 0) > 1 ? 's' : ''}`} />
-      {quand && <span className="text-sm text-fg-2">{quand}</span>}
+      {quand && <span className="whitespace-nowrap text-sm text-fg-2">{quand}</span>}
     </div>
   )
 }
@@ -116,8 +118,9 @@ function CelluleAction({ projet, maintenant, onStatut, onSupprimer }: { projet: 
       ) : enTraitement(projet) ? (
         <span className="text-sm text-fg-2">Synorix s’en occupe</span>
       ) : (
-        <Link to={lien} {...precharger(projet, lien)} className={classesBouton('secondaire', 'max-md:flex-1')}>
-          {action.verbe}<ArrowRight aria-hidden strokeWidth={1.75} />
+        // un lien, pas un bouton : dans une liste, l'aplat et le trait restent à « À la une » (jury, tour 3 : un mur de 50 boutons)
+        <Link to={lien} {...precharger(projet, lien)} className={classesBouton('lien', 'min-w-0 text-right max-md:min-h-11 max-md:text-left')}>
+          <span className="min-w-0">{action.verbe}</span><ArrowRight aria-hidden strokeWidth={1.75} />
         </Link>
       )}
       <MenuAO projet={projet} onStatut={onStatut} onSupprimer={onSupprimer} />
@@ -125,15 +128,22 @@ function CelluleAction({ projet, maintenant, onStatut, onSupprimer }: { projet: 
   )
 }
 
+/**
+ * Le tableau « En cours » garde les mêmes colonnes quel que soit son contenu (jury, tour 3 : il se recalait d'un jeu de
+ * données à l'autre, et la colonne « Remise », trop étroite, coupait l'heure) : à partir de 1 024 px, largeurs fixées ici,
+ * la colonne de l'AO prend le reste. À passer en `className` du `<Tableau>`.
+ */
+export const TABLEAU_EN_COURS = 'lg:[&_table]:table-fixed'
+
 /** Les colonnes d'un AO en cours : l'AO · où vous en êtes · la remise · les unités · la prochaine action. */
 export function colonnesEnCours(g: GestesAO): ColonneTableau<Project>[] {
   return [
-    { cle: 'ao', titre: 'Appel d’offres', rendu: (p) => <CelluleAO projet={p} />, classe: 'md:w-[32%]' },
-    { cle: 'etape', titre: 'Où vous en êtes', tel: true, rendu: (p) => <CelluleEtape projet={p} /> },
-    { cle: 'remise', titre: 'Remise', tel: true, rendu: (p) => <CelluleRemise projet={p} maintenant={g.maintenant} /> },
-    { cle: 'unites', titre: 'Unités', tel: true, classe: 'max-lg:hidden max-md:block',
+    { cle: 'ao', titre: 'Appel d’offres', rendu: (p) => <CelluleAO projet={p} />, classe: 'md:max-lg:w-[32%]' },
+    { cle: 'etape', titre: 'Où vous en êtes', tel: true, rendu: (p) => <CelluleEtape projet={p} />, classe: 'lg:w-[13rem]' },
+    { cle: 'remise', titre: 'Remise', tel: true, rendu: (p) => <CelluleRemise projet={p} maintenant={g.maintenant} />, classe: 'lg:w-[14rem]' },
+    { cle: 'unites', titre: 'Unités', tel: true, classe: 'max-xl:hidden max-md:block xl:w-[11rem]',
       rendu: (p) => { const u = texteUnites(p.avancement); return u ? <span className="whitespace-nowrap text-sm text-fg-2">{u}</span> : <span className="text-fg-3 max-md:hidden">—</span> } },
-    { cle: 'action', titre: 'Prochaine action', tel: true, nombre: true, rendu: (p) => <CelluleAction projet={p} {...g} /> },
+    { cle: 'action', titre: 'Prochaine action', tel: true, nombre: true, rendu: (p) => <CelluleAction projet={p} {...g} />, classe: 'lg:w-[17rem]' },
   ]
 }
 

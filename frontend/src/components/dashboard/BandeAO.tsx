@@ -44,6 +44,9 @@ export interface PropsBandeAO {
   onNouveau: () => void
 }
 
+// Les colonnes ne dépendent pas du contenu d'une rangée (jury, tour 3 : la largeur du bouton décalait le fil et la date
+// d'une rangée à l'autre) : le nom prend le reste, le fil, la remise et l'action ont leur largeur.
+const COLONNES = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_12.5rem_auto] lg:items-center xl:grid-cols-[minmax(0,1fr)_15rem_13rem_17.5rem]'
 const RANGEE = 'grid min-w-0 gap-x-6 gap-y-3 border-t border-bord px-5 py-4 first:border-t-0 sm:px-6'
 
 export default function BandeAO({ projets, maintenant = new Date(), onStatut, onNouveau }: PropsBandeAO) {
@@ -78,15 +81,15 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
               const sousTitre = [acheteurCourt(p.maitre_ouvrage), p.selected_lot_name].filter(Boolean).join(' · ')
               const traitement = enTraitement(p)
               return (
-                <li key={p.id} data-ao={p.id} className={`${RANGEE} lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_auto] lg:items-center`}>
+                <li key={p.id} data-ao={p.id} className={`${RANGEE} ${COLONNES}`}>
                   <div className="min-w-0">
                     <Link to={`/projects/${p.id}`} {...precharger(p)} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{lierNumero(p.name)}</span></Link>
-                    {sousTitre && <p className="mt-0.5 truncate text-sm text-fg-2">{sousTitre}</p>}
+                    {sousTitre && <p className="mt-0.5 line-clamp-2 break-words text-sm text-fg-2">{sousTitre}</p>}
                   </div>
                   <div className="min-w-0">
                     {traitement ? <JaugeLecture pct={p.processing_progress ?? 0} className="max-w-[320px]" /> : <FilPoints fil={filDeLAO(p)} className="max-w-[320px]" />}
                     <p className="mt-1.5 text-sm text-fg-2">
-                      {traitement ? (p.processing_detail || 'Synorix s’en occupe') : <><strong className="font-semibold text-fg">{nom}</strong> · étape {etape} sur {total}</>}
+                      {traitement ? (p.processing_detail || 'Synorix s’en occupe') : <><strong className="font-semibold text-fg">{nom}</strong><span className="sr-only"> · étape {etape} sur {total}</span></>}
                     </p>
                   </div>
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
@@ -95,7 +98,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
                       : (
                         <>
                           <PastilleRemise libelle={lecture.echeance.libelle} niveau={niveauRemise(p, maintenant)} />
-                          {quand && <span className="text-sm text-fg-2">{quand}</span>}
+                          {quand && <span className="whitespace-nowrap text-sm text-fg-2">{quand}</span>}
                         </>
                       )}
                   </div>

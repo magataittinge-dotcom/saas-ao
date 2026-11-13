@@ -37,7 +37,8 @@ export function ALaUne({ projet, maintenant = new Date() }: { projet: Project; m
           <p className="max-w-[62ch] text-base text-fg-2">{lecture.phrase}</p>
           <div className="mt-1 max-w-[560px]">
             <FilPoints fil={filDeLAO(projet)} etiquettes />
-            <p className="mt-2 text-sm text-fg-2"><strong className="font-semibold text-fg">{nom}</strong> · étape {etape} sur {total}</p>
+            {/* le fil nomme déjà les sept étapes à partir de 640 px : la ligne ne reste écrite qu'au téléphone (jury, tour 3) */}
+            <p className="mt-2 text-sm text-fg-2 sm:sr-only"><strong className="font-semibold text-fg">{nom}</strong> · étape {etape} sur {total}</p>
           </div>
           {traitement ? (
             <div className="mt-1.5 flex flex-wrap items-center gap-3">
