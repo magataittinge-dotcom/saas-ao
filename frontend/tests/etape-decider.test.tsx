@@ -68,7 +68,7 @@ test('« À vérifier avant de vous engager » : chaque point avec sa source,
   assert.equal(par.visite.valeur, 'Obligatoire, le jeudi 5 novembre 2026')
   assert.equal(par.variantes.valeur, 'Les variantes ne sont pas autorisées.')
   assert.equal(par.variantes.source?.page, 7)
-  assert.equal(par.garanties.valeur, 'Retenue de garantie de 5 %, remplaçable par une caution.')
+  assert.equal(par.garanties.valeur, 'Retenue de garantie de 5\u00a0%, remplaçable par une caution.', 'le nombre et son signe d’un seul tenant (FIN-ECR)')
   assert.equal(par.garanties.source?.document, 'CCAP-demo.pdf')
   const html = renderToStaticMarkup(<AVerifierAvantEngagement points={points} onVoir={() => undefined} onVoirPenalites={() => undefined} />)
   assert.match(html, /À vérifier avant de vous engager/)

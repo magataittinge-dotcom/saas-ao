@@ -14,7 +14,7 @@ export function SqueletteBandeEtape({ cases = 4 }: { cases?: number }) {
   return (
     <div aria-hidden="true" data-squelette-bande="" className={`grid divide-bord rounded-carte border border-bord bg-surface-0 shadow-card max-md:grid-cols-2 md:divide-x ${cases >= 4 ? 'md:grid-cols-4' : cases === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
       {Array.from({ length: cases }, (_, i) => (
-        <div key={i} className="grid min-h-[150px] content-start gap-3 p-5 max-md:min-h-[116px] max-md:p-4">
+        <div key={i} className="grid min-h-[150px] grid-cols-1 content-start gap-3 p-5 max-md:min-h-[116px] max-md:p-4">
           <Squelette className="h-4 w-24 max-w-full" />
           <Squelette className="h-7 w-14" />
           <Squelette className="h-3.5 w-36 max-w-full" />

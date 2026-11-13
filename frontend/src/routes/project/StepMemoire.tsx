@@ -375,7 +375,7 @@ export default function StepMemoire({ project }: Props) {
           {/* la bande de cases, à sa forme : une surface, des filets, aucune valeur écrite */}
           <div aria-hidden="true" className="grid grid-cols-2 divide-bord rounded-carte border border-bord bg-surface-0 md:grid-cols-4 md:divide-x">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="grid content-start gap-3 p-5 max-md:p-4">
+              <div key={i} className="grid grid-cols-1 content-start gap-3 p-5 max-md:p-4">
                 <Squelette className="h-4 w-24 max-w-full" />
                 <Squelette className="h-6 w-16" />
               </div>

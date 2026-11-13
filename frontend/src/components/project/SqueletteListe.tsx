@@ -17,7 +17,7 @@ function LigneLot({ i }: { i: number }) {
     <div className="flex min-h-20 flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4 max-sm:px-4">
       <Squelette className="size-5 shrink-0 rounded" />
       <Squelette className="h-3.5 w-12 shrink-0 max-sm:hidden" />
-      <div className="grid min-w-0 flex-1 gap-2.5">
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-2.5">
         <Squelette className={`h-4 max-w-full ${LARGEURS[i % LARGEURS.length]}`} />
         <Squelette className="h-3 w-48 max-w-[60%]" />
       </div>
@@ -34,7 +34,7 @@ function LigneLot({ i }: { i: number }) {
 function LignePieceSquelette({ i }: { i: number }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-3.5 max-sm:px-4">
-      <div className="grid min-w-0 flex-1 basis-72 gap-2.5">
+      <div className="grid min-w-0 flex-1 basis-72 grid-cols-1 gap-2.5">
         <Squelette className={`h-4 max-w-full ${LARGEURS[(i + 2) % LARGEURS.length]}`} />
         {i % 2 === 0 && <Squelette className="h-3 w-56 max-w-[70%]" />}
       </div>

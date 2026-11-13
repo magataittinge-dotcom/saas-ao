@@ -4,6 +4,7 @@
 //
 // Miroir du serveur : backend/services/pdf_ancre.py (forme de l'ancre) et
 // backend/services/pdf_positions.py::tourner_rectangle (rotation).
+import { espacesFr } from '@/lib/espacesFr'
 
 /** [x0, y0, x1, y1], en fractions de la page, origine en haut à gauche. */
 export type Rect = [number, number, number, number]
@@ -189,11 +190,12 @@ export interface CitationAffichee {
 
 /** La citation prête à afficher : contexte raccourci de part et d'autre du passage entier. */
 export function citationAffichee(c: Citation, max = 160): CitationAffichee {
+  // espacesFr : un nombre ne se sépare pas de son signe, ni un mot de ses deux-points, en fin de ligne (affichage seul)
   return {
-    avant: couperContexte(c.avant, max, true),
+    avant: espacesFr(couperContexte(c.avant, max, true)),
     // les points de conduite d'un sommaire (« ATTRIBUTAIRE ………… 12 ») ne sont pas du texte à lire
-    passage: (c.passage || '').replace(/(?:\s*[.…·]){4,}/g, ' ').replace(ESPACES, ' ').trim(),
-    apres: couperContexte(c.apres, max, false),
+    passage: espacesFr((c.passage || '').replace(/(?:\s*[.…·]){4,}/g, ' ').replace(ESPACES, ' ').trim()),
+    apres: espacesFr(couperContexte(c.apres, max, false)),
   }
 }
 

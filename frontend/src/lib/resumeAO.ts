@@ -125,7 +125,7 @@ export function pointsAVerifier(
     points.push({ id: 'variantes', libelle: 'Variantes', valeur: i.variantes_autorisees ? 'Les variantes sont autorisées.' : 'Les variantes ne sont pas autorisées.', source: sourceParMots(exigences, /variante/i) })
   }
   const garanties: string[] = []
-  if (typeof i.retenue_garantie_pct === 'number') garanties.push(`retenue de garantie de ${i.retenue_garantie_pct} %`)
+  if (typeof i.retenue_garantie_pct === 'number') garanties.push(`retenue de garantie de ${i.retenue_garantie_pct}\u00a0%`)
   if (i.caution_remplacante === true) garanties.push('remplaçable par une caution')
   if (garanties.length) points.push({ id: 'garanties', libelle: 'Garanties', valeur: garanties[0].charAt(0).toUpperCase() + garanties.join(', ').slice(1) + '.', source: sourceParMots(exigences, /garantie|caution/i) })
   if (typeof i.validite_offres_jours === 'number') points.push({ id: 'validite', libelle: 'Validité de l’offre', valeur: `${i.validite_offres_jours} jours`, source: sourceParMots(exigences, /validit[ée] des offres|d[ée]lai de validit/i) })
