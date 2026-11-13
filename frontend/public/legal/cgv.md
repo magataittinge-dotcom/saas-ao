@@ -1,6 +1,6 @@
 # Conditions Générales de Vente (CGV)
 
-**Dernière mise à jour : 12 novembre 2026**
+**Dernière mise à jour : 13 novembre 2026**
 
 Les présentes Conditions Générales de Vente (« CGV ») régissent la relation
 contractuelle entre Synorix (édité par [À COMPLÉTER], cf. Mentions légales)
@@ -195,15 +195,11 @@ tiers, sauf obligation légale expresse.
 Synorix s'engage à **ne pas utiliser les données du Client pour
 entraîner des modèles d'intelligence artificielle**.
 
-## 11. Service Level Agreement (SLA)
+## 11. Disponibilité du Service
 
 Synorix s'engage à mettre en œuvre les moyens raisonnables pour assurer
-une disponibilité du Service supérieure à **99 %** en moyenne mensuelle
-(plans Starter et Pro).
-
-Pour le plan Business, un SLA contractuel de **99,5 %** est applicable,
-avec mécanisme d'indemnité par crédit en cas de manquement, dans les
-conditions précisées dans le contrat de service.
+une disponibilité du Service supérieure à **99 %** en moyenne mensuelle,
+quelle que soit l'offre souscrite.
 
 Les opérations de maintenance planifiée et les cas de force majeure
 sont exclus du calcul de disponibilité.
