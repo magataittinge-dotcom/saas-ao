@@ -59,7 +59,10 @@ function Cellule({ texte }: { texte: string }) {
 function TableauJuridique({ table }: { table: SegmentTable }) {
   const colonnes = table.entetes.map((titre, k) => ({
     cle: String(k), titre, tel: true,
-    classe: k > 0 && table.lignes.every((l) => (l[k] ?? '').length <= 28) ? 'md:whitespace-nowrap' : undefined,
+    // une première colonne de noms longs dans un tableau d'au moins quatre colonnes garde 30 % de la largeur (jury, tour 3 :
+    // « Hostinger International Ltd » sur trois lignes à côté d'une colonne qui avait de la place)
+    classe: k > 0 && table.lignes.every((l) => (l[k] ?? '').length <= 28) ? 'md:whitespace-nowrap'
+      : k === 0 && table.entetes.length >= 4 && table.lignes.some((l) => (l[0] ?? '').length > 24) ? 'md:w-[30%]' : undefined,
     rendu: (ligne: string[]) => <>{k > 0 && <span className="text-fg-3 md:hidden">{titre}{' : '}</span>}<Cellule texte={ligne[k] ?? ''} /></>,
   }))
   return <Tableau className="my-6" libelle={table.entetes.join(', ')} colonnes={colonnes} lignes={table.lignes} cle={(ligne) => ligne.join('|')} vide={null} />
