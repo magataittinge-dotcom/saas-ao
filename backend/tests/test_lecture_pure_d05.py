@@ -67,7 +67,8 @@ def test_resultat_identique_a_l_ecran(client, db_session, test_org):
     attendu = build_critical_fields(INFOS_MARCHE, CRITERES, docs)
     attendu = resoudre_pages(db_session, "p-d05", attendu) or attendu
     corps = client.get("/api/projects/p-d05/critical-fields").json()
-    assert corps == {"lot": "lot2", "fields": attendu}
+    from services.extrait import extraits_lisibles     # FIN-SRV : l'écran lit l'extrait lisible, l'exact reste à côté
+    assert corps == {"lot": "lot2", "fields": extraits_lisibles(attendu)}
     assert corps["fields"]["date_limite_remise"]["value"]["date"] == "2026-09-30"
 
 
@@ -94,7 +95,8 @@ def test_la_fin_de_l_analyse_range_les_champs_et_leur_page(client, db_session, t
     source = ranges["date_limite_remise"]["source"]
     assert source["page"] == 3
     corps = client.get("/api/projects/p-d05p/critical-fields").json()
-    assert corps["fields"] == ranges
+    from services.extrait import extraits_lisibles
+    assert corps["fields"] == extraits_lisibles(ranges)
 
 
 def test_mes_ao_ordre_stable_a_mise_a_jour_egale(client, db_session, test_org):
