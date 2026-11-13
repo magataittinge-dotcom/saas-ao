@@ -56,6 +56,12 @@ test('quota atteint : « 100% » tient dans l\'anneau (anneau de 40 px, chiffre 
 test('mur d’abonnement en Business : le refus du serveur, sans grille d’offres', () => {
   const code = sansCommentaires(lire('src/components/common/SubscriptionWall.tsx'))
   assert.match(code, /\?\.plan\) === 'business'/)
-  assert.match(code, /Quota du mois atteint/)
-  assert.match(code, /business \? null : \(\s*<GrilleOffres/)
+  // COR-B1 (jury, tour 3 : un dialogue sans issue) : en Business, un petit dialogue rendu AVANT la grille, avec le fait en
+  // titre, la phrase du serveur et une issue vers Paramètres > Abonnement ; ni grille, ni mention de résiliation.
+  const business = code.slice(code.indexOf('if (business) {'), code.indexOf('<GrilleOffres'))
+  assert.match(business, /^if \(business\) \{\s*return \(\s*<Dialogue [^\n]*taille="petit"/)
+  assert.match(business, /Vos analyses du mois sont utilisées/)
+  assert.match(business, /description=\{message \?\?/)
+  assert.match(business, /versPage\('\/settings\/billing', 'Voir mon abonnement'\)/)
+  assert.doesNotMatch(business, /PHRASE_RESILIATION/)
 })

@@ -38,8 +38,9 @@ test('402 SIRET reconnu ; 402 quota (même « essai déjà utilisé pour ce SIRE
 test('402 SIRET : le mur mène à Mon entreprise > Identité, pas à la grille des offres', () => {
   const src = sansCommentaires(lire('src/components/common/SubscriptionWall.tsx'))
   assert.match(src, /estRefusSiret\(message\)/)
-  assert.match(src, /to="\/company\?rubrique=identite"/)
-  assert.match(src, /Ouvrir Mon entreprise/)
+  // COR-B1 : le lien d'issue est écrit une fois (`versPage`), pour le SIRET comme pour le quota Business
+  assert.match(src, /versPage\('\/company\?rubrique=identite', 'Ouvrir Mon entreprise'\)/)
+  assert.match(src, /<Link to=\{to\} onClick=\{onClose\}>/)
 })
 
 test('429 de « Reformuler » : la phrase du serveur (messageErreur), plus une phrase fixe', () => {
