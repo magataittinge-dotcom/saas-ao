@@ -492,7 +492,9 @@ export default function StepUpload({ project }: Props) {
           erreur={(
             <EtatErreur
               titre="Le dossier n’a pas pu se charger"
-              detail="La liste des fichiers déposés n’a pas pu être lue. Vos fichiers restent en place."
+              detail="Vos fichiers restent en place. Si un nouvel essai ne suffit pas, rechargez la page."
+              // la carte à la largeur de sa phrase (jury, tour 3 : 1 200 px pour deux lignes)
+              className="max-w-3xl"
               onReessayer={() => { void requeteDocuments.refetch() }}
               enCours={requeteDocuments.isFetching}
             />

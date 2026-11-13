@@ -45,12 +45,12 @@ export default function RetroPlanning({ projectId }: Props) {
   if (!data || data.steps.length === 0) return null
 
   return (
-    <Carte className="grid min-w-0 content-start gap-4">
-      <header className="grid gap-1">
+    <Carte sansMarge className="min-w-0">
+      <header className="grid gap-1 border-b border-bord px-5 py-4 sm:px-6">
         <TitreCarte>Rétro-planning</TitreCarte>
         <p className="text-sm text-fg-2">Les dates lues dans le <Sigle code="RC" />, dans l’ordre.</p>
       </header>
-      <ol className="grid">
+      <ol className="grid px-5 py-4 sm:px-6">
         {data.steps.map((step, i) => (
           <li key={step.id} className="relative grid gap-0.5 pb-4 pl-7 last:pb-0">
             {i < data.steps.length - 1 && <span aria-hidden className="absolute bottom-0 left-2 top-5 w-px bg-bord-2" />}

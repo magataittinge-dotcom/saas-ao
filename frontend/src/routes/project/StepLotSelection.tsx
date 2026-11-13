@@ -639,7 +639,9 @@ export default function StepLotSelection({ project }: Props) {
         {chargementEchoue ? (
           <EtatErreur
             titre="Les lots n’ont pas pu se charger"
-            detail="La liste des lots n’a pas pu être lue. Votre dossier reste en place."
+            detail="Votre dossier reste en place. Si un nouvel essai ne suffit pas, rechargez la page."
+            // la carte à la largeur de sa phrase (jury, tour 3 : 1 200 px pour deux lignes)
+            className="max-w-3xl"
             onReessayer={() => { void requeteDocuments.refetch(); void requeteLots.refetch() }}
             enCours={requeteLots.isFetching || requeteDocuments.isFetching}
           />

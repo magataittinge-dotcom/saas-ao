@@ -79,7 +79,9 @@
 .carte-ao-30s {
   /* La surface du système (jury, tour 1 : un aplat gris-bleu sans trait à côté de cartes blanches au trait) */
   background: var(--surface-0);
-  border: 1px solid var(--bord);
+  /* jury, tour 3 : `--bord` n'existe pas, la carte n'avait pas de trait à côté de cartes qui en ont un */
+  border: 1px solid var(--border-1);
+  box-shadow: var(--shadow-card);
   border-radius: var(--radius-carte, 22px);
   padding: 1.25rem 1.5rem;
   color: var(--carte-texte);
