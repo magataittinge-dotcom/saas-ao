@@ -53,7 +53,8 @@ export default function PartiePlanCarte({
 
   // Ordinateur : « Fiche » à droite du titre. Téléphone : sous la justification, pour laisser sa largeur au titre.
   const boutonFiche = (classe: string) => (
-    <Bouton variante="secondaire" onClick={onBasculerFiche} aria-expanded={ouverte} aria-controls={idFiche} className={classe}>
+    // discret (jury, tour 3) : treize boutons bordés, un par rangée, pesaient plus que les titres des parties
+    <Bouton variante="discret" onClick={onBasculerFiche} aria-expanded={ouverte} aria-controls={idFiche} className={classe}>
       Fiche
       {ficheRemplie(partie.fiche) && <PastilleEtat sens="vert">Remplie</PastilleEtat>}
       <ChevronDown aria-hidden className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', ouverte && 'rotate-180')} />
