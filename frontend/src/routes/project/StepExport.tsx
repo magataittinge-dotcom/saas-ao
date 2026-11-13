@@ -25,6 +25,7 @@ import { messageErreur } from '@/lib/erreurs'
 import { Sigle } from '@/components/common/Sigle'
 import { developper } from '@/lib/lexique'
 import { noteDepot } from '@/lib/statutPiece'
+import ControleFichiers from '@/components/project/ControleFichiers'
 import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO, etatEcheance, type EcheanceSource } from '@/lib/echeance'
 import { useMedia } from '@/hooks/useMedia'
@@ -655,6 +656,8 @@ export default function StepExport({ project }: Props) {
             ? <>Pièces nommées selon le <Sigle code="RC" />&nbsp;: {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}</>
             : undefined}
         >
+          {/* B9 — les fichiers à relire avant le dépôt (jamais bloquant ; rien à relire : rien à l'écran) */}
+          <ControleFichiers projectId={project.id} />
           {detail.pieces_zip.length === 0 ? (
             <p className="text-sm text-fg-2">Les pièces apparaissent ici dès qu’elles sont jointes au dossier.</p>
           ) : (

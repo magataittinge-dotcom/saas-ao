@@ -15,6 +15,7 @@ import { nomPiece } from '@/lib/nomsPieces'
 import { libelleSource } from '@/lib/resumeAO'
 import { api } from '@/services/api'
 import { typeAffichable } from '@/lib/adresseSure'
+import { espacesFr } from '@/lib/espacesFr'
 
 /** Les routes /api exigent le jeton (Bearer) : un lien nu ouvrait un onglet « 401 » (recette finale). La pièce est lue
  *  avec le jeton, puis montrée dans l'onglet ouvert pendant le clic (jamais bloqué comme une fenêtre surgissante). */
@@ -152,7 +153,7 @@ function TemplateRow({
   const source = item.source_document ? libelleSource({ document: item.source_document, page: item.source_page ?? null }) : null
   const voirSource = item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined
   // Espaces insécables du français : « Fichier déposé : X » ne se coupe plus avant les deux-points (B7).
-  const precision = (item.details ?? '').trim().replace(/ (?=[:;?»])/g, '\u00a0').replace(/« /g, '«\u00a0')
+  const precision = espacesFr((item.details ?? '').trim())
   // D'où vient le formulaire, en une ligne : le fichier déposé, sinon le modèle à compléter (avec son lien), puis la source.
   const modele = item.jointe && item.piece_nom ? item.piece_nom : nonConcernee || isWarning ? null : hasTemplate ? 'Modèle de l’acheteur à compléter'
     // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire : service-public (F32144, F32106)
