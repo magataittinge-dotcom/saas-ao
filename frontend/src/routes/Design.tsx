@@ -47,7 +47,7 @@ function Section({ id, titre, note, children }: { id: string; titre: string; not
     <section id={id} aria-labelledby={`${id}-t`} className="scroll-mt-6 space-y-4 pt-10">
       <div>
         <h2 id={`${id}-t`} className="text-xl font-semibold text-fg">{titre}</h2>
-        {note && <p className="mt-1 max-w-md text-sm text-fg-2">{note}</p>}
+        {note && <p className="mt-1 max-w-2xl text-sm text-fg-2">{note}</p>}
       </div>
       {children}
     </section>
@@ -441,7 +441,9 @@ export default function Design() {
               <SqueletteLignes className="mt-4" />
               <div className="mt-4 flex gap-2"><Squelette className="h-11 w-32 rounded-lg" /><Squelette className="h-11 w-24 rounded-lg" /></div>
             </div>
-            <EtatErreur onReessayer={() => {}} />
+            {/* l'exemple est rendu deux fois (clair, nuit) : le bouton est posé en action, sinon la règle « un seul Réessayer par
+                écran » de <EtatErreur> le retire de la seconde colonne (jury, tour 3) */}
+            <EtatErreur action={<Bouton variante="secondaire">Réessayer</Bouton>} />
             <EtatVide titre="Votre premier dossier se prépare ici" phrase="Déposez le dossier de l’acheteur : Synorix lit les pièces et repère les lots." action={<Bouton>Déposer un dossier</Bouton>} />
             <EtatVide titre="Aucun appel d’offres ne correspond à ces filtres" parFiltre={() => {}} />
           </div>

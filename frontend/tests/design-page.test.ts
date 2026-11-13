@@ -48,3 +48,9 @@ test('/design : sommaire en mots, décimales à la virgule, aucun menu sans libe
   assert.match(lire('src/components/ui/etats.tsx'), /Vos données sont intactes\./)
   assert.doesNotMatch(lire('src/components/ui/etats.tsx'), /ne sont pas touchées/)
 })
+
+test('/design : l’exemple d’erreur porte « Réessayer » dans les deux colonnes ; le texte des sections tient la mesure de lecture', () => {
+  assert.match(page, /<EtatErreur action=\{<Bouton variante="secondaire">Réessayer<\/Bouton>\} \/>/)
+  assert.doesNotMatch(page, /<EtatErreur onReessayer/, 'rendu deux fois, le second perdrait son bouton')
+  assert.match(page, /\{note && <p className="mt-1 max-w-2xl /)
+})
