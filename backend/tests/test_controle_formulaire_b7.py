@@ -140,3 +140,28 @@ def test_le_controle_lit_le_profil_de_l_organisation_qui_depose(client, db_sessi
     r = _deposer(client, url, pdf_texte(["DC1\nCandidat : Toiture Martin\nSIRET : 111 222 333 00044"]))
     assert r.status_code == 200, r.text
     assert r.json()["a_relire"] is True
+
+
+def test_l_export_dit_a_relire_et_le_formulaire_part_dans_le_dossier(client, db_session, test_org, uploads, monkeypatch):
+    """L'écran Export lit la même ligne que Pièces : « À relire » (pas « Date de validité à confirmer ») et le motif à part ;
+    le formulaire déposé figure dans ce que le ZIP contient (B7 n'est jamais bloquant)."""
+    import routers.export as export
+    monkeypatch.setattr(export, "UPLOADS_ROOT", uploads)
+    url = _ligne(db_session, test_org.id)
+    assert _deposer(client, url, pdf_texte(["DC1\nCandidat : Toiture Martin"])).status_code == 200
+    r = client.get("/api/projects/p-b7/export/detail")
+    assert r.status_code == 200, r.text
+    ligne = [l for l in r.json()["checklist_items"] if l["id"] == "p-b7-l"][0]
+    assert ligne["a_relire"] is True and ligne["status"] == "warning"
+    assert ligne["document_type_required"] == "dc1_template"
+    complet = db_session.get(ChecklistItem, "p-b7-l").completed_project_doc_id
+    assert complet and any(p["document_projet_id"] == complet for p in r.json()["pieces_zip"])
+
+
+def test_l_export_ne_dit_pas_a_relire_un_formulaire_au_nom_de_l_entreprise(client, db_session, test_org, uploads, monkeypatch):
+    import routers.export as export
+    monkeypatch.setattr(export, "UPLOADS_ROOT", uploads)
+    url = _ligne(db_session, test_org.id)
+    assert _deposer(client, url, pdf_texte(["DC1\nCandidat : SYNORIX TEST BTP"])).status_code == 200
+    ligne = [l for l in client.get("/api/projects/p-b7/export/detail").json()["checklist_items"] if l["id"] == "p-b7-l"][0]
+    assert ligne["a_relire"] is False and ligne["jointe"] is True

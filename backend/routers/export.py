@@ -185,6 +185,8 @@ def get_export_detail(
             # le gate d'export compte les mêmes lignes que le score serveur
             document_group=item.document_group or "fournir",
             jointe=jointe, piece_nom=piece_nom, valable_jusqu_au=valable_jusqu_au,
+            a_relire=(item.source_kind == "dce_template" and bool(item.completed_project_doc_id)
+                      and item.status == "warning"),
             obligation=lire_obligation(item), phase=lire_phase(item),
             # « Déposé le … par … » et source de la signature lue dans le RC (bloc 9)
             depose_le=item.depose_le, depose_par=item.depose_par,
