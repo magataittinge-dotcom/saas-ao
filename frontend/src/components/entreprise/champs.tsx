@@ -39,7 +39,7 @@ export function Field({ label, aide, groupe, rempli, source, children }: { label
   return (
     <div className="grid min-w-0 content-start gap-1.5">
       <Tete {...(groupe ? {} : { htmlFor: id })} className={cn('block font-medium text-fg-2', groupe ? 'text-sm text-fg' : 'text-xs')}>{label}</Tete>
-      {groupe && aide && <p className="-mt-1 text-xs text-fg-3">{aide}</p>}
+      {groupe && aide && <p className="-mt-1 text-sm text-fg-2">{aide}</p>}
       {enfant}
       {!groupe && dessous && <p className="text-xs text-fg-3">{dessous}</p>}
       {groupe && rempli && source && <p className="text-xs text-fg-3">{source}</p>}
