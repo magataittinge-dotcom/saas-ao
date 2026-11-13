@@ -140,3 +140,84 @@ def test_le_controle_lit_le_profil_de_l_organisation_qui_depose(client, db_sessi
     r = _deposer(client, url, pdf_texte(["DC1\nCandidat : Toiture Martin\nSIRET : 111 222 333 00044"]))
     assert r.status_code == 200, r.text
     assert r.json()["a_relire"] is True
+
+
+def test_l_export_dit_a_relire_et_le_formulaire_part_dans_le_dossier(client, db_session, test_org, uploads, monkeypatch):
+    """L'écran Export lit la même ligne que Pièces : « À relire » (pas « Date de validité à confirmer ») et le motif à part ;
+    le formulaire déposé figure dans ce que le ZIP contient (B7 n'est jamais bloquant)."""
+    import routers.export as export
+    monkeypatch.setattr(export, "UPLOADS_ROOT", uploads)
+    url = _ligne(db_session, test_org.id)
+    assert _deposer(client, url, pdf_texte(["DC1\nCandidat : Toiture Martin"])).status_code == 200
+    r = client.get("/api/projects/p-b7/export/detail")
+    assert r.status_code == 200, r.text
+    ligne = [l for l in r.json()["checklist_items"] if l["id"] == "p-b7-l"][0]
+    assert ligne["a_relire"] is True and ligne["status"] == "warning"
+    assert ligne["document_type_required"] == "dc1_template"
+    complet = db_session.get(ChecklistItem, "p-b7-l").completed_project_doc_id
+    assert complet and any(p["document_projet_id"] == complet for p in r.json()["pieces_zip"])
+
+
+def test_l_export_ne_dit_pas_a_relire_un_formulaire_au_nom_de_l_entreprise(client, db_session, test_org, uploads, monkeypatch):
+    import routers.export as export
+    monkeypatch.setattr(export, "UPLOADS_ROOT", uploads)
+    url = _ligne(db_session, test_org.id)
+    assert _deposer(client, url, pdf_texte(["DC1\nCandidat : SYNORIX TEST BTP"])).status_code == 200
+    ligne = [l for l in client.get("/api/projects/p-b7/export/detail").json()["checklist_items"] if l["id"] == "p-b7-l"][0]
+    assert ligne["a_relire"] is False and ligne["jointe"] is True
+
+
+def test_bout_en_bout_un_formulaire_a_relire_dans_pieces_l_export_et_le_zip(client, db_session, test_org, uploads, monkeypatch):
+    """Le cas du contrôle de bout en bout (E2E-CONTROLE § 4) : une pièce du coffre prête, un formulaire déposé que le
+    contrôle classe « À relire ». Pièces et Export lisent la même règle (schemas.compliance.formulaire_a_relire) et le
+    même motif ; l'Export ne le range pas « Date de validité à confirmer » (``a_relire``, jamais ``jointe``) ; le ZIP
+    réel le contient, dans 01_Candidature, après la pièce du coffre (ordre du RC, puis formulaires remplis)."""
+    import io
+    import zipfile
+    from datetime import date, timedelta
+    import routers.export as export
+    from models.document import Document
+    monkeypatch.setattr(export, "UPLOADS_ROOT", uploads)
+    url = _ligne(db_session, test_org.id)
+    kbis = uploads / "organizations" / test_org.id / "vault" / "kbis.pdf"
+    kbis.parent.mkdir(parents=True, exist_ok=True)
+    kbis.write_bytes(b"%PDF-1.4 kbis")
+    db_session.add(Document(id="b7-kbis", organization_id=test_org.id, type="kbis", status="valid", category="autres",
+                            file_name="kbis.pdf", file_url=f"/uploads/organizations/{test_org.id}/vault/kbis.pdf",
+                            expiry_date=date.today() + timedelta(days=90)))
+    db_session.add(ChecklistItem(id="p-b7-kbis", project_id="p-b7", document_type_required="kbis", source_kind="vault",
+                                 linked_document_id="b7-kbis", status="present", rc_position=0))
+    db_session.get(ChecklistItem, "p-b7-l").rc_position = 1
+    db_session.commit()
+
+    # avant le dépôt : ni Pièces ni l'Export ne disent « À relire »
+    avant = [l for l in client.get("/api/projects/p-b7/export/detail").json()["checklist_items"] if l["id"] == "p-b7-l"][0]
+    assert avant["a_relire"] is False
+
+    r = _deposer(client, url, pdf_texte(["DC1 — Lettre de candidature\nCandidat : Toiture Martin"]), nom="DC1_autre.pdf")
+    assert r.status_code == 200, r.text
+    pieces = {l["id"]: l for l in client.get("/api/projects/p-b7/checklist").json()}
+    detail = client.get("/api/projects/p-b7/export/detail").json()
+    export_lignes = {l["id"]: l for l in detail["checklist_items"]}
+
+    # même règle, même motif sur les deux écrans
+    for id_ in ("p-b7-l", "p-b7-kbis"):
+        assert export_lignes[id_]["a_relire"] == pieces[id_]["a_relire"]
+    ligne = export_lignes["p-b7-l"]
+    assert ligne["a_relire"] is True and ligne["jointe"] is False and ligne["status"] == "warning"
+    assert ligne["document_type_required"] == "dc1_template" and ligne["source_kind"] == "dce_template"
+    assert ligne["details"] == pieces["p-b7-l"]["details"] and "DC1_autre.pdf" in _motif_propre(ligne["details"])
+    assert export_lignes["p-b7-kbis"]["jointe"] is True and export_lignes["p-b7-kbis"]["a_relire"] is False
+
+    # ce que l'écran annonce = ce que le ZIP contient : le formulaire part, après la pièce du coffre
+    complet = db_session.get(ChecklistItem, "p-b7-l").completed_project_doc_id
+    annonce = [(p["dossier"], p["nom"]) for p in detail["pieces_zip"] if p["dossier"] == "01_Candidature"]
+    assert [n for _, n in annonce] == ["01_kbis.pdf", "02_DC1_autre.pdf"], annonce
+    assert any(p["document_projet_id"] == complet for p in detail["pieces_zip"])
+    z = client.get("/api/projects/p-b7/export/zip")
+    assert z.status_code == 200, z.text
+    with zipfile.ZipFile(io.BytesIO(z.content)) as archive:
+        noms = [n.split("/", 1)[1] for n in archive.namelist() if not n.endswith("/")]
+        contenu = archive.read(next(n for n in archive.namelist() if n.endswith("01_Candidature/02_DC1_autre.pdf")))
+    assert "01_Candidature/01_kbis.pdf" in noms and "01_Candidature/02_DC1_autre.pdf" in noms
+    assert contenu.startswith(b"%PDF")

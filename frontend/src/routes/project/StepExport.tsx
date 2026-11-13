@@ -19,12 +19,13 @@ import { PastilleEtat } from '@/components/ui/pastille'
 import { cartesPieces, etatDeStatut } from '@/lib/resumePieces'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
-  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, phraseDepot, phrasePiecesAJoindre, pieceDemandee, resumeExigences, type GroupeExigences,
+  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, phraseDepot, phrasePiecesAJoindre, phrasePiecesARelire, bilanPiecesExport, resumeExigences, type GroupeExigences,
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 import { Sigle } from '@/components/common/Sigle'
 import { developper } from '@/lib/lexique'
 import { noteDepot } from '@/lib/statutPiece'
+import { nomPiece } from '@/lib/nomsPieces'
 import ControleFichiers from '@/components/project/ControleFichiers'
 import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO, etatEcheance, type EcheanceSource } from '@/lib/echeance'
@@ -58,6 +59,8 @@ interface ChecklistExportItem {
   jointe: boolean
   piece_nom: string | null
   valable_jusqu_au: string | null
+  /** B7 — formulaire déposé à relire (serveur, même règle que Pièces) : il part dans le dossier, le motif est dans `details`. */
+  a_relire?: boolean
   // Lecture du RC (serveur) : statuts « Si concerné », « Facultatif », « Pour l'attribution »
   obligation?: 'obligatoire' | 'si_concerne' | 'facultatif'
   phase?: 'depot' | 'attribution'
@@ -170,9 +173,17 @@ export function SuiteDepot({ telecharge, phrase, avertissements, onDepose }: {
   )
 }
 
-/** Le nom d'une pièce : son libellé (le serveur n'y écrit plus de note du logiciel), sinon son type. */
-export const titrePiece = (item: { details: string | null; document_type_required: string }): string =>
-  (item.details || item.document_type_required).trim()
+type LignePiece = { details: string | null; document_type_required: string; source_kind?: string; a_relire?: boolean }
+
+/** Le nom d'une pièce. Un formulaire de l'acheteur : son nom, comme sur Pièces (`details` peut porter le motif de B7) ;
+ *  une pièce du coffre : son libellé, sinon son type. */
+export const titrePiece = (item: LignePiece): string =>
+  item.source_kind === 'dce_template' ? nomPiece(item.document_type_required, null)
+    : (item.details || item.document_type_required).trim()
+
+/** B7 — le motif d'un formulaire « À relire », écrit par le serveur dans `details` : une note sous le nom. */
+export const notePiece = (item: LignePiece): string | null =>
+  item.a_relire && item.details?.trim() ? item.details.trim() : null
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
@@ -404,13 +415,12 @@ export default function StepExport({ project }: Props) {
 
   // ── Gate ZIP (C10) : X < Y pièces conformes → avertissement, sans bloquer ──────
   const gateBlocked = !!score && score.total > 0 && score.conformes < score.total
-  const CONFORME_STATUSES = new Set(['present', 'expiration_proche', 'non_applicable'])
   // Signature : règle serveur (signature_required) — DC1, DC2, DUME et AE seulement si le RC l'exige.
   // Mêmes lignes que le score du serveur : pièces à fournir et à compléter. Une pièce facultative n'est pas comptée :
-  // même nombre que les cartes de l'écran Pièces.
-  const nonConformes = lignesDuScore(detail?.checklist_items ?? []).filter((i) =>
-    i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)) && pieceDemandee(i, echeance),
-  )
+  // même nombre que les cartes de l'écran Pièces. B7 : un formulaire « À relire » part dans le dossier ; il est compté à part.
+  const bilan = bilanPiecesExport(piecesDemandees, echeance, signatureAConfirmer)
+  const nonConformes = bilan.aFaire
+  const aRelire = bilan.aRelire.length
 
   const readyForDeposit = !gateBlocked && alertCount === 0
   const piecesVisibles = piecesDemandees.filter((p) => p.status !== 'non_applicable')
@@ -432,8 +442,7 @@ export default function StepExport({ project }: Props) {
   // Aucune pièce n'est encore jointe : le dossier ne contiendrait que le mémoire. L'écran le dit, et son action devient
   // « Réunir les pièces » ; le téléchargement reste possible, au trait (jury, tour 1 : un aplat « Télécharger » sur un
   // dossier que l'écran déclarait lui-même sans pièce).
-  const pretes = piecesVisibles.filter((p) => pieceDemandee(p, echeance) && !nonConformes.includes(p)).length
-  const aucunePieceJointe = gateBlocked && nonConformes.length > 0 && pretes === 0
+  const aucunePieceJointe = gateBlocked && bilan.aucuneJointe
   const allerAuxPieces = () => navigate(`/projects/${project.id}/verification`)
   // Un AO terminé (gagné, perdu…) : aucune action de préparation en bouton principal (lib/etatAO.ts).
   const boutons = boutonsExport(project, aucunePieceJointe)
@@ -463,7 +472,7 @@ export default function StepExport({ project }: Props) {
   ))
 
   // ── Barre du bas : l'état du dossier ; au téléphone, l'action de l'écran (au pouce).
-  const etatDossier = ligneEtatDossier(gateBlocked ? nonConformes.length : 0, alertCount, readyForDeposit)
+  const etatDossier = ligneEtatDossier(gateBlocked ? nonConformes.length : 0, alertCount, readyForDeposit, aRelire)
   const bottomBar = (
     <BarreEtape className="justify-between gap-3">
       <BilanBarre bureau={<p role="status" className="text-sm text-fg-2">{etatDossier}</p>} />
@@ -471,7 +480,9 @@ export default function StepExport({ project }: Props) {
     </BarreEtape>
   )
 
-  const phrasePieces = gateBlocked ? phrasePiecesAJoindre(nonConformes.length) : null
+  // Ce qui reste hors du dossier, puis ce qui y part à relire (B7) : deux phrases, jamais un seul compte.
+  const phrasePieces = [gateBlocked ? phrasePiecesAJoindre(nonConformes.length) : null, phrasePiecesARelire(aRelire)]
+    .filter(Boolean).join(' ') || null
   // UN message à la fois sous l'en-tête, du plus pressant au moins pressant : le téléchargement qui n'a pas abouti, le
   // dossier qui se prépare, le dossier téléchargé, puis les pièces qui restent à joindre.
   const echecIci = (lieu: Lieu) => (echec && echec.lieu === lieu ? (
@@ -523,7 +534,7 @@ export default function StepExport({ project }: Props) {
       >
         {/* ── Pièces demandées : mêmes lignes et même règle que le résumé ── */}
         <SectionEtape titre="Pièces demandées"
-          description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
+          description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête ou à relire part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
           {piecesVisibles.length === 0 ? (
             <p className="text-sm text-fg-2">La liste des pièces apparaît après l’analyse du <Sigle code="RC" />.</p>
           ) : (
@@ -545,6 +556,7 @@ export default function StepExport({ project }: Props) {
                       {g.pieces.map((item) => (
                         <li key={item.id} className="min-h-11 border-t border-bord px-4 py-2.5 sm:px-5">
                           <p className="break-words text-sm font-medium text-fg">{titrePiece(item)}</p>
+                          {notePiece(item) && <p className="max-w-prose text-xs text-fg-2">{notePiece(item)}</p>}
                           {noteDepot(item) && <p className="text-xs text-fg-3">{noteDepot(item)}</p>}
                           {phraseSourceSignature(item) && <p className="text-xs text-fg-3">{phraseSourceSignature(item)}</p>}
                         </li>

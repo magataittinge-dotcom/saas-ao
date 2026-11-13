@@ -74,11 +74,43 @@ export function phrasePiecesAJoindre(n: number): string | null {
     : `${n} pièces à joindre ou à confirmer. Elles ne seront pas dans le dossier.`
 }
 
-/** Le héros de l'export : ce qu'il reste à faire, en une ligne, sans couleur d'alarme (un travail à faire, pas une alerte). */
-export function ligneEtatDossier(aFaire: number, alertes: number, pret: boolean): string {
+/** B7 — les formulaires déposés « À relire » : ils partent dans le dossier tels quels, à relire avant le dépôt. */
+export function phrasePiecesARelire(n: number): string | null {
+  if (n <= 0) return null
+  return n === 1
+    ? '1 formulaire à relire avant le dépôt. Il part dans le dossier tel que vous l’avez déposé.'
+    : `${n} formulaires à relire avant le dépôt. Ils partent dans le dossier tels que vous les avez déposés.`
+}
+
+/** Le héros de l'export : ce qu'il reste à faire, en une ligne, sans couleur d'alarme (un travail à faire, pas une alerte).
+ *  Les formulaires à relire sont comptés à part : ils sont dans le dossier. */
+export function ligneEtatDossier(aFaire: number, alertes: number, pret: boolean, aRelire = 0): string {
   if (pret) return 'Dossier prêt pour le dépôt'
-  if (aFaire > 0) return `${aFaire} pièce${aFaire > 1 ? 's' : ''} à joindre ou à confirmer avant le dépôt`
+  if (aFaire > 0) {
+    return `${aFaire} pièce${aFaire > 1 ? 's' : ''} à joindre ou à confirmer${aRelire > 0 ? ` · ${aRelire} à relire` : ''} avant le dépôt`
+  }
+  if (aRelire > 0) return `${aRelire} formulaire${aRelire > 1 ? 's' : ''} à relire avant le dépôt`
   return `${alertes} point${alertes > 1 ? 's' : ''} de contrôle à vérifier`
+}
+
+/**
+ * Les pièces demandées de l'Export, rangées une fois : à joindre ou à confirmer (hors du dossier), à relire (B7 : dans le
+ * dossier, à relire avant le dépôt) et prêtes. `aucuneJointe` : rien ne part encore, ni prêt ni à relire.
+ */
+export function bilanPiecesExport<T extends EtatPieceEntree>(
+  pieces: readonly T[], echeance: string | null | undefined, signatureAConfirmer: (p: T) => boolean,
+): { aFaire: T[]; aRelire: T[]; pretes: number; aucuneJointe: boolean } {
+  const CONFORMES = new Set(['present', 'expiration_proche', 'non_applicable'])
+  const aFaire: T[] = []
+  const aRelire: T[] = []
+  let pretes = 0
+  for (const p of pieces) {
+    if (p.status === 'non_applicable' || !pieceDemandee(p, echeance)) continue
+    if (statutPiece(p, echeance).code === 'a-relire') aRelire.push(p)
+    else if (!CONFORMES.has(p.status) || signatureAConfirmer(p)) aFaire.push(p)
+    else pretes += 1
+  }
+  return { aFaire, aRelire, pretes, aucuneJointe: aFaire.length > 0 && pretes === 0 && aRelire.length === 0 }
 }
 
 /** Les pièces de la ligne « N pièces à joindre ou à confirmer » : celles que le dépôt demande (prêtes, à joindre, à confirmer,
