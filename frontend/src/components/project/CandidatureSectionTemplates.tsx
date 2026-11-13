@@ -186,9 +186,11 @@ function TemplateRow({
       </>}
       etat={<EtatDePiece statut={statut} />}
       actions={nonConcernee ? null : (
-        <Bouton variante="secondaire" onClick={handlePick} enCours={uploading} libelleEnCours="Dépôt en cours…">
+        // « Déposer » : un verbe, comme « Choisir » sur les autres rangées ; le nom du formulaire est le titre de la rangée
+        // (jury, tour 3 : « Déposer le formulaire » poussait la carte hors de la gouttière à 390 px).
+        <Bouton variante="secondaire" aria-label={isPresent ? `Remplacer\u00a0: ${label}` : `Déposer le formulaire\u00a0: ${label}`} onClick={handlePick} enCours={uploading} libelleEnCours="Dépôt…">
           <Upload size={16} strokeWidth={1.5} aria-hidden />
-          {isPresent ? 'Remplacer' : 'Déposer le formulaire'}
+          {isPresent ? 'Remplacer' : 'Déposer'}
         </Bouton>
       )}
       menu={(

@@ -59,13 +59,31 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
   }
   const paie = trouverOffre(plan) !== undefined
 
+  // L'issue d'un refus qui n'est pas un achat : la page où le régler (écrite une fois : un seul aplat par dialogue).
+  const versPage = (to: string, libelle: string) => <Bouton asChild variante="principal"><Link to={to} onClick={onClose}>{libelle}</Link></Bouton>
+
   // 402 SIRET (S-05) : l'AO offert attend un SIRET vérifié ; la phrase du serveur et le chemin vers Mon entreprise > Identité.
   if (estRefusSiret(message)) {
     return (
       <Dialogue ouvert={open} onOuvert={(o) => { if (!o) onClose() }} taille="petit" titre="Renseignez votre SIRET" description={message}
         actions={<>
           <Bouton variante="secondaire" onClick={onClose}>Plus tard</Bouton>
-          <Bouton asChild variante="principal"><Link to="/company?rubrique=identite" onClick={onClose}>Ouvrir Mon entreprise</Link></Bouton>
+          {versPage('/company?rubrique=identite', 'Ouvrir Mon entreprise')}
+        </>} />
+    )
+  }
+
+  // Business au quota (offre la plus haute) : rien à « passer ». Un petit dialogue, comme les autres dialogues de l'étape : le
+  // fait en titre, la phrase du serveur (le compte, la date de remise à zéro, « relevé sur demande ») et une issue, vers
+  // Paramètres > Abonnement (jury, tour 3 : un grand dialogue sans action, avec la mention de résiliation d'un écran de paiement).
+  if (business) {
+    return (
+      <Dialogue ouvert={open} onOuvert={(o) => { if (!o) onClose() }} taille="petit"
+        titre={feature === 'memoire' ? 'Vos mémoires du mois sont utilisés' : 'Vos analyses du mois sont utilisées'}
+        description={message ?? 'Le quota se remet à zéro chaque mois. Il peut être relevé sur demande.'}
+        actions={<>
+          <Bouton variante="secondaire" onClick={onClose}>Fermer</Bouton>
+          {versPage('/settings/billing', 'Voir mon abonnement')}
         </>} />
     )
   }
@@ -73,9 +91,8 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
   // Le mur d'abonnement est un Dialogue du système (grand) : Échap, clic sur le voile, piège et retour du focus par Radix.
   // Aucun aplat dans la grille : chaque offre a un bouton au trait (le choix revient à l'utilisateur, aucune n'est poussée).
   return (
-    <Dialogue ouvert={open} onOuvert={(o) => { if (!o) onClose() }} taille="grand" titre={business ? 'Quota du mois atteint' : 'Passez au niveau supérieur'}
+    <Dialogue ouvert={open} onOuvert={(o) => { if (!o) onClose() }} taille="grand" titre="Passez au niveau supérieur"
       description={message ?? `${FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} demande une offre active. Choisissez celle qui suit votre rythme.`}>
-    {business ? null : (
     <GrilleOffres
         compacte
         action={(offre) => {
@@ -93,8 +110,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
           )
         }}
       />
-    )}
-      {paie && !business && <p className="text-sm text-fg-2">Le changement d’offre se fait sur le portail de paiement sécurisé de Stripe, qui s’ouvre à la place de cette page.</p>}
+      {paie && <p className="text-sm text-fg-2">Le changement d’offre se fait sur le portail de paiement sécurisé de Stripe, qui s’ouvre à la place de cette page.</p>}
         {erreur && <Message ton="erreur">{erreur}</Message>}
       <p className="text-xs text-fg-3">{PHRASE_RESILIATION}</p>
     </Dialogue>

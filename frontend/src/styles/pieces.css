@@ -79,7 +79,9 @@
 .carte-ao-30s {
   /* La surface du système (jury, tour 1 : un aplat gris-bleu sans trait à côté de cartes blanches au trait) */
   background: var(--surface-0);
-  border: 1px solid var(--bord);
+  /* jury, tour 3 : `--bord` n'existe pas, la carte n'avait pas de trait à côté de cartes qui en ont un */
+  border: 1px solid var(--border-1);
+  box-shadow: var(--shadow-card);
   border-radius: var(--radius-carte, 22px);
   padding: 1.25rem 1.5rem;
   color: var(--carte-texte);
@@ -125,20 +127,20 @@
   font-weight: 400;
   color: var(--carte-discret);
 }
-/* Lien « Voir dans le DCE » : cible tactile d'au moins 44 px */
-.carte-ao-30s__source {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  /* jury, tour 1 : le lien était collé à la valeur (« 50 %Voir dans le dossier ») : le bouton « lien » n'a pas de marge */
-  margin-left: .5rem;
-  padding: 0 .25rem;
-  font-size: .75rem;
-  color: var(--carte-discret);
-  text-decoration: underline;
-  background: none;
-  border: 0;
-  cursor: pointer;
+/* Lien « Voir dans le dossier » : sur sa propre ligne, au bord du texte (jury, tour 3 : collé à la valeur, il se coupait
+   d'elle en fin de ligne et se décalait de 8 px en passant dessous). Le lien du système, sans soulignement ni teinte à part :
+   le même que dans la fiche de décision et « À vérifier ». */
+.carte-ao-30s__valeur .carte-ao-30s__source {
+  display: flex;
+  width: fit-content;
+  margin-top: .125rem;
+}
+/* cible tactile d'au moins 44 px au doigt */
+@media (max-width: 767px), (pointer: coarse) {
+  .carte-ao-30s__valeur .carte-ao-30s__source {
+    min-height: 44px;
+    margin-top: 0;
+  }
 }
 
 /* ── Signature lue dans le RC (bloc 9, tranche 4) ───────────── */
@@ -174,11 +176,12 @@
    `.cible-libre` sort un contrôle de la règle (case à cocher, puce intégrée à une ligne) ;
    `.cible-etendue` garde la taille visuelle mais étend la zone qui répond au doigt à 44 px. */
 @media (max-width: 767px) {
-  /* une case à cocher du système (`button[role=checkbox]`) garde son dessin de 20 px : c'est sa rangée qui fait 44 px */
-  .page-ao :is(button, [role='button'], select, input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'])):not(.cible-libre, [role='checkbox']) {
+  /* Une case, un rond ou un interrupteur du système (un `button` à rôle) garde son dessin : c'est sa rangée (le `label`) qui
+     fait 44 px. Sans cette exclusion, la case de 20 px était dessinée en carré de 44 px (jury, tour 3). */
+  .page-ao :is(button, [role='button'], select, input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'])):not(.cible-libre, [role='checkbox'], [role='radio'], [role='switch']) {
     min-height: 44px;
   }
-  .page-ao button:not(.cible-libre, [role='checkbox']) { min-width: 44px; }
+  .page-ao button:not(.cible-libre, [role='checkbox'], [role='radio'], [role='switch']) { min-width: 44px; }
   .page-ao :is(a.glass-btn, a.btn-primary, a.signature-btn):not(.cible-libre) { min-height: 44px; }
   /* case à cocher : toute la ligne répond au doigt */
   .page-ao label:has(> input[type='checkbox'], > input[type='radio']):not(.cible-libre) { min-height: 44px; display: flex; align-items: center; }
