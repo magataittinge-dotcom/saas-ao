@@ -36,3 +36,15 @@ test('/design : toutes les familles de composants du socle sont montrées', () =
   }
   assert.doesNotMatch(page.replace(/#111111/g, ''), /#[0-9A-Fa-f]{6}\b|rgba?\(/, 'couleur en dur')
 })
+
+// Jury, tour 3 (COR-A) : la page de référence écrit comme le produit.
+test('/design : sommaire en mots, décimales à la virgule, aucun menu sans libellé, erreur par défaut « intactes »', () => {
+  assert.match(page, /\['resume', 'Cases de résumé'\]/, 'le sommaire écrit le nom de la section')
+  assert.match(page, /\['etats', 'États'\]/)
+  assert.doesNotMatch(page, /\{id\}<\/a>/, 'jamais l’identifiant brut dans le sommaire')
+  assert.match(page, /toFixed\(2\)\.replace\('\.', ','\)/, 'rapport de contraste à la virgule')
+  assert.match(page, /String\(l\.seuil\)\.replace\('\.', ','\)/, 'seuil « 4,5:1 »')
+  assert.doesNotMatch(page, /<MenuPoints/, 'le menu de la page de référence porte son mot')
+  assert.match(lire('src/components/ui/etats.tsx'), /Vos données sont intactes\./)
+  assert.doesNotMatch(lire('src/components/ui/etats.tsx'), /ne sont pas touchées/)
+})

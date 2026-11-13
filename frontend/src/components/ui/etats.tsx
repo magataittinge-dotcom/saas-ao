@@ -82,7 +82,7 @@ function useErreurCommune(onReessayer: (() => void) | undefined) {
  * jamais centré dans une carte. Un seul « Réessayer » par écran : s'il y a plusieurs pannes, le premier état porte le bouton
  * et relance tout. Jamais une pile d'appels, jamais de l'anglais, jamais le texte de l'état vide. Annoncé aux lecteurs d'écran.
  */
-export function EtatErreur({ titre = 'Cette page n’a pas pu se charger', detail = 'La connexion au serveur a échoué. Vos données ne sont pas touchées.', onReessayer, enCours, action, className }: {
+export function EtatErreur({ titre = 'Cette page n’a pas pu se charger', detail = 'La connexion au serveur a échoué. Vos données sont intactes.', onReessayer, enCours, action, className }: {
   titre?: React.ReactNode
   detail?: React.ReactNode
   onReessayer?: () => void

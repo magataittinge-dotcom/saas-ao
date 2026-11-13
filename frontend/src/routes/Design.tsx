@@ -12,7 +12,7 @@ import { PastilleCompte, PastilleEtat } from '@/components/ui/pastille'
 import { BandeCases, CaseResume } from '@/components/ui/case-resume'
 import { Tableau } from '@/components/ui/tableau'
 import { Dialogue, DialogueConfirmation } from '@/components/ui/dialogue'
-import { MenuElement, MenuPoints, MenuSeparateur } from '@/components/ui/menu'
+import { Menu, MenuContenu, MenuDeclencheur, MenuElement, MenuSeparateur } from '@/components/ui/menu'
 import { Infobulle } from '@/components/ui/infobulle'
 import { Message } from '@/components/ui/message'
 import { annoncer } from '@/components/ui/toast'
@@ -119,8 +119,8 @@ function TableContrastes() {
       <Tableau libelle="Contrastes" lignes={lignes} cle={(l) => l.nom} vide={null}
         colonnes={[
           { cle: 'nom', titre: 'Paire', rendu: (l) => l.nom },
-          { cle: 'rapport', titre: 'Rapport', nombre: true, tel: true, rendu: (l) => (l.r === null ? '—' : l.r.toFixed(2)) },
-          { cle: 'seuil', titre: 'Seuil', tel: true, rendu: (l) => <PastilleEtat sens={l.r !== null && l.r >= l.seuil ? 'vert' : 'ambre'}>{l.seuil}:1{l.r !== null && l.r >= l.seuil ? ' tenu' : ''}</PastilleEtat> },
+          { cle: 'rapport', titre: 'Rapport', nombre: true, tel: true, rendu: (l) => (l.r === null ? '—' : l.r.toFixed(2).replace('.', ',')) },
+          { cle: 'seuil', titre: 'Seuil', tel: true, rendu: (l) => <PastilleEtat sens={l.r !== null && l.r >= l.seuil ? 'vert' : 'ambre'}>{String(l.seuil).replace('.', ',')}:1{l.r !== null && l.r >= l.seuil ? ' tenu' : ''}</PastilleEtat> },
         ]} />
     </div>
   )
@@ -214,12 +214,16 @@ function Surcouches() {
       <Infobulle texte="Dossier de consultation des entreprises"><Bouton>Infobulle</Bouton></Infobulle>
       <Bouton onClick={() => setDialogue(true)}>Dialogue</Bouton>
       <Bouton onClick={() => setConfirmation(true)}>Confirmation</Bouton>
-      <MenuPoints libelle="Autres actions">
-        <MenuElement><Download aria-hidden size={18} strokeWidth={1.5} />Télécharger</MenuElement>
-        <MenuElement>Renommer</MenuElement>
-        <MenuSeparateur />
-        <MenuElement danger><Trash2 aria-hidden size={18} strokeWidth={1.5} />Supprimer</MenuElement>
-      </MenuPoints>
+      {/* le menu s'ouvre par un bouton qui porte son mot, comme ses voisins (jury, tour 3 : un « … » nu, sans libellé) */}
+      <Menu>
+        <MenuDeclencheur asChild><Bouton>Menu</Bouton></MenuDeclencheur>
+        <MenuContenu align="start">
+          <MenuElement><Download aria-hidden size={18} strokeWidth={1.5} />Télécharger</MenuElement>
+          <MenuElement>Renommer</MenuElement>
+          <MenuSeparateur />
+          <MenuElement danger><Trash2 aria-hidden size={18} strokeWidth={1.5} />Supprimer</MenuElement>
+        </MenuContenu>
+      </Menu>
       <Sheet>
         <SheetTrigger asChild><Bouton>Tiroir</Bouton></SheetTrigger>
         <SheetContent side="right"><SheetHeader><SheetTitle>Voir dans le dossier</SheetTitle><SheetDescription>Le passage cité est surligné dans la pièce.</SheetDescription></SheetHeader></SheetContent>
@@ -240,14 +244,17 @@ function Surcouches() {
   )
 }
 
-const SECTIONS = ['grille', 'couleurs', 'contrastes', 'typographie', 'formes', 'boutons', 'champs', 'filtres', 'cartes', 'resume', 'tableau', 'pastilles', 'onglets', 'surcouches', 'messages', 'etats', 'visage', 'mouvement', 'icones']
+// le sommaire écrit le nom de la section, pas son identifiant (jury, tour 3 : « resume », « etats », « icones »)
+const SECTIONS: readonly (readonly [string, string])[] = [['grille', 'Grille'], ['couleurs', 'Couleurs'], ['contrastes', 'Contrastes'], ['typographie', 'Typographie'], ['formes', 'Formes'],
+  ['boutons', 'Boutons'], ['champs', 'Champs'], ['filtres', 'Filtres'], ['cartes', 'Cartes'], ['resume', 'Cases de résumé'], ['tableau', 'Tableau'], ['pastilles', 'Pastilles'],
+  ['onglets', 'Onglets'], ['surcouches', 'Surcouches'], ['messages', 'Messages'], ['etats', 'États'], ['visage', 'Synorix parle'], ['mouvement', 'Mouvement'], ['icones', 'Icônes']]
 
 export default function Design() {
   return (
     <Page titre="Système de design" sousTitre="Page interne, non liée au menu : les jetons et chaque composant du système, dans chaque état, en clair et en nuit.">
       <nav aria-label="Sections" className="flex flex-wrap gap-x-4 gap-y-1">
-        {SECTIONS.map((id) => (
-          <a key={id} href={`#${id}`} className="flex min-h-11 items-center rounded text-sm font-medium text-fg underline decoration-bord-2 underline-offset-4 hover:decoration-fg">{id}</a>
+        {SECTIONS.map(([id, nom]) => (
+          <a key={id} href={`#${id}`} className="flex min-h-11 items-center whitespace-nowrap rounded text-sm font-medium text-fg-2 underline-offset-4 hover:text-fg hover:underline">{nom}</a>
         ))}
       </nav>
 
