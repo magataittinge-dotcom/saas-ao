@@ -109,6 +109,11 @@ export function PanneauSourceVue({
   const page = pageDoc ?? reponse?.page ?? 1
 
   const choisirVue = (v: VueSource) => { setVueChoisie(v); if (v === 'document') setPageDoc(reponse?.page ?? 1) }
+  // Une vue en pages (Page, Document) rend au panneau toute sa hauteur : il est ramené à l'écran, son pied compris.
+  useEffect(() => {
+    if (feuille || (vue !== 'document' && vue !== 'page')) return
+    panneauRef.current?.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+  }, [vue, feuille])
   const surTabs = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
     const i = vues.indexOf(vue as VueSource)
@@ -120,6 +125,7 @@ export function PanneauSourceVue({
   const largeurPage = largeurPourConteneur(largeurCorps || 600, typeof window !== 'undefined' ? window.devicePixelRatio : 1)
 
   const lien = reponse ? lienPiece(reponse) : null
+  const route = reponse ? aiguiller(reponse) : null
   const nom = reponse?.document?.nom ?? titre ?? 'Extrait du dossier'
   const lienOuvrir = lien && (
     <Bouton asChild variante="secondaire" className="source-ouvrir">
@@ -138,12 +144,15 @@ export function PanneauSourceVue({
               {feuille
                 ? <SheetTitle className="source-piece pr-12">{nom}</SheetTitle>
                 : <Infobulle texte={nom} cote="bottom"><h2 id={idTitre} className="source-piece">{nom}</h2></Infobulle>}
+              {/* Un fait, une fois (jury, tour 3). La coche ne se pose que sur un passage retrouvé ; une page seulement
+                  citée se dit sans icône de réussite. La page n'est pas redite ici quand le pied la porte (vue Document),
+                  et un classeur n'a pas de « page ». */}
               {reponse && reponse.niveau !== 'aucun' && (
                 <p className="source-meta">
                   <span className="source-niveau">
-                    <Check size={14} aria-hidden="true" /> {libelleNiveau(reponse)}
+                    {reponse.niveau === 'passage' && <Check size={14} aria-hidden="true" />} {libelleNiveau(reponse)}
                   </span>
-                  {reponse.page && (
+                  {reponse.page && route === 'pdf' && vue !== 'document' && (
                     <span>page {reponse.page}{totalPages ? ` sur ${totalPages}` : ''}</span>
                   )}
                 </p>
@@ -196,9 +205,10 @@ export function PanneauSourceVue({
             </div>
           )}
           {reponse && (() => {
-            const route = aiguiller(reponse)
             if (route === 'tableur') {
-              return rendreTableur ? rendreTableur(reponse) : (
+              // l'écran peut ne rien avoir à dessiner pour cette source (un fait du résumé lu dans un classeur) : le panneau
+              // dit alors comment lire la pièce, il ne reste jamais blanc
+              return rendreTableur?.(reponse) ?? (
                 <VueSansPage reponse={reponse} lien={lienOuvrir}>
                   <p>Cette pièce est un tableur : ouvrez-la pour lire la ligne citée.</p>
                 </VueSansPage>
@@ -236,14 +246,14 @@ export function PanneauSourceVue({
   if (feuille) {
     return (
       <Sheet open onOpenChange={(ouvert) => { if (!ouvert) onFermer() }}>
-        <SheetContent side="bottom" aria-describedby={undefined} data-feuille="oui" className="source-panneau gap-0 p-0 pr-0">
+        <SheetContent side="bottom" aria-describedby={undefined} data-feuille="oui" data-vue={vue ?? undefined} className="source-panneau gap-0 p-0 pr-0">
           {interieur}
         </SheetContent>
       </Sheet>
     )
   }
   return (
-    <aside ref={panneauRef} className="source-panneau" role="dialog" aria-labelledby={idTitre} tabIndex={-1} data-feuille="non">
+    <aside ref={panneauRef} className="source-panneau" role="dialog" aria-labelledby={idTitre} tabIndex={-1} data-feuille="non" data-vue={vue ?? undefined}>
       {interieur}
     </aside>
   )

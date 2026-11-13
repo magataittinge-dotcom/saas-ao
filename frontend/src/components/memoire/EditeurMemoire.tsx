@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Bold, Heading, Italic, List, ListOrdered, type LucideIcon } from 'lucide-react'
 import { heureParis } from '@/lib/dateParis'
-import { Bouton } from '@/components/ui/bouton'
+import { Bouton, BoutonIcone } from '@/components/ui/bouton'
 import { DialogueConfirmation } from '@/components/ui/dialogue'
 import { Infobulle } from '@/components/ui/infobulle'
 import { Message } from '@/components/ui/message'
@@ -19,6 +20,8 @@ const DELAI_ENREGISTREMENT_AUTO_MS = 3000
 /** Les blocs dont le texte peut être réécrit ou changer de forme (un titre de partie, un filet, un tableau : non). */
 const REECRIVABLES: ReadonlySet<Bloc['type']> = new Set<Bloc['type']>(['paragraphe', 'puce'])
 const FORMABLES: ReadonlySet<Bloc['type']> = new Set<Bloc['type']>(['paragraphe', 'puce', 'titre'])
+/** Les gestes de mise en forme : une icône par geste (son nom est dit au survol, au focus et au lecteur d'écran). */
+const ICONES_GESTES: Record<Geste, LucideIcon> = { titre: Heading, gras: Bold, italique: Italic, liste: List, numeros: ListOrdered }
 
 /**
  * L'éditeur du mémoire, en plein écran (la feuille du système : piège de focus, Échap, retour du focus). Le mémoire s'y lit
@@ -138,17 +141,20 @@ export default function EditeurMemoire({
 
   return (
     <Sheet open onOpenChange={(ouvert) => { if (!ouvert) fermer() }}>
-      <SheetContent side="bottom" data-editeur-memoire="" className="top-0 flex h-dvh flex-col gap-0 border-t-0 bg-surface-0 p-0">
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-bord px-4 py-3 pr-14 sm:px-6 sm:pr-16">
-          <div className="min-w-0">
+      <SheetContent side="bottom" data-editeur-memoire="" className="top-0 flex h-dvh flex-col gap-0 border-t-0 bg-surface-0 p-0 [&>button:first-child]:hidden">
+        {/* On quitte l'éditeur par « Terminé » (jury, tour 3 : une croix nue ne dit pas que le texte est gardé) : la croix
+            de la feuille est retirée ici, Échap ferme toujours. L'enregistrement est dit une fois, par son état. */}
+        <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-0.5 border-b border-bord px-4 py-3 sm:px-6">
+          <div className="min-w-0 flex-1">
             <SheetTitle className="font-memoire text-xl font-semibold text-fg">Modifier le mémoire</SheetTitle>
-            <SheetDescription className="text-sm text-fg-2 max-md:sr-only">Corrigez le texte là où il se lit. Il s’enregistre seul.</SheetDescription>
+            <SheetDescription className="text-sm text-fg-2 max-md:sr-only">Corrigez le texte là où il se lit.</SheetDescription>
           </div>
-          <p role="status" aria-live="polite" className="text-sm text-fg-2">
+          <p role="status" aria-live="polite" className="text-sm text-fg-2 max-md:order-last max-md:basis-full">
             {etat === 'en_cours' ? 'Enregistrement…'
               : modifie || etat === 'echec' ? <PastilleEtat sens="ambre">Modifications non enregistrées</PastilleEtat>
                 : heure ? `Enregistré à ${heureParis(heure)}` : 'Tout est enregistré'}
           </p>
+          <Bouton variante="secondaire" onClick={fermer}>Terminé</Bouton>
         </header>
 
         {etat === 'echec' && (
@@ -160,21 +166,27 @@ export default function EditeurMemoire({
           </Message>
         )}
 
-        {/* Les outils : une rangée au-dessus du texte ; au téléphone, une rangée qui défile, sous le texte. */}
-        <div data-outils-editeur="" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-bord px-4 py-1.5 max-md:order-last max-md:flex-nowrap max-md:overflow-x-auto max-md:border-b-0 max-md:border-t sm:px-6">
-          <div role="toolbar" aria-label="Mise en forme" className="flex shrink-0 items-center gap-1">
-            {GESTES.map((g) => (
-              <Infobulle key={g.id} texte={g.aide} cote="bottom">
-                {/* Le bouton ne prend pas le focus : le curseur reste dans le texte. */}
-                <Bouton variante="secondaire" className="px-3" onMouseDown={(e) => e.preventDefault()} onClick={() => geste(g.id)}>{g.libelle}</Bouton>
-              </Infobulle>
-            ))}
+        {/* Les outils : une rangée au-dessus du texte. Au téléphone, sous le texte, sans rien qui défile de côté : la
+            réécriture du paragraphe choisi d'abord (au plus près du texte), la mise en forme en dernière rangée. */}
+        <div data-outils-editeur="" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-bord px-4 py-1.5 max-md:order-last max-md:flex-col-reverse max-md:flex-nowrap max-md:items-stretch max-md:gap-y-2 max-md:border-b-0 max-md:border-t max-md:py-2 sm:px-6">
+          <div role="toolbar" aria-label="Mise en forme" className="-mx-2 flex shrink-0 items-center gap-1">
+            {GESTES.map((g) => {
+              const Icone = ICONES_GESTES[g.id]
+              return (
+                <Infobulle key={g.id} texte={g.aide} cote="bottom">
+                  {/* Le bouton ne prend pas le focus : le curseur reste dans le texte. */}
+                  <BoutonIcone libelle={g.libelle} className="rounded-lg" onMouseDown={(e) => e.preventDefault()} onClick={() => geste(g.id)}>
+                    <Icone aria-hidden strokeWidth={1.75} />
+                  </BoutonIcone>
+                </Infobulle>
+              )
+            })}
           </div>
           {/* C9b — réécriture ciblée (agit sur le paragraphe où l'on écrit, et sur lui seul) */}
           <RewritePassageBar projectId={projectId} selection={selection} onApply={applyRewrite} />
         </div>
 
-        <div data-texte-memoire="" className="min-h-0 flex-1 overflow-y-auto px-5 py-8">
+        <div data-texte-memoire="" className="min-h-0 flex-1 overflow-y-auto px-5 py-8 max-md:py-6">
           <div className="lecteur-memoire mx-auto max-w-[72ch] text-lg leading-[1.7]">
             {blocs.map((b) => (
               <BlocMemoire key={b.id} bloc={b} actif={b.id === actif} onSaisie={onSaisie} onEntree={onEntree} onSortie={onSortie} />

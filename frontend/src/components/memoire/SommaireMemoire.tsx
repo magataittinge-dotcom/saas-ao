@@ -59,7 +59,7 @@ export default function SommaireMemoire({
     <>
       {bilanRefaire && <p className="memoire-bilan-refaire mb-2 text-xs font-medium text-ambre-ink">{bilanRefaire}</p>}
       {bilan && (
-        <section className="mb-3 border-b border-bord pb-3" aria-label="Critères du règlement à couvrir">
+        <section className="mb-3 border-b border-bord px-2 pb-3" aria-label="Critères du règlement à couvrir">
           <p className="text-xs text-fg-2">{bilan}</p>
           {aCouvrir.length > 0 && (
             <ul className="mt-2 space-y-2">
@@ -100,10 +100,14 @@ export default function SommaireMemoire({
                 {aEnfants && <ChevronDown aria-hidden className={cn('mt-0.5 text-fg-3 transition-transform duration-survol ease-survol motion-reduce:transition-none', !ouverte && '-rotate-90')} />}
               </Bouton>
               {aEnfants && ouverte && (
-                <ul className="border-l border-bord">
-                  {section.enfants.map((enfant) => {
+                <ul className="ml-2 border-l border-bord">
+                  {section.enfants.map((enfant, rang) => {
                     const enfantActif = activeSection === enfant.id
                     const traites = rattaches[cleDe(section, enfant)] ?? []
+                    // Un critère se dit une fois par suite de sections qui le traitent (jury, tour 3 : le même critère
+                    // redit sous chaque entrée doublait la hauteur du sommaire) : il court jusqu'au critère suivant.
+                    const precedente = rang > 0 ? rattaches[cleDe(section, section.enfants[rang - 1])] ?? [] : []
+                    const redit = traites.length > 0 && traites.map((s) => s.nom).join('|') === precedente.map((s) => s.nom).join('|')
                     const aRefaire = etatDe(etats, section.id.replace('partie-', 'partie_'), enfant.id.replace('sec-', '')) === 'a_refaire'
                     return (
                       <li key={enfant.id}>
@@ -118,7 +122,7 @@ export default function SommaireMemoire({
                         >
                           <span className="min-w-0 break-words">{enfant.titre}</span>
                           {aRefaire && <span className="memoire-a-refaire font-semibold text-ambre-ink">À refaire</span>}
-                          {traites.map((s) => (
+                          {!redit && traites.map((s) => (
                             <span key={s.nom} className="memoire-critere font-normal text-fg-3">{libelleSousCritere(s.nom, s.poids)}</span>
                           ))}
                         </Bouton>

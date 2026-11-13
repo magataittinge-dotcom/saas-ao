@@ -174,10 +174,11 @@
    `.cible-libre` sort un contrôle de la règle (case à cocher, puce intégrée à une ligne) ;
    `.cible-etendue` garde la taille visuelle mais étend la zone qui répond au doigt à 44 px. */
 @media (max-width: 767px) {
-  .page-ao :is(button, [role='button'], select, input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'])):not(.cible-libre) {
+  /* une case à cocher du système (`button[role=checkbox]`) garde son dessin de 20 px : c'est sa rangée qui fait 44 px */
+  .page-ao :is(button, [role='button'], select, input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'])):not(.cible-libre, [role='checkbox']) {
     min-height: 44px;
   }
-  .page-ao button:not(.cible-libre) { min-width: 44px; }
+  .page-ao button:not(.cible-libre, [role='checkbox']) { min-width: 44px; }
   .page-ao :is(a.glass-btn, a.btn-primary, a.signature-btn):not(.cible-libre) { min-height: 44px; }
   /* case à cocher : toute la ligne répond au doigt */
   .page-ao label:has(> input[type='checkbox'], > input[type='radio']):not(.cible-libre) { min-height: 44px; display: flex; align-items: center; }

@@ -40,11 +40,13 @@ function rendre(preparer: (client: QueryClient) => void | Promise<void>) {
 }
 const texte = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ')
 
-test('comptes uniques : le mémoire dit la phrase de Rédiger, une fois dans le résumé et une fois dans sa section', async () => {
+// Jury, tour 3 : chaque fait une fois. La phrase est celle de Rédiger (même compte du serveur) ; elle se lit dans la section
+// du mémoire, à côté de ses boutons, et la case du résumé ne la redit plus.
+test('comptes uniques : le mémoire dit la phrase de Rédiger, une fois, dans sa section', async () => {
   const html = await rendre((c) => { c.setQueryData(['export-detail', 'ao-1'], DETAIL) })
   const phrase = libellePassagesACompleter(136)!
   assert.equal(phrase, '136 passages à compléter avant le dépôt')
-  assert.equal(html.split(phrase).length - 1, 2, 'résumé et section : la même phrase')
+  assert.equal(html.split(phrase).length - 1, 1, 'la phrase de Rédiger, une seule fois')
   assert.doesNotMatch(texte(html), /100 %|Aucune partie à refaire/, 'plus de second compte qui dit le contraire')
   assert.equal((html.match(/<h1/g) ?? []).length, 1, 'un seul h1')
   assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'un seul bouton principal')

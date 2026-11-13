@@ -19,7 +19,7 @@ interface CommunProps {
 /** Le passage cité, lisible : avant, passage surligné, après. 16 px au moins (lecture sur chantier),
  *  et dit tel quel aux lecteurs d'écran. `surligner` faux : extrait cité par l'analyse, non vérifié
  *  dans la pièce, donc sans surlignage. */
-export function Citation({ reponse, surligner }: { reponse: ReponseSource; surligner: boolean }) {
+export function Citation({ reponse, surligner, sansLegende = false }: { reponse: ReponseSource; surligner: boolean; sansLegende?: boolean }) {
   if (!reponse.citation) return null
   const c = citationAffichee(reponse.citation)
   const nom = reponse.document?.nom
@@ -38,11 +38,14 @@ export function Citation({ reponse, surligner }: { reponse: ReponseSource; surli
         )}
         {c.apres && <span className="source-ctx"> {c.apres}</span>}
       </blockquote>
-      <figcaption>
-        {surligner
-          ? `Texte exact de la page ${reponse.page}${nom ? ` · ${nom}` : ''}`
-          : 'Extrait cité par Synorix, non retrouvé mot pour mot dans la pièce'}
-      </figcaption>
+      {/* `sansLegende` : la phrase au-dessus de l'extrait a déjà dit qu'il n'est pas retrouvé mot pour mot */}
+      {!sansLegende && (
+        <figcaption>
+          {surligner
+            ? `Texte exact de la page ${reponse.page}${nom ? ` · ${nom}` : ''}`
+            : 'Extrait cité par Synorix, non retrouvé mot pour mot dans la pièce'}
+        </figcaption>
+      )}
     </figure>
   )
 }
@@ -56,10 +59,10 @@ export function VuePassage({
       {/* Jury et testeur, tour 1 : un extrait sans surlignage se lisait comme « le passage ». L'écran dit d'abord la vérité. */}
       {reponse.niveau === 'page' && (
         <p className="source-note" data-passage-non-retrouve="">
-          Passage non retrouvé mot pour mot dans la pièce. Page citée par Synorix{reponse.page ? ` · page ${reponse.page}` : ''} : la clause est à lire sur cette page.
+          Passage non retrouvé mot pour mot dans la pièce : la clause est à lire {reponse.page ? `à la page ${reponse.page}` : 'sur la page citée'}.
         </p>
       )}
-      <Citation reponse={reponse} surligner={reponse.niveau === 'passage' && exigenceId !== null} />
+      <Citation reponse={reponse} surligner={reponse.niveau === 'passage' && exigenceId !== null} sansLegende={reponse.niveau === 'page'} />
       {exigenceId !== null && (
         <>
           <p className="source-sous-titre">Sur la page</p>
@@ -89,7 +92,7 @@ export function VuePage({
   return (
     <div className="source-vue">
       {reponse.niveau === 'page' && (
-        <p className="source-note" data-passage-non-retrouve="">Passage non retrouvé mot pour mot dans la pièce. Page citée par Synorix : la clause est à lire sur cette page.</p>
+        <p className="source-note" data-passage-non-retrouve="">Passage non retrouvé mot pour mot dans la pièce : la clause est à lire sur cette page.</p>
       )}
       <ImageSource
         exigenceId={exigenceId}
@@ -127,7 +130,7 @@ export function VueDocumentPdf({
   return (
     <div className="source-vue">
       {reponse.niveau === 'page' && page === reponse.page && (
-        <p className="source-note" data-passage-non-retrouve="">Passage non retrouvé mot pour mot dans la pièce. Voici la page citée par Synorix : la clause est à lire sur cette page.</p>
+        <p className="source-note" data-passage-non-retrouve="">Passage non retrouvé mot pour mot dans la pièce : la clause est à lire sur cette page.</p>
       )}
       <Suspense fallback={<div className="source-squelette" role="status" aria-label="Chargement du document" />}>
         <VueDocument

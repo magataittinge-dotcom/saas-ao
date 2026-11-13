@@ -75,6 +75,7 @@ export default function StepPlan({ project }: { project: Project }) {
   const [erreur, setErreur] = useState<string | null>(null)
   const [nouveauTitre, setNouveauTitre] = useState('')
   const [nouvellePartie, setNouvellePartie] = useState<PartieId>('partie_c')
+  const [echecValidation, setEchecValidation] = useState(0)
   const versionEnvoi = useRef(0)
 
   // Première lecture : le plan enregistré, ou celui que le serveur propose.
@@ -103,8 +104,17 @@ export default function StepPlan({ project }: { project: Project }) {
     onError: (err) => {
       const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
       setErreur(typeof detail === 'string' ? detail : MESSAGE_ECHEC)
+      setEchecValidation((n) => n + 1)
     },
   })
+
+  // « Valider le plan » a échoué : la page revient au message (jury, tour 3 : au téléphone, le bouton est dans la barre du
+  // bas et le message sous l'en-tête, hors de l'écran : on appuyait et rien ne semblait se passer). Le message reste dit
+  // une seule fois, à sa place.
+  useEffect(() => {
+    if (echecValidation === 0) return
+    document.querySelector('main [data-message="erreur"]')?.scrollIntoView({ block: 'center' })
+  }, [echecValidation])
 
   // Enregistrement automatique : quelques instants après le dernier geste.
   useEffect(() => {
@@ -203,6 +213,11 @@ export default function StepPlan({ project }: { project: Project }) {
     valideEtAJour, valideLe: vue.valide_le, enregistre: vue.enregistre, modifie, enCours, enValidation: valider.isPending,
   }
   const versRedaction = () => navigate(`/projects/${project.id}/memoire`)
+  // Le geste qui a échoué se rejoue depuis le message : la validation si c'est elle, sinon l'enregistrement.
+  const reessayer = () => {
+    if (valider.isError) valider.mutate(parties)
+    else enregistrer.mutate({ liste: parties, version: versionEnvoi.current })
+  }
   const actionPrincipale = <BoutonPrincipalPlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} />
 
   return (
@@ -211,7 +226,13 @@ export default function StepPlan({ project }: { project: Project }) {
         titre="Plan du mémoire"
         utilite={UTILITE}
         actionPrincipale={actionPrincipale}
-        message={erreur ? <Message ton="erreur">{erreur}</Message> : valideEtAJour ? <Message ton="succes">Le plan est validé : la rédaction le suivra, partie par partie.</Message> : undefined}
+        message={erreur
+          ? (
+            <Message ton="erreur" action={<Bouton variante="secondaire" onClick={reessayer} disabled={enCours}>Réessayer</Bouton>}>
+              {erreur}
+            </Message>
+          )
+          : valideEtAJour ? <Message ton="succes">Le plan est validé : la rédaction le suivra, partie par partie.</Message> : undefined}
         resume={<BandeResume cartes={cartes} libelle="Résumé du plan" />}
         barre={<BarrePlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} />}
       >

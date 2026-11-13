@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Sparkles } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import MemoirePreflight, { QuotaMemoire, type PreflightSelection } from '@/components/project/MemoirePreflight'
 import type { VariablesMemoire } from '@/lib/memoireGeneration'
 import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
@@ -73,10 +73,13 @@ export default function FormulaireMemoire({
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <Bouton variante="principal" onClick={onGenerer} disabled={enCours || !variables.nb_ouvriers || !variables.delai}>
-            <Sparkles aria-hidden />
             {echec ? 'Relancer la rédaction' : hasMemoire ? 'Régénérer le mémoire' : 'Rédiger le mémoire'}
           </Bouton>
           <QuotaMemoire projectId={projectId} />
+          {/* le bouton attend les deux champs : l'écran dit lesquels (jury, tour 3 : un aplat grisé sans explication) */}
+          {!enCours && (!variables.nb_ouvriers || !variables.delai) && (
+            <p className="basis-full text-sm text-fg-2">Indiquez le nombre d’ouvriers dédiés et le délai estimé : la rédaction se lance ensuite.</p>
+          )}
         </div>
       </Carte>
 
@@ -87,8 +90,9 @@ export default function FormulaireMemoire({
       <details className="group rounded-carte border border-bord">
         <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 text-sm font-semibold text-fg [&::-webkit-details-marker]:hidden">
           Options (facultatif)
-          <span className="text-xs font-normal text-fg-3">
+          <span className="flex items-center gap-2 text-xs font-normal text-fg-3">
             profil local, références, planning, annexes, équipe, matériel
+            <ChevronDown aria-hidden size={18} strokeWidth={1.5} className="shrink-0 transition-transform duration-survol ease-survol group-open:rotate-180 motion-reduce:transition-none" />
           </span>
         </summary>
         <div className="space-y-4 px-4 pb-4">

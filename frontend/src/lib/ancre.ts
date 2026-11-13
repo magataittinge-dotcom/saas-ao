@@ -191,7 +191,8 @@ export interface CitationAffichee {
 export function citationAffichee(c: Citation, max = 160): CitationAffichee {
   return {
     avant: couperContexte(c.avant, max, true),
-    passage: (c.passage || '').replace(ESPACES, ' ').trim(),
+    // les points de conduite d'un sommaire (« ATTRIBUTAIRE ………… 12 ») ne sont pas du texte à lire
+    passage: (c.passage || '').replace(/(?:\s*[.…·]){4,}/g, ' ').replace(ESPACES, ' ').trim(),
     apres: couperContexte(c.apres, max, false),
   }
 }
@@ -218,8 +219,12 @@ export function reponseDeChamp(
 ): ReponseSource {
   const page = champ.page && champ.page >= 1 ? champ.page : null
   const extrait = (champ.excerpt ?? '').trim()
+  // Un classeur sans aperçu en pages (le tableau de l'acheteur) n'a ni « page » ni passage à lire ici : le panneau le dit et
+  // propose d'ouvrir la pièce (jury, tour 3 : une phrase sur une « page 1 » puis un panneau blanc).
+  const classeur = !urls.pdf && /\.(xlsx|xlsm|xls|ods|csv)$/i.test(piece.file_name)
   return {
     version: 1, doc_id: piece.id, page, rotation: 0, rects: [],
+    ...(classeur ? { format: 'tableur' } : {}),
     niveau: page ? 'page' : 'aucun',
     citation: extrait ? { avant: '', passage: extrait, apres: '' } : null,
     cadrage: null,
