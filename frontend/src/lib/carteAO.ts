@@ -163,7 +163,8 @@ export function construireCarteAO(e: EntreeCarte): FaitCarte[] {
   if (criteres.length > 0) {
     faits.push({
       id: 'criteres', libelle: 'Critères de jugement',
-      valeur: criteres.map((c) => `${texteNet(c.nom)} ${c.poids} %`).join(' · '),
+      // Insécables (jury, tour 3 : « Valeur technique 50 » / « % » en fin de ligne à 390 px) : le poids tient à son signe et au critère.
+      valeur: criteres.map((c) => `${texteNet(c.nom)}\u00a0${c.poids}\u00a0%`).join(' · '),
       source: champs?.criteres?.source ?? null, large: true,
     })
   }

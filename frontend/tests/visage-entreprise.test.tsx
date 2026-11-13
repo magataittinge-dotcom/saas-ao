@@ -363,7 +363,7 @@ test('la phrase de Synorix : ce qu’il sait (décompte des rubriques), puis la
   assert.ok(voix.prochaine && ['identite', 'moyens', 'certifications'].includes(voix.prochaine.rubrique) && voix.prochaine.titreRubrique.length > 0)
   const vide = voixSynorix({})
   assert.match(vide.phrase, /^Synorix ne sait encore rien de votre entreprise\./)
-  assert.deepEqual(vide.prochaine, { libelle: 'Nom de l’entreprise', rubrique: 'identite', titreRubrique: 'Identité' })
+  assert.deepEqual(vide.prochaine, { libelle: 'Nom de l’entreprise', rubrique: 'identite', titreRubrique: 'Identité', lien: '/company?rubrique=identite&champ=raison_sociale' })
   const une = voixSynorix({ organisation: { name: 'Entreprise inventée' } as never })
   assert.match(une.phrase, /^Synorix connaît 1 des \d+ informations/)
   for (const v of [voix, vide, une]) assert.ok(!/!|manquant|incomplet|absent/i.test(v.phrase))

@@ -10,6 +10,7 @@ import { PastilleEtat } from '@/components/ui/pastille'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { SqueletteLignes } from '@/components/ui/squelette'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
+import ExigencesMemoire from '@/components/memoire/ExigencesMemoire'
 import PropositionParagraphe, { type EtatProposition } from '@/components/memoire/PropositionParagraphe'
 import { annoncer } from '@/components/ui/toast'
 import { detailErreur, useFonctionsIA } from '@/lib/fonctionsIA'
@@ -122,7 +123,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
     enabled: ouvert,
   })
 
-  const aller = (l: LigneRelecture) => {
+  const aller = (l: Pick<LigneRelecture, 'ancre'>) => {
     if (!l.ancre) return
     changer(false)
     // le tiroir se ferme (le focus revient au bouton), puis la page remonte au passage
@@ -221,6 +222,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
                   <p className="text-sm text-fg-2"><span className="font-semibold text-fg">{resumeRelecture(data)}</span> avant le dépôt, rangés par nature. Chaque point mène à son passage.</p>
                 )}
                 <ListeRelecture donnees={data} onAller={aller} onSource={ouvrirSource} onProposer={fonctions.relecture_proposer ? (l) => { void proposer(l) } : undefined} />
+                <ExigencesMemoire exigences={data.exigences} onAller={(ancre) => aller({ ancre })} onSource={ouvrirSource} />
                 {data.limite_pages !== null && (
                   <p className="border-t border-bord pt-3 text-xs text-fg-3">Longueur estimée : environ {data.pages_estimees} pages, pour {data.limite_pages} au plus dans le règlement.</p>
                 )}

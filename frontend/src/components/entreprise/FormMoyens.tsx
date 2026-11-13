@@ -92,8 +92,13 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
             />
           </Field>
         </Pleine>
-        <EffectifSimple valeur={effectifs} categorie="encadrement" libelle="Effectif d’encadrement" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
-        <HabilitationSst valeur={habilitations} onChange={(h) => f.poserProfil('habilitations', h)} />
+        {/* deux petits nombres : côte à côte, à gauche (ils ne flottent plus chacun au début d'une colonne de 590 px) */}
+        <Pleine>
+          <div className="flex flex-wrap gap-x-10 gap-y-5">
+            <EffectifSimple valeur={effectifs} categorie="encadrement" libelle="Effectif d’encadrement" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
+            <HabilitationSst valeur={habilitations} onChange={(h) => f.poserProfil('habilitations', h)} />
+          </div>
+        </Pleine>
         <Pleine>
           <EffectifParSpecialite valeur={effectifs} categorie="chef_equipe" libelle="Chefs d’équipe par spécialité" exemple="Maçonnerie" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
         </Pleine>

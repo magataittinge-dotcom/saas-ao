@@ -48,7 +48,7 @@ export function LignePiece({ id, nom, sous, etat, actions, menu, pied }: {
         </div>
         <div className="flex min-w-0 items-center justify-between gap-x-3 max-sm:basis-full">
           <div className="min-w-0 sm:w-56">{etat}</div>
-          <div className="flex shrink-0 items-center justify-end gap-1 sm:w-64">
+          <div className="flex min-w-0 items-center justify-end gap-1 sm:w-64 sm:shrink-0">
             {actions}
             {menu ?? <span aria-hidden="true" className="size-11 shrink-0" />}
           </div>

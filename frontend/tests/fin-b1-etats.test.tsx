@@ -38,7 +38,8 @@ test('la liste des lots ne marque que l\'exception ; « tout le dossier » ne di
   assert.match(douteux, /data-etat="a-verifier"/)
   assert.match(douteux, /À vérifier/)
   const tout = renderToStaticMarkup(<LotCard lot={{ id: 'all', nom: 'Analyser l’ensemble du dossier (tous les lots)' }} selected={false} onSelect={rien} pieces={[{ file_name: 'a.pdf' }, { file_name: 'b.pdf' }]} />)
-  assert.match(tout, /2 pièces lues dans le dossier/)
+  // COR-B1 : « dans le dossier » est déjà dit par l'intitulé de la rangée ; la rangée tient dans la carte à 390 px
+  assert.match(tout, /2 pièces lues</)
   assert.doesNotMatch(tout, /pour ce lot/)
   // une liste (une surface, des filets), plus une grille de cartes ; plus de bande de cases avec une jauge
   assert.match(lots, /<ListeLots>\{lots\.map\(carteLot\)\}<\/ListeLots>/)
@@ -72,8 +73,13 @@ test('bloquant « Le dossier est bien enregistré… Relancer » : un AO sans do
 
 test('chargement et erreur : un squelette du système et une phrase, « restent en place » (plus « ne sont pas touchés »)', () => {
   assert.match(decider, /Synorix ouvre l’analyse du dossier\./)
-  assert.match(decider, /<SqueletteCorpsEtape cases=\{2\} \/>/)
-  assert.match(pieces, /<SqueletteListe phrase="Synorix ouvre la liste des pièces demandées par le règlement\." \/>/)
+  // COR-B1 (jury, tour 3) : un squelette à la forme de chaque écran (plus celui d'un autre écran)
+  assert.match(decider, /<SqueletteDecider \/>/)
+  assert.match(decider, /data-squelette-decider=""/)
+  assert.match(pieces, /<SqueletteListe parFamilles phrase="Synorix ouvre la liste des pièces demandées par le règlement\." \/>/)
+  const squelettePieces = renderToStaticMarkup(<SqueletteListe parFamilles phrase="Synorix ouvre la liste." />)
+  assert.match(squelettePieces, /data-squelette-liste="familles"/)
+  assert.doesNotMatch(squelettePieces, /size-5 shrink-0 rounded"/, 'ni case à cocher ni numéro de lot dans le squelette des pièces')
   for (const src of [lots, decider, pieces]) {
     assert.doesNotMatch(src, /pas touché|<Squelette className="h-(28|32|56)/)
   }

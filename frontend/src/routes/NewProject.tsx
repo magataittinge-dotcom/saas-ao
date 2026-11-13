@@ -1,4 +1,5 @@
 import ZoneDepotAO from '@/components/onboarding/ZoneDepotAO'
+import { TitreDepot } from '@/components/depot/ZoneDepot'
 import { Sigle } from '@/components/common/Sigle'
 import { Page } from '@/components/ui/page'
 
@@ -14,7 +15,7 @@ export default function NewProject() {
       <ZoneDepotAO
         geste
         suite
-        titre="Glissez ici le dossier de l’acheteur"
+        titre={<TitreDepot />}
         className="md:min-h-80"
         precision={<>Le <Sigle code="DCE" /> entier en ZIP, tel que vous l’avez téléchargé, ou plusieurs fichiers à la fois. Le nom de l’AO vient du fichier ; vous pourrez le modifier ensuite.</>}
       />

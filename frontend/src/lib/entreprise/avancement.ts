@@ -109,6 +109,14 @@ export const INFORMATIONS: Information[] = [
 
 export interface Avancement { rempli: number; total: number }
 
+/**
+ * B6 — la prochaine information à donner : la première information indispensable encore à renseigner, dans l'ordre de
+ * la liste (Identité, puis Moyens, puis Certifications et références). Null quand tout est renseigné.
+ */
+export function prochaineInformation(d: DonneesEntreprise, informations: Information[] = INFORMATIONS): Information | null {
+  return informations.find((i) => i.niveau === 'indispensable' && !i.rempli(d)) ?? null
+}
+
 /** Les informations indispensables d'une rubrique, renseignées sur le total. */
 export function avancement(d: DonneesEntreprise, rubrique: RubriqueId, informations: Information[] = INFORMATIONS): Avancement {
   const liste = informations.filter((i) => i.rubrique === rubrique && i.niveau === 'indispensable')

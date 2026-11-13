@@ -49,7 +49,7 @@ test('la carte résume l’AO depuis l’analyse déjà en base, fait par fait',
   assert.equal(f.visite.reste, 'date à planifier')
   assert.equal(f.visite.action, true)
   assert.equal(f.pieces.valeur, '2 pièces à joindre · 1 prête')
-  assert.equal(f.criteres.valeur, 'Valeur technique 60 % · Prix 40 %')
+  assert.equal(f.criteres.valeur, 'Valeur technique\u00a060\u00a0% · Prix\u00a040\u00a0%')
   assert.equal(f.criteres.source?.document, 'RC')
   assert.equal(f.delai.valeur, '6 mois à compter de l’ordre de service')
   assert.equal(f.delai.source?.document, 'CCAP')
@@ -94,7 +94,7 @@ test('visite facultative ou non mentionnée', () => {
 
 test('les critères de l’AO servent de repli quand le RC n’a pas été lu', () => {
   const f = parId(construireCarteAO({ projet: { criteres_jugement: [{ nom: 'Prix', poids: 30 }, { nom: 'Technique', poids: 70 }] } }))
-  assert.equal(f.criteres.valeur, 'Prix 30 % · Technique 70 %')
+  assert.equal(f.criteres.valeur, 'Prix\u00a030\u00a0% · Technique\u00a070\u00a0%')
   assert.equal(f.criteres.source, null)
 })
 

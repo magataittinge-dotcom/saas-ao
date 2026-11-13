@@ -125,11 +125,11 @@ test('CGV et CGU : la description des offres dit la grille du produit, sans « i
 test('Abonnement : au-delà du nouveau quota, la jauge lit « 30 sur 30 » ; Business au quota ne propose pas d’offre plus large', () => {
   const page = sansCommentaires(lire('src/routes/Billing.tsx'))
   assert.match(page, /const utilise = Math\.min\(compteur\.used, compteur\.limit\)/)
-  assert.match(page, /\{utilise\} sur \{compteur\.limit\}/)
+  assert.match(page, /\{utilise\}<\/span>\s*<span[^>]*>sur \{compteur\.limit\}/)
   assert.match(page, /aria-valuenow=\{utilise\}/)
   assert.doesNotMatch(page, /\{compteur\.used\} sur/)
-  assert.match(page, /business \? 'le nombre d’unités peut être relevé sur demande\.' : 'une offre plus large/)
-  assert.match(page, /\{business \? null : isPaid/)
+  assert.match(page, /business \? 'le nombre d’unités peut être relevé sur demande\.' : 'avec une offre supérieure/)
+  assert.match(page, /\{!business && \(\s*<Bouton variante="principal"/, 'Business au quota : aucun bouton vers une offre plus large')
   assert.doesNotMatch(page, /limit === null|limit !== null|illimit|usage raisonnable/)
 })
 

@@ -15,9 +15,9 @@ export const A_QUOI_SERT: Record<RubriqueFiche, string> = {
 }
 
 export const FORMATS_FICHE: { id: FormatFiche; libelle: string; explication: string }[] = [
-  { id: 'pdf', libelle: 'PDF', explication: 'à envoyer tel quel' },
-  { id: 'docx', libelle: 'Word', explication: 'pour modifier avant d’envoyer' },
-  { id: 'xlsx', libelle: 'Excel', explication: 'le tableau, pour trier ou compléter' },
+  { id: 'pdf', libelle: 'PDF', explication: 'Prêt à envoyer' },
+  { id: 'docx', libelle: 'Word', explication: 'À modifier avant l’envoi' },
+  { id: 'xlsx', libelle: 'Excel', explication: 'À trier ou à compléter' },
 ]
 
 export type EtatSection = 'prete' | 'a_renseigner'

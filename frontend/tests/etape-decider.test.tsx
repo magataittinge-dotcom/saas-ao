@@ -143,7 +143,10 @@ test('l’écran Décider passe par le gabarit : une seule action principale en
   // l'action principale n'est pas doublée sur ordinateur : la barre ne la porte qu'au téléphone ; là, l'en-tête ne monte pas la
   // sienne (montée cachée, elle faisait céder l'aplat : aucun bouton principal, E2E du 12/11), et la barre porte la décision
   // tant qu'elle n'est pas prise, puis « Suivant : Pièces »
-  assert.match(code, /actionPrincipale=\{tel \? undefined : boutonDecision\}/)
+  // COR-B1 (jury, tour 3 : « On y va » écrit trois fois) : la décision se prend dans la carte ; l'en-tête ne porte l'action
+  // (« Passer aux pièces ») qu'une fois la décision prise
+  assert.match(code, /actionPrincipale=\{tel \|\| !isStepAlreadyDone \? undefined : boutonDecision\}/)
+  assert.match(code, /allerDansLaBarre=\{tel\}/)
   assert.match(code, /<ActionsBarreTel>\s*\{tel && !isStepAlreadyDone \? boutonDecision : <BoutonSuite\s+etape="Pièces"/)
   // aucune question ni donnée de prix côté écran
   for (const f of ['src/components/project/PointsAEclaircir.tsx', 'src/components/project/AVerifierAvantEngagement.tsx', 'src/lib/resumeAO.ts']) {
@@ -172,7 +175,10 @@ test('Décider : décision, trésorerie et rétro-planning en Carte du système
     assert.doesNotMatch(sansCommentaires(lire(f)), /<button\b|style=\{\{|glass-card|glass-btn|microlabel|uppercase|font-mono|title=/, f)
   }
   const decision = sansCommentaires(lire('src/components/project/SynorixScoreCard.tsx'))
-  assert.doesNotMatch(decision, /variante="principal"/, '« On y va » de la carte est au trait : l’aplat est dans l’en-tête')
+  // COR-B1 : l'aplat « On y va » est dans la carte (une fois), sauf au téléphone où la barre du bas le porte
+  assert.equal((decision.match(/variante="principal"/g) ?? []).length, 1)
+  assert.match(decision, /\{!allerDansLaBarre && <Bouton variante="principal" onClick=\{onYAller\}/)
+  assert.match(decision, /data-decision="aller"/)
   assert.match(decision, /<Sigle code="DCE" \/>/)
   assert.match(sansCommentaires(lire('src/components/project/TresorerieCard.tsx')), /<Sigle code="CCAP" \/>/)
   assert.match(sansCommentaires(lire('src/components/project/RetroPlanning.tsx')), /<Sigle code="RC" \/>/)

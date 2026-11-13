@@ -1,7 +1,7 @@
 import { FileText, Trash2, ExternalLink, Tag, Pencil } from 'lucide-react'
 import { DOC_TYPE_LABELS } from '@/lib/vault'
 import { noteValidite, statutDocument } from '@/lib/statutPiece'
-import { jourLongParis } from '@/lib/dateParis'
+import { dateDuJourParis } from '@/lib/dateParis'
 import { getSignedFileUrl } from '@/services/api'
 import { Bouton, BoutonIcone } from '@/components/ui/bouton'
 import { Infobulle } from '@/components/ui/infobulle'
@@ -27,7 +27,8 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
   const statut = statutDocument(document)
   const note = noteValidite(document.type)
   const isUnclassified = document.status === 'unclassified'
-  const depose = jourLongParis(document.uploaded_at)
+  // « 3 juillet 2026 » : avec l'année (une attestation a une durée de validité ; jury, tour 3), sans le jour de la semaine
+  const depose = document.uploaded_at ? dateDuJourParis(document.uploaded_at).split(' ').slice(1).join(' ') : ''
 
   const openFile = async () => {
     try {

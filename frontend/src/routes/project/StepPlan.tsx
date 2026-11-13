@@ -25,7 +25,7 @@ import type { CriticalFieldsPayload } from '@/components/project/CriticalBanner'
 import type { Project } from '@/types'
 import type { PartieId } from '@/lib/memoireSections'
 import {
-  ETAT_A_VERIFIER, ETAT_PRET, MAX_PARTIES, MAX_TITRE, ajouter, basculerRetrait, changerFiche, corpsPlan, deplacer, libelleFichesRemplies, libelleLongueur, libellePoids,
+  ETAT_A_VERIFIER, ETAT_PRET, MAX_PARTIES, MAX_TITRE, ajouter, basculerRetrait, changerFiche, corpsPlan, deplacer, carteLongueur, libelleFichesRemplies, libellePoids,
   numeroDansLaPartie, parGroupe, peutDeplacer, renommer, supprimerAjout, titrePartieLisible, type PartiePlan, type SourcePlan, type VuePlan,
 } from '@/lib/planMemoire'
 
@@ -200,9 +200,7 @@ export default function StepPlan({ project }: { project: Project }) {
         detail: vue.a_couvrir.length === 0 ? 'Chaque sous-critère est servi par une partie.' : `${vue.a_couvrir.length} à couvrir`,
       }
       : { libelle: 'Critères du règlement', valeur: 'Non détaillés', detail: 'Le règlement ne détaille pas de sous-critères.' },
-    vue.limite_pages
-      ? { libelle: 'Longueur', valeur: libelleLongueur(vue.limite_pages.pages), detail: 'Limite relevée dans le dossier.' }
-      : { libelle: 'Longueur', valeur: 'Libre', detail: 'Le dossier ne fixe pas de limite de pages.' },
+    carteLongueur(vue.limite_pages, voir),   // B8 : la limite du règlement avec sa source
     {
       libelle: 'Fiches remplies', valeur: fiches > 0 ? String(fiches) : libelleFichesRemplies(fiches), rien: 'Aucune' as const,
       detail: 'Facultatif : le plan se valide sans ouvrir une fiche.',

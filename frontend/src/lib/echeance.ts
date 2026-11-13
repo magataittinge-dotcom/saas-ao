@@ -7,6 +7,7 @@
 // ou « À déposer ».
 
 import { heureLimiteParis, joursParis, momentLimiteParis } from './remiseParis'
+import { joursOuvresRestants, libelleJoursOuvres } from './joursOuvres'
 
 export type EtatEcheance = 'sans_date' | 'a_venir' | 'proche' | 'aujourdhui' | 'passee'
 
@@ -21,6 +22,8 @@ export interface Echeance {
   etat: EtatEcheance
   /** Jours calendaires jusqu'au jour limite (0 = aujourd'hui, négatif = passé). */
   jours: number | null
+  /** B2 — jours ouvrés jusqu'au jour limite compris (lib/joursOuvres.ts) ; null hors d'une remise à venir. */
+  ouvres: number | null
   libelle: string
   limite: Date | null
 }
@@ -34,16 +37,18 @@ export function momentLimite(source: EcheanceSource | null | undefined): Date | 
 
 export function etatEcheance(source: EcheanceSource | null | undefined, maintenant: Date = new Date()): Echeance {
   const limite = momentLimite(source)
-  if (!limite) return { etat: 'sans_date', jours: null, libelle: '—', limite: null }
+  if (!limite) return { etat: 'sans_date', jours: null, ouvres: null, libelle: '—', limite: null }
   // jours du calendrier de Paris : le changement d'heure (23 h ou 25 h entre deux minuits) n'y change rien
   const jours = joursParis(limite, maintenant)
   if (maintenant.getTime() > limite.getTime()) {
-    return { etat: 'passee', jours, libelle: 'Date de remise passée', limite }
+    return { etat: 'passee', jours, ouvres: null, libelle: 'Date de remise passée', limite }
   }
   if (jours === 0) {
-    return { etat: 'aujourdhui', jours, libelle: source?.heure ? `Aujourd’hui, ${heureLimiteParis(limite)}` : "Aujourd’hui", limite }
+    return { etat: 'aujourdhui', jours, ouvres: null, libelle: source?.heure ? `Aujourd’hui, ${heureLimiteParis(limite)}` : "Aujourd’hui", limite }
   }
-  return { etat: jours <= JOURS_PROCHE ? 'proche' : 'a_venir', jours, libelle: `J−${jours}`, limite }
+  // B2 : « J−6 · 4 jours ouvrés », écrit ici pour tous les écrans (une seule mise en forme)
+  const ouvres = joursOuvresRestants(limite, maintenant)
+  return { etat: jours <= JOURS_PROCHE ? 'proche' : 'a_venir', jours, ouvres, libelle: `J−${jours} · ${libelleJoursOuvres(ouvres)}`, limite }
 }
 
 interface ProjetEcheance {

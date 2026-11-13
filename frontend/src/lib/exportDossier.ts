@@ -85,7 +85,7 @@ export function ligneEtatDossier(aFaire: number, alertes: number, pret: boolean)
  *  à renouveler), comme les cartes de l'écran Pièces. Une pièce facultative ou « pour l'attribution » n'est pas comptée. */
 export function pieceDemandee(p: EtatPieceEntree, echeance?: string | null): boolean {
   const code = statutPiece(p, echeance).code
-  return code === 'pret' || code === 'a-joindre' || code === 'a-confirmer' || code === 'a-renouveler'
+  return code === 'pret' || code === 'a-joindre' || code === 'a-confirmer' || code === 'a-relire' || code === 'a-renouveler'
 }
 
 /**

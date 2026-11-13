@@ -18,14 +18,14 @@ const UNITES = { plan: 'pro', analyses: { used: 15, limit: 30 }, memoires: { use
 
 test('Business a son anneau comme les autres offres, jamais de « ∞ »', () => {
   const html = rendre(BUSINESS)
-  assert.match(html, />10%</)
+  assert.match(html, />10\u202f%</)
   assert.match(html, /Analyses 7 \/ 70 · Mémoires 2 \/ 70/)
   assert.doesNotMatch(html, /∞|illimit/)
 })
 
 test('offre à unités : la jauge reste, avec son pourcentage', () => {
   const html = rendre(UNITES)
-  assert.match(html, /50%/)
+  assert.match(html, /50\u202f%/)
   assert.match(html, /href="\/settings\/billing"/)
 })
 
@@ -37,15 +37,15 @@ test('la barre latérale et le menu du téléphone montrent le même anneau, san
 
 // Migration 40 → 30 (11/11/2026) : une organisation Pro déjà à 35 analyses ce mois-ci lit 100 %, jamais plus.
 test('au-delà du nouveau quota : l’anneau plafonne à 100 %', () => {
-  assert.match(rendre({ plan: 'pro', analyses: { used: 35, limit: 30 }, memoires: { used: 3, limit: 30 } }), />100%</)
+  assert.match(rendre({ plan: 'pro', analyses: { used: 35, limit: 30 }, memoires: { used: 3, limit: 30 } }), />100\u202f%</)
 })
 
 // Jury, tour 1 (bloquant, accueil-quota-atteint et abonnement-quota-atteint) : « 100% » débordait de son anneau.
 test('quota atteint : « 100% » tient dans l\'anneau (anneau de 40 px, chiffre en 11 px, sans chasse fixe)', () => {
   const html = rendre({ plan: 'pro', analyses: { used: 30, limit: 30 }, memoires: { used: 12, limit: 30 } })
-  assert.match(html, />100%</)
+  assert.match(html, />100\u202f%</)
   const anneau = html.match(/<svg[^>]*data-anneau-quota[^>]*>/)?.[0] ?? ''
-  assert.match(anneau, /size-10/, 'anneau de 40 px : 31 px de creux')
+  assert.match(anneau, /size-11/, 'anneau de 44 px : 36 px de creux pour « 100 % » avec son espace fine (jury, tour 3)')
   const chiffre = html.match(/<span[^>]*data-chiffre-quota[^>]*>/)?.[0] ?? ''
   assert.match(chiffre, /text-micro/, 'chiffre en 11 px : « 100% » fait 27 px')
   assert.doesNotMatch(chiffre, /tabular-nums|text-xs|text-sm/)
@@ -56,6 +56,12 @@ test('quota atteint : « 100% » tient dans l\'anneau (anneau de 40 px, chiffre 
 test('mur d’abonnement en Business : le refus du serveur, sans grille d’offres', () => {
   const code = sansCommentaires(lire('src/components/common/SubscriptionWall.tsx'))
   assert.match(code, /\?\.plan\) === 'business'/)
-  assert.match(code, /Quota du mois atteint/)
-  assert.match(code, /business \? null : \(\s*<GrilleOffres/)
+  // COR-B1 (jury, tour 3 : un dialogue sans issue) : en Business, un petit dialogue rendu AVANT la grille, avec le fait en
+  // titre, la phrase du serveur et une issue vers Paramètres > Abonnement ; ni grille, ni mention de résiliation.
+  const business = code.slice(code.indexOf('if (business) {'), code.indexOf('<GrilleOffres'))
+  assert.match(business, /^if \(business\) \{\s*return \(\s*<Dialogue [^\n]*taille="petit"/)
+  assert.match(business, /Vos analyses du mois sont utilisées/)
+  assert.match(business, /description=\{message \?\?/)
+  assert.match(business, /versPage\('\/settings\/billing', 'Voir mon abonnement'\)/)
+  assert.doesNotMatch(business, /PHRASE_RESILIATION/)
 })
