@@ -90,7 +90,8 @@ def _lots_inconnus(project, lot_ids: list) -> list:
 def _accord(n: int, singulier: str, pluriel: str) -> str:
     """« 1 exigence extraite », « 448 exigences extraites » : le nombre et son nom accordé (jamais « exigence(s) extraite(s) »
     dans un texte renvoyé à l'écran). Zéro s'accorde au singulier, comme en français."""
-    return f"{n} {pluriel if n > 1 else singulier}"
+    from services.accords import accord
+    return accord(n, singulier, pluriel)
 
 
 def _date_courte(iso: str | None) -> str | None:
