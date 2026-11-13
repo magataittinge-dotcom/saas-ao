@@ -19,12 +19,14 @@ export function libelleBoutonLire(nbLots: number, nbLotsDetectes = 0): string {
 
 /** Le titre de la confirmation : « Analyser 13 lots = 13 unités ». */
 export function titreConfirmationLecture(nbLots: number): string {
-  return `Analyser ${nbLots} ${pluriel(nbLots)} = ${libelleUnites(nbLots)}`
+  // La question en titre, le coût dans la phrase (jury, tour 3 : « Analyser 3 lots = 3 unités » était une équation)
+  return `Analyser ces ${nbLots} ${pluriel(nbLots)}\u00a0?`
 }
 
 /** Sous le titre de la confirmation. */
-export function detailConfirmationLecture(): string {
-  return 'Chaque lot analysé décompte 1 unité de votre abonnement. L’analyse démarre dès votre confirmation.'
+export function detailConfirmationLecture(nbLots?: number): string {
+  const total = nbLots && nbLots > 1 ? `, soit ${libelleUnites(nbLots)}` : ''
+  return `Chaque lot analysé décompte 1 unité de votre abonnement${total}. L’analyse prend quelques minutes.`
 }
 
 /** La phrase de l'en-tête de l'écran Lots : la consigne, puis le coût en unités. */

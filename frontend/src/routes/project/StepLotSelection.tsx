@@ -3,7 +3,7 @@ import { choixParDefaut, basculerLot, lotAOuvrir, peutLancer } from '@/lib/choix
 import { etiquettesSourceLot, lotsAAfficher, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check as CheckIcon, CircleHelp, Pencil, Plus, X } from 'lucide-react'
+import { Check as CheckIcon, CheckCircle2, CircleHelp, Pencil, Plus, X } from 'lucide-react'
 import { GabaritEtape, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
 import { EtapeSansAnalyse } from '@/components/project/EtapeSansAnalyse'
 import { SqueletteListe } from '@/components/project/SqueletteListe'
@@ -47,6 +47,8 @@ interface LotCardProps {
   onRename?: (newLabel: string) => void
   /** Coût de l’analyse de ce lot, en unités d'abonnement (« 1 unité »). */
   cout?: string
+  /** Le lot est déjà analysé : l'état se dit avec son icône, à la place du coût. */
+  analyse?: boolean
   /** Les pièces lues pour ce lot (communes + propres au lot) : nombre et « Voir ». */
   pieces?: { file_name: string }[]
 }
@@ -67,7 +69,13 @@ function splitLotLabel(label: string): { num: string | null; title: string } {
   return { num: m[1].padStart(2, '0'), title: title || label.trim() }
 }
 
-export function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: LotCardProps) {
+/** Le libellé enregistré après un renommage : le numéro du dossier (« Lot 01 ») reste devant l'intitulé saisi. */
+export function intituleRenomme(libelle: string, saisie: string): string {
+  const prefixe = libelle.trim().match(/^lot\s+\d{1,3}[A-Za-z]?/i)?.[0]
+  return prefixe && !/^lot\s+\d/i.test(saisie) ? `${prefixe} — ${saisie}` : saisie
+}
+
+export function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, analyse, pieces }: LotCardProps) {
   // We deliberately do NOT show a Synorix-internal sequential number
   // (e.g. "LOT 06") next to the real DCE label — it confused users by
   // implying two competing numbering systems. lot.nom already starts
@@ -82,17 +90,21 @@ export function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pie
   const parIA = (lot.sources ?? []).includes('ia_fallback')
   const aVerifier = (lot.confidence !== undefined && lot.confidence < 80) || parIA
   const [isEditing, setIsEditing] = useState(false)
-  const [draft, setDraft] = useState(lot.user_label ?? '')
+  // Le champ de renommage porte l'intitulé à corriger (jury, tour 3 : il montrait un libellé d'aide à la place du nom) ;
+  // le numéro reste dans sa colonne, hors du champ : on renomme l'intitulé, pas le numéro.
+  const intituleActuel = isGeneric ? '' : lotNum ? lotTitle : displayedLabel
+  const [draft, setDraft] = useState(intituleActuel)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const startEdit = () => {
-    setDraft(lot.user_label ?? '')
+    setDraft(intituleActuel)
     setIsEditing(true)
-    setTimeout(() => inputRef.current?.focus(), 0)
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select() }, 0)
   }
   const saveEdit = () => {
     const value = draft.trim()
-    if (value && onRename) onRename(value)
+    const complet = intituleRenomme(displayedLabel, value)
+    if (value && complet !== displayedLabel && onRename) onRename(complet)
     setIsEditing(false)
   }
   const aUnMenu = !isEditing && (onRename || onDelete)
@@ -104,7 +116,7 @@ export function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pie
   // les métiers en texte, les pièces lues à droite. Seule l'exception est marquée (« À vérifier », « Ajouté à la main ») ;
   // d'où vient le lot se lit dans le détail (« Voir »), pas sur chaque ligne.
   return (
-    <div data-lot={lot.id} className={cn('relative transition-colors duration-survol ease-survol', selected ? 'bg-accent-tint' : 'hover:bg-surface-1')}>
+    <div data-lot={lot.id} className={cn('relative transition-colors duration-survol ease-survol', selected ? 'bg-accent-tint' : !isEditing && 'hover:bg-surface-1')}>
       {/* Une div à rôle « button » et non un vrai bouton : la ligne contient d'autres boutons (« Voir », le menu). Un bouton
           dans un bouton est du HTML invalide (clavier et lecteurs d'écran peu fiables, R7). */}
       <div
@@ -115,7 +127,9 @@ export function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pie
         onKeyDown={(e) => {
           if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect() }
         }}
-        className={cn('flex w-full cursor-pointer flex-wrap items-start gap-x-2 px-4 py-1.5 text-left max-sm:px-3', aUnMenu && 'pr-14 max-sm:pr-12')}
+        // La place du menu « … » est toujours réservée : la colonne de droite garde ses abscisses sur toutes les rangées,
+        // celle de « tout le dossier » et celle qu'on renomme comprises (jury, tour 3).
+        className="flex w-full cursor-pointer flex-wrap items-start gap-x-2 px-4 py-1.5 pr-14 text-left max-sm:px-3 max-sm:pr-12"
       >
         {/* Case à cocher dessinée : cible de 44 px, l'état est aussi dit par aria-pressed de la ligne */}
         <span aria-hidden="true" className="-ml-2 grid size-11 shrink-0 place-items-center">
@@ -128,34 +142,36 @@ export function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pie
         </span>
 
         <div className="min-w-0 flex-1 basis-40 py-2.5">
-          {isEditing ? (
-            <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
-              <Champ
-                ref={inputRef}
-                aria-label={`Intitulé de ${displayedLabel}`}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  e.stopPropagation()
-                  if (e.key === 'Enter') saveEdit()
-                  if (e.key === 'Escape') setIsEditing(false)
-                }}
-                placeholder={`${displayedLabel} : l’intitulé du lot`}
-                maxLength={200}
-                className="h-11 min-w-0 flex-1 basis-48"
-              />
-              <Bouton variante="secondaire" onClick={saveEdit}>Enregistrer</Bouton>
-              <Bouton variante="discret" onClick={() => setIsEditing(false)}>Annuler</Bouton>
-            </div>
-          ) : (
-            <>
-              <p className="flex items-baseline gap-x-2 text-base text-fg max-sm:flex-wrap">
-                {lotNum && <span className="chiffres shrink-0 font-medium text-fg-2 sm:w-14">Lot {lotNum}</span>}
-                <span className="min-w-0 break-words font-semibold">
-                  {isGeneric ? <span className="font-medium text-fg-2">Intitulé à préciser</span> : lotNum ? lotTitle : displayedLabel}
-                </span>
-              </p>
-              {(metiers.length > 0 || tranches.length > 0 || lot._manual || aVerifier) && (
+          {/* Au téléphone : toujours « Lot 0x » au-dessus, l'intitulé dessous (une seule mise en page dans la liste). */}
+          <div className="flex items-baseline gap-x-2 text-base text-fg max-sm:flex-col">
+            {lotNum && <span className="shrink-0 font-medium text-fg-2 sm:w-14">Lot {lotNum}</span>}
+            {isEditing ? (
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 max-sm:w-full" onClick={(e) => e.stopPropagation()}>
+                <Champ
+                  ref={inputRef}
+                  aria-label={`Intitulé de ${displayedLabel}`}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation()
+                    if (e.key === 'Enter') saveEdit()
+                    if (e.key === 'Escape') setIsEditing(false)
+                  }}
+                  placeholder="Intitulé du lot"
+                  maxLength={200}
+                  className="h-11 min-w-0 flex-1 basis-56 font-normal"
+                />
+                <Bouton variante="secondaire" onClick={saveEdit}>Enregistrer</Bouton>
+                <Bouton variante="secondaire" onClick={() => setIsEditing(false)}>Annuler</Bouton>
+              </div>
+            ) : (
+              <span className="min-w-0 break-words font-semibold">
+                {isGeneric ? <span className="font-medium text-fg-2">Intitulé à préciser</span> : lotNum ? lotTitle : displayedLabel}
+              </span>
+            )}
+          </div>
+          {/* La sous-ligne reste pendant le renommage : la rangée garde sa hauteur et sa grille. */}
+          {(metiers.length > 0 || tranches.length > 0 || lot._manual || aVerifier) && (
                 <p className={cn('mt-0.5 text-sm text-fg-2', lotNum && 'sm:pl-16')}>
                   {metiers.length > 0 && (
                     <span>
@@ -183,25 +199,30 @@ export function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pie
                   )}
                 </p>
               )}
-            </>
-          )}
         </div>
 
         {/* À droite : les pièces lues pour ce lot (jamais un chiffre tant qu'elles ne sont pas comptées) et le coût */}
-        <div className="flex min-h-11 shrink-0 items-center gap-x-3 whitespace-nowrap text-sm text-fg-2 max-sm:-mt-2 max-sm:min-h-0 max-sm:basis-full max-sm:pl-9" onClick={(e) => e.stopPropagation()}>
+        {/* Trois colonnes de largeur fixe à l'ordinateur (jury, tour 3 : « Voir » se décalait de 9 px sur le lot analysé) ; au
+            téléphone, la rangée part du bord du texte et reste dans la carte (« 13 unités » débordait de 1 px). */}
+        <div className="flex min-h-11 min-w-0 shrink-0 items-center gap-x-3 whitespace-nowrap text-sm text-fg-2 max-sm:-mt-2 max-sm:min-h-0 max-sm:basis-full max-sm:flex-wrap max-sm:pl-11" onClick={(e) => e.stopPropagation()}>
           {pieces && pieces.length > 0 && (
             <>
-              <span className="chiffres">{pieces.length} {pieces.length > 1 ? 'pièces lues' : 'pièce lue'}{tout ? ' dans le dossier' : ''}</span>
-              <Bouton variante="lien" aria-expanded={voirPieces} onClick={() => setVoirPieces((v) => !v)}>
+              <span className="sm:w-28 sm:text-right">{pieces.length} {pieces.length > 1 ? 'pièces lues' : 'pièce lue'}</span>
+              <Bouton variante="lien" className="sm:w-16 sm:justify-start" aria-expanded={voirPieces} onClick={() => setVoirPieces((v) => !v)}>
                 {voirPieces ? 'Masquer' : 'Voir'}
               </Bouton>
             </>
           )}
-          {cout && <span className="font-medium">{cout}</span>}
+          {analyse ? (
+            <span data-etat="analyse" className="inline-flex items-center gap-1.5 font-medium text-vert-ink sm:w-24">
+              <CheckCircle2 size={14} aria-hidden />
+              Analysé
+            </span>
+          ) : cout && <span className="font-medium sm:w-24">{cout}</span>}
         </div>
 
         {voirPieces && pieces && (
-          <div className="min-w-0 basis-full pb-3 pl-9 text-sm text-fg-2 sm:pl-[6.25rem]" onClick={(e) => e.stopPropagation()}>
+          <div className="min-w-0 basis-full pb-3 pl-11 text-sm text-fg-2 sm:pl-[6.25rem]" onClick={(e) => e.stopPropagation()}>
             {!tout && (parIA || sources.length > 0) && (
               <p>{parIA ? 'Intitulé complété par l’IA : vérifiez-le dans le règlement.' : `Repéré dans ${sources.join(', ')}.`}</p>
             )}
@@ -503,7 +524,8 @@ export default function StepLotSelection({ project }: Props) {
       onSelect={() => toggleLot(lot.id)}
       onDelete={() => setLotARetirer(lot)}
       onRename={(label) => renameLot({ lotId: lot.id, label })}
-      cout={project.lots_analyses?.includes(lot.id) ? 'Analysé' : libelleUnites(1)}
+      cout={libelleUnites(1)}
+      analyse={project.lots_analyses?.includes(lot.id)}
       pieces={piecesDuLot(lot.id)}
     />
   )
@@ -523,6 +545,8 @@ export default function StepLotSelection({ project }: Props) {
   const bilan = selectedLotIds.length > 1 ? `${selectedLotIds.length} lots choisis`
     : selectedId !== 'all' && selectedName ? `Lot choisi : ${selectedName}`
     : aucunChoix ? 'Aucun lot choisi' : 'Tout le dossier'
+  const numChoisi = selectedLotIds.length <= 1 && selectedId !== 'all' && selectedName ? splitLotLabel(selectedName).num : null
+  const bilanTel = numChoisi ? `Lot ${numChoisi} choisi` : bilan
   const ecartes = phraseLotsEcartes(lotsData?.ecartes)
   // Le compte, en une ligne sous le titre de la liste (plus de cases « Lots détectés 13 / Lots choisis 1 » avec une jauge).
   const compte = `${lots.length} ${lots.length > 1 ? 'lots repérés' : 'lot repéré'} dans le dossier de l’acheteur · ${nbChoisis === 0 ? 'cochez au moins un lot pour lancer l’analyse' : nbChoisis > 1 ? `${nbChoisis} choisis` : '1 choisi'}`
@@ -567,7 +591,7 @@ export default function StepLotSelection({ project }: Props) {
         // La barre du bas n'existe que lorsqu'il y a des lots à choisir : ni en erreur, ni sans dossier, ni pendant le chargement.
         barre={!peutLire ? undefined : (
           <BarreEtape>
-            <BilanBarre bureau={bilan} tel={<span className="truncate">{bilan}</span>} />
+            <BilanBarre bureau={bilan} tel={<span className="truncate">{bilanTel}</span>} />
             <ActionsBarre>
               {peutLire && <ActionsBarreTel>{actionLire}</ActionsBarreTel>}
             </ActionsBarre>
@@ -615,7 +639,9 @@ export default function StepLotSelection({ project }: Props) {
         {chargementEchoue ? (
           <EtatErreur
             titre="Les lots n’ont pas pu se charger"
-            detail="La liste des lots n’a pas pu être lue. Votre dossier reste en place."
+            detail="Votre dossier reste en place. Si un nouvel essai ne suffit pas, rechargez la page."
+            // la carte à la largeur de sa phrase (jury, tour 3 : 1 200 px pour deux lignes)
+            className="max-w-3xl"
             onReessayer={() => { void requeteDocuments.refetch(); void requeteLots.refetch() }}
             enCours={requeteLots.isFetching || requeteDocuments.isFetching}
           />

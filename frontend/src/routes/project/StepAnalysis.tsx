@@ -19,7 +19,8 @@ import { CarteAO30sVue, useFaitsAO, useFaitsAOEnLecture } from '@/components/pro
 import PointsAEclaircir from '@/components/project/PointsAEclaircir'
 import AVerifierAvantEngagement from '@/components/project/AVerifierAvantEngagement'
 import { voirTresorerie } from '@/components/project/TresorerieCard'
-import { GabaritEtape, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, BoutonSuite, SqueletteCorpsEtape } from '@/components/etape'
+import { GabaritEtape, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, BoutonSuite } from '@/components/etape'
+import { Squelette } from '@/components/ui/squelette'
 import { enumerer } from '@/components/etape/LectureNonFaite'
 import { EtapeSansAnalyse } from '@/components/project/EtapeSansAnalyse'
 import { pointsAVerifier } from '@/lib/resumeAO'
@@ -267,7 +268,7 @@ export default function StepAnalysis({ project }: Props) {
       {/* Le squelette du gabarit (une surface au trait, des lignes de longueur de phrase) et ce que Synorix fait : jamais trois pavés muets. */}
       <div role="status" aria-busy="true" className="space-y-4">
         <p className="text-sm text-fg-2">Synorix ouvre l’analyse du dossier.</p>
-        <SqueletteCorpsEtape cases={2} />
+        <SqueletteDecider />
       </div>
     </GabaritEtape>
   )
@@ -275,8 +276,10 @@ export default function StepAnalysis({ project }: Props) {
   if (requeteExigences.isError && requeteExigences.data === undefined) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatErreur
-        titre="L’analyse du dossier n’a pas pu se charger"
-        detail="Les exigences relevées dans le dossier n’ont pas pu être lues. Votre dossier et son analyse restent en place."
+        titre="L’analyse ne s’est pas ouverte"
+        detail="Votre dossier et son analyse restent en place. Si un nouvel essai ne suffit pas, rechargez la page."
+        // la carte à la largeur de sa phrase (jury, tour 3 : 1 200 px pour deux lignes)
+        className="max-w-3xl"
         onReessayer={() => { void requeteExigences.refetch() }}
         enCours={requeteExigences.isFetching}
       />
@@ -391,8 +394,9 @@ export default function StepAnalysis({ project }: Props) {
     <GabaritEtape
       titre="Décider"
       utilite={UTILITE}
-      // A1 — l'action de l'écran est la décision : « On y va » (même validation), puis « Passer aux pièces » une fois l'étape faite.
-      actionPrincipale={tel ? undefined : boutonDecision}
+      // A1 — l'action de l'écran est la décision. Jury, tour 3 (« On y va » écrit trois fois) : tant qu'elle n'est pas prise,
+      // elle se prend dans la carte « On y va ? » (l'aplat, « On passe » à côté) ; une fois prise, l'en-tête dit « Passer aux pièces ».
+      actionPrincipale={tel || !isStepAlreadyDone ? undefined : boutonDecision}
       // Une lecture en échec se dit, même quand une lecture précédente a laissé des exigences à l'écran.
       message={analysisFailed && (
         <Message ton="attention" titre="La dernière analyse s’est arrêtée avant la fin"
@@ -406,7 +410,7 @@ export default function StepAnalysis({ project }: Props) {
           avec les faits du marché à côté ; ce qui est à vérifier ; puis ce qui prépare la décision, et le détail replié. */}
       <div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <SectionEtape titre="Décision">
-          <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} />
+          <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} allerDansLaBarre={tel} />
         </SectionEtape>
         {marche.length > 0 && (
           <SectionEtape titre="Le marché en bref">
@@ -417,8 +421,8 @@ export default function StepAnalysis({ project }: Props) {
 
       <AVerifierAvantEngagement points={aVerifier} onVoir={voirSource} onVoirPenalites={voirTresorerie} />
 
-      {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) : chacune à sa hauteur ── */}
-      <SectionEtape titre="Trésorerie et calendrier" colonnes={2} classeContenu="items-start md:[&>*:only-child]:col-span-2">
+      {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) : cartes sœurs, mêmes têtes, même hauteur (jury, tour 3) ── */}
+      <SectionEtape titre="Trésorerie et calendrier" colonnes={2} classeContenu="md:[&>*:only-child]:col-span-2">
         <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
         <RetroPlanning projectId={project.id} />
       </SectionEtape>
@@ -430,8 +434,8 @@ export default function StepAnalysis({ project }: Props) {
         titre="Les exigences du dossier"
         description={
           <>
-            {/* Une analyse arrêtée avant la fin : le compte n'est pas affiché comme certain (jury, tour 1) */}
-            {analysisFailed && <span className="font-medium text-ambre-ink">Liste peut-être partielle (la dernière analyse s’est arrêtée avant la fin). </span>}
+            {/* Une analyse arrêtée avant la fin : le compte n'est pas affiché comme certain (« Au moins ») ; le fait lui-même
+                n'est dit qu'une fois, dans le message en tête (jury, tour 3 : il était redit ici en ambre) */}
             <span className="font-semibold text-fg">{analysisFailed ? 'Au moins ' : ''}{items.length} exigences identifiées</span>
             {project.selected_lot_name ? ` pour ${project.selected_lot_name}` : ''}. {phraseExigences(items.length, obligatoireCount)}.
             {lotFilterInfo && phraseDocuments && (
@@ -468,7 +472,7 @@ export default function StepAnalysis({ project }: Props) {
               <ChampRecherche
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher une clause ou une exigence"
+                placeholder="Rechercher une exigence"
                 aria-label="Rechercher une clause ou une exigence"
                 className="min-w-0 flex-1 basis-64"
               />
@@ -525,6 +529,54 @@ export default function StepAnalysis({ project }: Props) {
   )
 }
 
+/**
+ * Le squelette de Décider, à la forme de l'écran chargé (jury, tour 3 : « deux cases et un paragraphe », un écran de chiffres
+ * annoncé pour un écran de texte) : la fiche de décision (une tête, quatre conditions, les deux réponses) et « Le marché en
+ * bref » à côté d'elle (l'une sous l'autre au téléphone), puis le titre et les rangées de « À vérifier ». Fixe, sans valeur.
+ */
+function SqueletteDecider() {
+  return (
+    <div aria-hidden="true" data-squelette-decider="" className="space-y-8">
+      <div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div className="space-y-3">
+          <Squelette className="h-5 w-24" />
+          <div className="divide-y divide-bord rounded-carte border border-bord bg-surface-0">
+            <div className="grid gap-2.5 px-5 py-4 sm:px-6"><Squelette className="h-5 w-28" /><Squelette className="h-3.5 w-96 max-w-full" /></div>
+            {['w-44', 'w-52', 'w-48', 'w-24'].map((l) => (
+              <div key={l} className="grid gap-2.5 px-5 py-4 sm:px-6">
+                <Squelette className={`h-4 ${l}`} />
+                <Squelette className="h-3.5 w-full max-w-md" />
+                <Squelette className="h-3.5 w-64 max-w-[70%]" />
+              </div>
+            ))}
+            <div className="flex gap-3 px-5 py-4 sm:px-6"><Squelette className="h-11 w-24 rounded-pilule" /><Squelette className="h-11 w-24 rounded-lg" /></div>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <Squelette className="h-5 w-40" />
+          <div className="grid gap-4 rounded-carte border border-bord bg-surface-0 px-6 py-5">
+            {['w-56', 'w-full', 'w-48', 'w-36', 'w-64', 'w-52'].map((l) => (
+              <div key={l} className="grid gap-2"><Squelette className="h-3 w-20" /><Squelette className={`h-4 max-w-full ${l}`} /></div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="space-y-3">
+        <Squelette className="h-5 w-72 max-w-full" />
+        <div className="divide-y divide-bord rounded-carte border border-bord bg-surface-0">
+          {['w-64', 'w-80', 'w-56', 'w-72'].map((l) => (
+            <div key={l} className="flex min-h-14 flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
+              <Squelette className="h-3.5 w-32" />
+              <Squelette className={`h-4 max-w-full ${l}`} />
+              <Squelette className="ml-auto h-3.5 w-40 max-sm:hidden" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 //  Les exigences : une section repliable par catégorie (A15), un tableau du système par section (pages de 50)
 // ═════════════════════════════════════════════════════════════════════════════
@@ -564,7 +616,7 @@ function ExigenceSection({
 
   return (
     <section data-categorie={category} className="space-y-2">
-      <h3>
+      <h3 className="-mx-2">
         <Bouton variante="discret" aria-expanded={open} aria-controls={idContenu} onClick={() => setOpen((o) => !o)}
           className="w-full justify-between px-2 text-base font-semibold text-fg">
           <span>{CATEGORY_LABELS[category]} <span className="chiffres font-medium text-fg-3">({items.length})</span></span>

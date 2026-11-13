@@ -9,6 +9,7 @@ import { Bouton } from '@/components/ui/bouton'
 import { Carte, TitreCarte } from '@/components/ui/carte'
 import { EtatElement } from '@/components/etape'
 import { libelleSource } from '@/lib/resumeAO'
+import { CheckCircle2 } from 'lucide-react'
 
 interface Composante {
   id: string
@@ -40,6 +41,8 @@ interface Props {
   /** « On y va » : l'analyse est validée, l'AO passe à la vérification. */
   onYAller: () => void
   enCours?: boolean
+  /** Téléphone : « On y va » est porté par la barre du bas (au pouce) ; la carte ne le redit pas. */
+  allerDansLaBarre?: boolean
 }
 
 /**
@@ -48,9 +51,9 @@ interface Props {
  * déterministe côté serveur (synorix_score.py), sans score ni verdict affichés,
  * sans aucun critère de prix.
  */
-export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCours }: Props) {
+export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCours, allerDansLaBarre }: Props) {
   const queryClient = useQueryClient()
-  const { data } = useQuery<ScorePayload>({
+  const { data, isLoading } = useQuery<ScorePayload>({
     queryKey: ['synorix-score', project.id],
     queryFn: async () => {
       const { data } = await api.get(`/projects/${project.id}/synorix-score`)
@@ -70,7 +73,9 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
     },
   })
 
-  if (!data || data.composantes.length === 0) return null
+  // La décision se prend ici : la carte reste, même sans condition relevée (la lecture des conditions a pu échouer).
+  if (isLoading) return null
+  const composantes = data?.composantes ?? []
   const decideAller = project.completed_steps?.['3'] === true
   const decidePasser = project.status === 'sans_suite'
 
@@ -84,7 +89,7 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
       </header>
 
       <ul>
-        {data.composantes.map((comp) => {
+        {composantes.map((comp) => {
           const source = comp.source && comp.id !== PENALITES ? comp.source : null
           return (
             <li key={comp.id} className="grid gap-1 border-b border-bord px-5 py-3 sm:px-6">
@@ -131,16 +136,22 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
             <Bouton variante="secondaire" onClick={() => changerStatut('analyzed')} enCours={changement} libelleEnCours="Réouverture…">Rouvrir l’appel d’offres</Bouton>
           </>
         ) : decideAller ? (
-          <p className="text-sm text-fg-2">Vous avez décidé d’y aller.</p>
+          // La décision prise se lit comme un état (une icône, une phrase à l'encre), plus comme une note grise ; on peut encore
+          // classer l'appel d'offres sans suite (réversible).
+          <>
+            <p data-decision="aller" className="flex min-w-0 flex-1 basis-56 items-center gap-2 text-base font-semibold text-fg">
+              <CheckCircle2 aria-hidden size={18} strokeWidth={1.75} className="shrink-0 text-vert-ink" />
+              Vous avez décidé d’y aller
+            </p>
+            <Bouton variante="lien" onClick={() => changerStatut('sans_suite')} enCours={changement} libelleEnCours="Classement…">Classer sans suite</Bouton>
+          </>
         ) : (
-          <div className="grid gap-3">
-            {/* La phrase d'abord, les deux réponses dessous. « On y va » est aussi l'action principale de l'en-tête (un seul aplat
-                par écran) ; ici, au trait, là où la décision se lit. */}
-            <p className="text-sm text-fg-2">«&nbsp;On y va&nbsp;» ouvre la préparation des pièces. «&nbsp;On passe&nbsp;» classe l’appel d’offres sans suite ; vous pourrez le rouvrir.</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Bouton variante="secondaire" onClick={onYAller} disabled={enCours || changement}>On y va</Bouton>
-              <Bouton variante="secondaire" onClick={() => changerStatut('sans_suite')} disabled={enCours || changement}>On passe</Bouton>
-            </div>
+          // La décision se prend ici, une fois (jury, tour 3 : « On y va » en tête, dans la carte et dans la barre) : l'aplat de
+          // l'écran et « On passe » à côté. Au téléphone, la barre du bas porte « On y va » ; la carte garde « On passe ».
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+            {!allerDansLaBarre && <Bouton variante="principal" onClick={onYAller} enCours={enCours} libelleEnCours="Validation…" disabled={changement}>On y va</Bouton>}
+            <Bouton variante="secondaire" onClick={() => changerStatut('sans_suite')} disabled={enCours || changement}>On passe</Bouton>
+            <p className="min-w-0 flex-1 basis-64 text-sm text-fg-2">La préparation des pièces s’ouvre ensuite. Un appel d’offres classé sans suite peut être rouvert.</p>
           </div>
         )}
       </footer>

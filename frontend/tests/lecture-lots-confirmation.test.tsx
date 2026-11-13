@@ -21,8 +21,9 @@ test('l\'unité est écrite sur le bouton, pour toutes les offres (aucune n\'est
 })
 
 test('la confirmation dit « Analyser N lots = N unités » ; chaque lot analysé décompte 1 unité, pour toutes les offres', () => {
-  assert.equal(titreConfirmationLecture(13), 'Analyser 13 lots = 13 unités')
-  assert.equal(titreConfirmationLecture(2), 'Analyser 2 lots = 2 unités')
+  assert.equal(titreConfirmationLecture(13), 'Analyser ces 13 lots\u00a0?')
+  assert.equal(titreConfirmationLecture(2), 'Analyser ces 2 lots\u00a0?')
+  assert.match(detailConfirmationLecture(3), /décompte 1 unité de votre abonnement, soit 3 unités\. L’analyse prend quelques minutes\.$/)
   assert.match(detailConfirmationLecture(), /Chaque lot analysé décompte 1 unité/)
   assert.doesNotMatch(detailConfirmationLecture() + phraseCoutLots(13) + phraseCoutLots(1) + phraseCoutLots(0), /illimit/i)
   assert.match(phraseCoutLots(13), /1 unité/)

@@ -196,7 +196,7 @@ export default function StepVerification({ project }: Props) {
   // ── Chargement → erreur → rien à montrer → contenu (une erreur n'est jamais « le dossier n'est pas lu ») ──
   if (isLoading) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <div aria-busy="true"><SqueletteListe phrase="Synorix ouvre la liste des pièces demandées par le règlement." /></div>
+      <div aria-busy="true"><SqueletteListe parFamilles phrase="Synorix ouvre la liste des pièces demandées par le règlement." /></div>
     </GabaritEtape>
   )
 
@@ -204,7 +204,9 @@ export default function StepVerification({ project }: Props) {
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatErreur
         titre="Les pièces n’ont pas pu se charger"
-        detail="La liste des pièces demandées par le règlement n’a pas pu être lue. Vos pièces et votre coffre-fort restent en place."
+        detail="Vos pièces et votre coffre-fort restent en place. Si un nouvel essai ne suffit pas, rechargez la page."
+        // la carte à la largeur de sa phrase (jury, tour 3 : 1 200 px pour deux lignes)
+        className="max-w-3xl"
         onReessayer={() => { void requetePieces.refetch() }}
         enCours={requetePieces.isFetching}
       />
