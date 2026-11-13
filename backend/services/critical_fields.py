@@ -14,7 +14,9 @@ front ouvre alors le document avec surlignage de l'excerpt.
 """
 import re
 import unicodedata
+from bisect import bisect_right
 from datetime import date
+from functools import lru_cache
 from typing import List, Optional
 
 _MONTHS_FR = {
@@ -95,6 +97,38 @@ def _excerpt_around(text: str, match_start: int, match_end: int, radius: int = 8
     return " ".join(text[start:end].split())
 
 
+_NON_ASCII = re.compile(r"[^\x00-\x7f]")
+
+
+@lru_cache(maxsize=16)
+def _ecarts_de_normalisation(text: str) -> tuple:
+    """Les caractères dont la forme normalisée (minuscules sans accents) n'a pas la longueur 1 : « ﬀ » → « ff »,
+    « … » → « ... », un accent combinant → rien. Sans eux, une position lue dans le texte normalisé tombe à côté dans le
+    texte d'origine, et l'extrait montré précède le fait (FIN-SRV : la clause des pénalités montrait l'article d'avant).
+    Retourne (débuts dans le texte normalisé, (indice d'origine, longueur produite, écart cumulé) par caractère)."""
+    debuts, points, ecart = [], [], 0
+    for m in _NON_ASCII.finditer(text):
+        i = m.start()
+        n = len(_strip_accents(text[i].lower()))
+        if n != 1:
+            ecart += n - 1
+            debuts.append(i + ecart - (n - 1))
+            points.append((i, n, ecart))
+    return tuple(debuts), tuple(points)
+
+
+def _position_d_origine(text: str, k: int) -> int:
+    """L'indice, dans `text`, du caractère qui a produit le rang `k` du texte normalisé."""
+    debuts, points = _ecarts_de_normalisation(text)
+    j = bisect_right(debuts, k) - 1
+    if j < 0:
+        return k
+    i, n, ecart = points[j]
+    if k < debuts[j] + n:
+        return i
+    return k - ecart
+
+
 def _find_in_docs(docs: List, pattern: re.Pattern, doc_types=("rc", "ccap")):
     """Première occurrence du motif dans les documents ciblés.
 
@@ -115,7 +149,8 @@ def _find_in_docs(docs: List, pattern: re.Pattern, doc_types=("rc", "ccap")):
             return m, {
                 "document": doc.file_name,
                 "page": None,  # frontières de pages non conservées dans le texte
-                "excerpt": _excerpt_around(text, m.start(), m.end()),
+                "excerpt": _excerpt_around(text, _position_d_origine(text, m.start()),
+                                           _position_d_origine(text, max(m.start(), m.end() - 1)) + 1),
             }
     return None, None
 

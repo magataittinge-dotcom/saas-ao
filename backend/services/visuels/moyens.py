@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import re
 
+from ..accords import accord
+
 from .couleurs import Theme
 from .modele import Visuel
 from .organigramme import DIRECTION, ENCADREMENT, _norme, personnes_depuis
@@ -220,7 +222,8 @@ def synoptique_materiels(items: list[dict], th: Theme) -> tuple[str, str] | None
         y += h + gap
     bas = y - gap + 4
     if exces:
-        corps.append(t(0, bas + 10, f"et {exces} autre(s) élément(s) du profil", 8, False, th.discret))
+        corps.append(t(0, bas + 10, f"et {accord(exces, 'autre élément', 'autres éléments')} du profil", 8, False,
+                       th.discret))
         bas += 14
     alt = "Moyens matériels : " + " ; ".join(
         (f"{m['quantite']} " if m["quantite"] else "") + m["nom"] for m in items) + "."

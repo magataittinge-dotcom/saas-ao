@@ -90,7 +90,8 @@ def _lots_inconnus(project, lot_ids: list) -> list:
 def _accord(n: int, singulier: str, pluriel: str) -> str:
     """« 1 exigence extraite », « 448 exigences extraites » : le nombre et son nom accordé (jamais « exigence(s) extraite(s) »
     dans un texte renvoyé à l'écran). Zéro s'accorde au singulier, comme en français."""
-    return f"{n} {pluriel if n > 1 else singulier}"
+    from services.accords import accord
+    return accord(n, singulier, pluriel)
 
 
 def _date_courte(iso: str | None) -> str | None:
@@ -993,7 +994,8 @@ def get_critical_fields(
     D-05 : lecture pure (aucune écriture). Les champs et la page de chaque source (R14 : « Voir dans le dossier »
     ouvre la bonne page) sont rangés à la fin de l'analyse ; sinon calculés à la lecture (`_champs_critiques_lus`)."""
     project = _get_project_or_404(project_id, user.organization_id, db)
-    return {"lot": project.selected_lot, "fields": _champs_critiques_lus(db, project, avec_pages=True)}
+    from services.extrait import extraits_lisibles
+    return extraits_lisibles({"lot": project.selected_lot, "fields": _champs_critiques_lus(db, project, avec_pages=True)})
 
 
 @router.get("/{project_id}/tresorerie")
@@ -1012,7 +1014,8 @@ def get_tresorerie(
         ProjectDocument.project_id == project_id,
     ).all()
     lignes = build_tresorerie(project.infos_marche, docs)
-    return {"lot": project.selected_lot, "lignes": lignes}
+    from services.extrait import extraits_lisibles
+    return extraits_lisibles({"lot": project.selected_lot, "lignes": lignes})
 
 
 @router.get("/{project_id}/retroplanning")
@@ -1026,7 +1029,8 @@ def get_retroplanning(
 
     project = _get_project_or_404(project_id, user.organization_id, db)
     champs_critiques = _champs_critiques_lus(db, project)   # D-05 : lecture pure
-    return {"lot": project.selected_lot, "steps": build_retroplanning(champs_critiques)}
+    from services.extrait import extraits_lisibles
+    return extraits_lisibles({"lot": project.selected_lot, "steps": build_retroplanning(champs_critiques)})
 
 
 @router.get("/{project_id}/synorix-score")
@@ -1064,7 +1068,8 @@ def get_synorix_score(
         infos_marche=project.infos_marche,
     )
     result["lot"] = project.selected_lot
-    return result
+    from services.extrait import extraits_lisibles
+    return extraits_lisibles(result)
 
 
 # R11 — source UNIQUE (filtre org + soft-delete) ; fini les 7 copies.

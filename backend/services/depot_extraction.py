@@ -40,6 +40,7 @@ from schemas.qualification import QualificationCreate
 from services import couts_ia, depot_budget, depot_lecture, file_storage, masquage_rgpd
 from services.ai import depot_extracteur
 from services.ai.profile_structurer import _norm, _value_grounded_in_text
+from services.accords import accord
 from services.depot_cases import CaseDepot, case_par_id
 from services.depot_lecture import Lecture, Unite
 
@@ -458,7 +459,7 @@ def _propositions_personnel(case: CaseDepot, v: dict, norm: str, ctx: _Contexte,
         if actuelle is not None:
             if int(actuelle.get("effectif") or 0) == e.effectif:
                 continue
-            remplace = f"{actuelle.get('effectif')} personne(s)"
+            remplace = accord(int(actuelle.get('effectif') or 0), 'personne', 'personnes')
         affichage = f"{e.effectif} · {_LIBELLES_CATEGORIE[e.categorie]}" + (f" ({e.specialite})" if e.specialite else "")
         sortie.append(_Brouillon("profil.effectifs_par_categorie", "Effectif", e.model_dump(exclude_none=True),
                                  affichage, e.specialite or e.categorie.replace("_", " "), remplace))
@@ -479,7 +480,7 @@ def _propositions_personnel(case: CaseDepot, v: dict, norm: str, ctx: _Contexte,
         if actuelle is not None:
             if int(actuelle.get("nombre") or 0) == h.nombre:
                 continue
-            remplace = f"{actuelle.get('nombre')} personne(s)"
+            remplace = accord(int(actuelle.get('nombre') or 0), 'personne', 'personnes')
         valeur = h.model_dump(exclude_none=True)
         if h.valide_jusqu and not valide:
             valeur.pop("valide_jusqu", None)
