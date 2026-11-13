@@ -83,7 +83,7 @@ test('Abonnement : l’écran dit où l’on paie, où l’on change d’offre e
 
 test('Abonnement, unités utilisées : dit une fois, avec un bouton ; « unités » et non « quota » ; « 1er décembre » (bloquant du jury)', () => {
   assert.deepEqual(lectureCompteur({ used: 30, limit: 30 }).mot, 'Tout est utilisé')
-  assert.doesNotMatch(lectureCompteur({ used: 30, limit: 30 }).barre, /rouge/, 'la barre pleine ne redit pas le rouge')
+  assert.match(lectureCompteur({ used: 30, limit: 30 }).barre, /rouge-mark/, 'une seule couleur pour l’état : la barre pleine est rouge, comme la pastille et l’anneau (jury, tour 3)')
   assert.equal(lectureCompteur({ used: 3, limit: 30 }).mot, 'Disponible')
   assert.equal(premierDuMois('1 décembre'), '1er décembre')
   assert.equal(premierDuMois('11 décembre'), '11 décembre')
