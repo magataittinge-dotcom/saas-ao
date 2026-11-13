@@ -92,9 +92,9 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
         <Groupe titre="Métiers et présentation">
           <Pleine>
             <Field label="Métiers exercés" groupe>
-              {/* par ordre alphabétique, en colonnes : on cherche son métier en descendant, pas case par case */}
+              {/* par ordre alphabétique (« Autre » en dernier), en colonnes : on cherche son métier en descendant, pas case par case */}
               <div className="gap-x-4 sm:columns-2 lg:columns-3 [&>*]:break-inside-avoid">
-                {[...METIERS].sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr')).map((m) => (
+                {[...METIERS].sort((a, b) => Number(a.code === 'autre') - Number(b.code === 'autre') || a.libelle.localeCompare(b.libelle, 'fr')).map((m) => (
                   <CaseACocher key={m.code} libelle={m.libelle} coche={metiers.includes(m.code)}
                     onChange={(coche) => f.poserProfil('metiers', coche ? [...metiers, m.code] : metiers.filter((c) => c !== m.code))} />
                 ))}
