@@ -28,7 +28,7 @@ export function Message({ ton = 'info', titre, children, action, onFermer, class
   const Icone = t.icone
   return (
     <div role={ton === 'erreur' || ton === 'attention' ? 'alert' : 'status'} data-message={ton}
-      className={cn('flex flex-wrap items-start gap-x-3 gap-y-2 rounded-lg px-4 py-3 text-sm text-fg', t.fond, className)}>
+      className={cn('flex flex-wrap items-start gap-x-3 gap-y-2 rounded-lg px-4 py-3 text-sm text-fg', (action || onFermer) && 'sm:items-center', t.fond, className)}>
       <Icone aria-hidden size={18} strokeWidth={1.75} className={cn('mt-0.5 shrink-0', t.encre)} />
       <div className="min-w-0 flex-1 basis-40">
         {titre && <p className="font-semibold">{titre}</p>}
