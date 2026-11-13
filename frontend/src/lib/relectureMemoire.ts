@@ -1,6 +1,8 @@
 // « Relire mon mémoire » : le contrat de GET /api/projects/:id/memoire/relecture (services/relecture_memoire.py)
 // et les petites règles d'affichage. Contrôle déterministe côté serveur, sans IA.
 
+import type { BlocExigences } from '@/lib/exigencesMemoire'
+
 export type TypeLigne = 'sous_critere' | 'piece' | 'a_completer' | 'dtu' | 'longueur'
 
 /** La source d'une ligne dans le dossier : une exigence (le panneau s'y ancre) ou un document et une page cités. */
@@ -29,6 +31,8 @@ export interface ReponseRelecture {
   message: string | null
   pages_estimees: number
   limite_pages: number | null
+  /** B4 — les exigences de contenu du règlement et le paragraphe qui les traite (lib/exigencesMemoire.ts). */
+  exigences?: BlocExigences | null
 }
 
 /** Le résumé du bouton une fois le contrôle fait. Mots positifs seulement. */
