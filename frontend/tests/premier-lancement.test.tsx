@@ -59,7 +59,7 @@ test('premier écran : il dit à quoi sert Synorix avant de demander le SIRET', 
   assert.equal((html.match(/Synorix lit/g) ?? []).length, 1, 'ce que fait Synorix est dit une fois')
   assert.ok(html.indexOf('Synorix lit et rédige') > 0 && html.indexOf('Synorix lit et rédige') < html.indexOf('Numéro SIRET'), 'avant le champ SIRET')
   // « Valider » n'est plus un aplat éteint : il reste plein, et une saisie qui n'a pas 14 chiffres est dite sous le champ
-  assert.doesNotMatch(html.match(/<button[^>]*>Valider<\/button>/)?.[0] ?? " disabled=", / disabled=/)
+  assert.doesNotMatch(html.match(/<button[^>]*>Trouver mon entreprise<\/button>/)?.[0] ?? " disabled=", / disabled=/)
   assert.equal(siretValide('123 456 789 00012'), true)
   assert.equal(siretValide('1234'), false)
   assert.equal(siretValide(''), false)

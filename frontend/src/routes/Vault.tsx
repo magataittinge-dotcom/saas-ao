@@ -201,9 +201,9 @@ export default function Vault() {
                   des formats est dans la carte, sous le bouton qu'elle précise */}
               <EtatVide
                 className="page-etroite"
-                titre="Vos attestations (URSSAF, assurance, Kbis) vivent ici."
+                titre="Vos attestations (URSSAF, assurance, Kbis) se rangent ici."
                 phrase="Synorix les joint à chaque dossier et vous prévient avant la fin de leur validité."
-                action={<>{boutonDeposer}<p className="basis-full text-xs text-fg-3">{PRECISION_COFFRE}. Vous pouvez aussi glisser vos fichiers sur cette page.</p></>}
+                action={<>{boutonDeposer}<p className="text-sm text-fg-2 max-sm:hidden">Vous pouvez aussi glisser vos fichiers sur cette page.</p><p className="basis-full text-xs text-fg-3">{PRECISION_COFFRE}.</p></>}
               />
             </>
           )}

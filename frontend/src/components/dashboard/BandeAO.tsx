@@ -7,7 +7,7 @@ import { ArrowRight, ChevronRight } from 'lucide-react'
 import { FilPoints, JaugeLecture, PastilleRemise } from '@/components/mesao/Etat'
 import { Bouton, classesBouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
-import { EtatVide } from '@/components/ui/etats'
+import { FilSeptEtapes } from '@/components/onboarding/FilSeptEtapes'
 import { TitreSection } from '@/components/ui/page'
 import { aLaUne, aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
 import { momentParis } from '@/lib/remiseParis'
@@ -57,20 +57,31 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
     <section aria-labelledby="t-bande" data-bande-ao className="mt-10 max-md:mt-7.5">
       {/* le premier titre de la bande porte le lien vers Mes AO : « En cours », ou « À mettre à jour » s'il n'y a que cela */}
       {(liste.length > 0 || passees.length === 0) && (
-        <TitreSection id="t-bande" action={tousMesAO}>
+        <TitreSection id="t-bande" action={projets.length > 0 ? tousMesAO : undefined}>
           Vos appels d’offres en cours{enCours.length > 0 && <span className="chiffres ml-2 font-normal text-fg-3">{enCours.length}</span>}
         </TitreSection>
       )}
 
       {liste.length === 0 ? (
         passees.length === 0 && (
-          <EtatVide titre="Aucun appel d’offres en cours"
-            phrase="Choisissez un avis de la veille, ou déposez le dossier de l’acheteur : Synorix le lit et prépare la décision."
-            action={<Bouton onClick={onNouveau}>Nouvel appel d’offres</Bouton>} />
+          // Compte neuf (jury, tour 3) : un seul geste, au verbe de la première étape (le bouton de la barre passe au trait) ;
+          // à côté, ce qui apparaîtra ici : les sept étapes que suivra le dossier. Une surface, deux colonnes, rien de centré.
+          <Carte data-etat-vide="" className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+            <div className="min-w-0">
+              <p className="text-lg font-semibold text-fg">Aucun appel d’offres en cours</p>
+              <p className="mt-1 max-w-[52ch] text-sm text-fg-2">Déposez le dossier de l’acheteur, ou choisissez un avis de la veille plus bas : Synorix le lit et prépare la décision.</p>
+              <Bouton variante="principal" onClick={onNouveau} className="mt-4 max-sm:w-full">Déposer le dossier de l’acheteur<ArrowRight aria-hidden strokeWidth={1.75} /></Bouton>
+            </div>
+            <div className="flex min-w-0 flex-col justify-center border-bord max-lg:border-t max-lg:pt-5 lg:self-stretch lg:border-l lg:pl-10">
+              <p className="text-sm font-medium text-fg-2">Chaque dossier suit sept étapes</p>
+              <FilSeptEtapes className="mt-4" />
+            </div>
+          </Carte>
         )
       ) : (
         <Carte sansMarge>
-          <ul>
+          {/* une seule grille pour toutes les rangées (jury, tour 3 : chaque rangée se mettait en page seule) */}
+          <ul className="lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_auto]">
             {liste.map((p) => {
               const lecture = lectureAO(p, maintenant)
               const { etape, total, nom } = avancementAffiche(p)
@@ -78,10 +89,10 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
               const sousTitre = [acheteurCourt(p.maitre_ouvrage), p.selected_lot_name].filter(Boolean).join(' · ')
               const traitement = enTraitement(p)
               return (
-                <li key={p.id} data-ao={p.id} className={`${RANGEE} lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_auto] lg:items-center`}>
+                <li key={p.id} data-ao={p.id} className={`${RANGEE} lg:col-span-4 lg:grid-cols-subgrid lg:items-center`}>
                   <div className="min-w-0">
                     <Link to={`/projects/${p.id}`} {...precharger(p)} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{lierNumero(p.name)}</span></Link>
-                    {sousTitre && <p className="mt-0.5 truncate text-sm text-fg-2">{sousTitre}</p>}
+                    {sousTitre && <p className="mt-0.5 line-clamp-2 text-sm text-fg-2">{sousTitre}</p>}
                   </div>
                   <div className="min-w-0">
                     {traitement ? <JaugeLecture pct={p.processing_progress ?? 0} className="max-w-[320px]" /> : <FilPoints fil={filDeLAO(p)} className="max-w-[320px]" />}

@@ -49,8 +49,8 @@ function CadreHorsRouteur({ titre, phrase, geste, discret, etat, pied, children 
 export function ErreurAppli() {
   return (
     <CadreHorsRouteur titre="Cet écran n’a pas pu s’afficher" geste="Recharger la page"
-      phrase="Une erreur est survenue de notre côté. Vos dossiers et vos documents ne sont pas touchés."
-      pied={<p className="mt-8 text-sm text-fg-2">Si l’erreur revient, écrivez-nous : <a href={`mailto:${CONTACT}`} className="font-medium text-accent-text underline underline-offset-4">{CONTACT}</a></p>}>
+      phrase={<>Une erreur est survenue de notre côté.<br className="max-sm:hidden" /> Vos dossiers et vos documents ne sont pas touchés.</>}
+      pied={<p className="mt-8 text-base text-fg">Si l’erreur revient, écrivez-nous : <a href={`mailto:${CONTACT}`} className="font-medium text-accent-text underline underline-offset-4">{CONTACT}</a></p>}>
       <a href={accueilPour(typeof window === 'undefined' ? '/' : window.location.pathname)} className={classesBouton('secondaire', 'max-sm:w-full')}>Revenir à l’accueil</a>
     </CadreHorsRouteur>
   )
@@ -66,9 +66,10 @@ export function ConnexionInterrompue() {
     <CadreHorsRouteur discret titre="Connexion interrompue" geste="Réessayer maintenant"
       phrase="Synorix n’arrive plus à joindre le réseau. Ce qui est enregistré le reste."
       etat={(
-        <p role="status" className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-fg-2">
-          <PastilleEtat sens="ambre" icone={WifiOff}>Hors connexion</PastilleEtat>
-          Synorix guette le retour du réseau : cet écran se rechargera seul.
+        <p role="status" className="mt-5 flex items-start gap-x-3 text-sm text-fg-2">
+          <PastilleEtat sens="ambre" icone={WifiOff} className="shrink-0">Hors connexion</PastilleEtat>
+          {/* la phrase reste à côté de sa pastille, au téléphone aussi (jury, tour 3) */}
+          <span className="min-w-0 pt-0.5">Synorix guette le retour du réseau : cet écran se rechargera seul.</span>
         </p>
       )} />
   )

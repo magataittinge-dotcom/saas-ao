@@ -32,6 +32,8 @@ interface Props {
   geste?: boolean
   /** Dit, à côté du geste, ce que Synorix fera du dossier (écran « Nouvel appel d'offres »). */
   suite?: boolean
+  /** Le texte et le bouton au bord gauche, comme le reste du produit (Mes AO sans AO ; jury, tour 3 : « l'état vide centré des kits »). */
+  aGauche?: boolean
   className?: string
 }
 
@@ -40,7 +42,7 @@ interface Props {
  * dépôt avec le fichier déjà prêt. Partagée par l'écran « Bienvenue », l'écran vide de « Mes AO » et /projects/new.
  * La création peut échouer : on le dit, et on garde le fichier pour réessayer (1.16).
  */
-export default function ZoneDepotAO({ titre, precision, geste, suite, className }: Props) {
+export default function ZoneDepotAO({ titre, precision, geste, suite, aGauche, className }: Props) {
   const navigate = useNavigate()
   const { mutate: createProject, isPending: isCreating } = useCreateProject()
   const [echec, setEchec] = useState<{ message: string; fichiers: File[] } | null>(null)
@@ -97,7 +99,7 @@ export default function ZoneDepotAO({ titre, precision, geste, suite, className 
         ) : isCreating ? <p role="status" className="text-sm font-medium text-fg">Création de l’AO…</p> : undefined}
         formats={FORMATS_DEPOT}
         suite={suite ? SUITE_DEPOT : undefined}
-        centree={!suite}
+        centree={!suite && !aGauche}
         className={`cursor-pointer ${className ?? ''}`}
       />
     </>

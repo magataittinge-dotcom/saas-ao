@@ -44,7 +44,7 @@ export function suiteDuJour(projets: readonly Project[], maintenant: Date = new 
   if (e.etat === 'aujourdhui') return next.current_step >= 6 ? 'remise aujourd’hui, dossier prêt' : 'remise aujourd’hui'
   if (e.etat === 'proche') return `prochaine remise dans ${pluriel(e.jours ?? 0, 'jour', 'jours')}`
   const quand = quandCourt(next)
-  return quand ? `prochaine remise ${quand}` : null
+  return quand ? `prochaine remise ${quand.replace(/ /g, '\u00a0')}` : null
 }
 
 /** Ce que Synorix dit sur l'Accueil : une phrase au plus, celle qui appelle un geste. Rien à dire : pas de visage. */
@@ -202,7 +202,7 @@ export default function Dashboard() {
                     ? 'Vos pièces administratives apparaîtront ici, avec leur date de validité.'
                     : <><span className="font-semibold text-fg">{pluriel(nbDocuments, 'pièce', 'pièces')}</span>{aRenouveler > 0 && <PastilleEtat sens={s && s.documents_expires > 0 ? 'rouge' : 'ambre'}>{aRenouveler} à renouveler</PastilleEtat>}</>}
               </LigneFait>
-              <LigneFait intitule="Profil d’entreprise" lien={{ to: '/company', libelle: profilRenseigne === false ? 'Compléter le profil' : 'Ouvrir Mon entreprise' }}>
+              <LigneFait intitule="Profil d’entreprise" lien={{ to: '/company', libelle: profilRenseigne === false ? 'Compléter Mon entreprise' : 'Ouvrir Mon entreprise' }}>
                 {/* sans raison sociale vérifiée, pas de nom : « Mon entreprise » redirait l'intitulé */}
                 {nomDuCompte(organization, null) && <span className="font-semibold text-fg">{nomDuCompte(organization, null)}</span>}
                 {profilRenseigne !== null && <span className={nomDuCompte(organization, null) ? 'text-fg-2' : 'font-semibold text-fg'}>{profilRenseigne ? 'Profil renseigné' : 'Profil à compléter'}</span>}
