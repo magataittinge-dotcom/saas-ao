@@ -7,6 +7,7 @@ import { api } from '@/services/api'
 import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
+import EquipeDossier from '@/components/project/EquipeDossier'
 import { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
 import { EtatDePiece, LignePiece, ListePieces } from '@/components/project/LignePiece'
 import { GabaritEtape, BarreEtape, SectionEtape, ActionsBarreTel } from '@/components/etape'
@@ -305,6 +306,9 @@ export default function StepVerification({ project }: Props) {
             onNonConcerne={handleNonConcerne}
             echeance={echeance}
           />
+
+          {/* B3 — les habilitations et qualifications que le dossier cite, en face du profil (rien si le dossier n'en cite pas) */}
+          <EquipeDossier projectId={project.id} onSource={(id, titre) => setSelection({ type: 'exigence', id, titre })} />
 
           <WorkflowSection
             items={groups.workflow}

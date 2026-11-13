@@ -26,10 +26,10 @@ const BLOC: BlocExigences = {
 }
 
 test('la phrase de tête : ce qui est traité, ce qui reste à couvrir', () => {
-  assert.equal(phraseExigences({ traitees: 4, a_couvrir: 1 }), '5 exigences de contenu du règlement : 4 traitées, 1 à couvrir.')
+  assert.equal(phraseExigences({ traitees: 4, a_couvrir: 1 }), '5 exigences de contenu du règlement\u00a0: 4 traitées, 1 à couvrir.')
   assert.equal(phraseExigences({ traitees: 5, a_couvrir: 0 }), 'Les 5 exigences de contenu du règlement sont traitées dans le mémoire.')
   assert.equal(phraseExigences({ traitees: 1, a_couvrir: 0 }), 'L’exigence de contenu du règlement est traitée dans le mémoire.')
-  assert.equal(phraseExigences({ traitees: 0, a_couvrir: 1 }), '1 exigence de contenu du règlement : 1 à couvrir.')
+  assert.equal(phraseExigences({ traitees: 0, a_couvrir: 1 }), '1 exigence de contenu du règlement\u00a0: 1 à couvrir.')
 })
 
 test('« À couvrir » d’abord, puis ce qui est traité, sans changer l’ordre du règlement', () => {

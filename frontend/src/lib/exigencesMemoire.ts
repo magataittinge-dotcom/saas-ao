@@ -42,7 +42,7 @@ export function phraseExigences(b: Pick<BlocExigences, 'traitees' | 'a_couvrir'>
     b.traitees > 0 ? `${b.traitees} ${b.traitees > 1 ? 'traitées' : 'traitée'}` : null,
     `${b.a_couvrir} à couvrir`,
   ].filter(Boolean).join(', ')
-  return `${total} ${total > 1 ? 'exigences' : 'exigence'} de contenu du règlement : ${faits}.`
+  return `${total} ${total > 1 ? 'exigences' : 'exigence'} de contenu du règlement\u00a0: ${faits}.`
 }
 
 /** Ce qui reste à couvrir d'abord, puis ce qui est traité ; dans chaque groupe, l'ordre du règlement. */
