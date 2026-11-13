@@ -2,6 +2,8 @@
 // du patron (retirer, remettre, renommer, déplacer, ajouter). Tout est pur : l'écran appelle ces fonctions, le serveur
 // recalcule sous-critères, sources et propositions à chaque lecture.
 import type { PartieId } from '@/lib/memoireSections'
+import type { CarteResume } from '@/components/etape'
+import { libelleSource } from '@/lib/resumeAO'
 
 export const MAX_PARTIES = 60
 export const MAX_TITRE = 120
@@ -202,3 +204,19 @@ export const libelleFichesRemplies = (n: number): string => (n <= 0 ? 'Aucune re
 
 /** La carte « Longueur » : « 1 page au plus », « 20 pages au plus ». */
 export const libelleLongueur = (pages: number): string => `${pages} page${pages > 1 ? 's' : ''} au plus`
+
+/**
+ * B8 — la case « Longueur » du plan, avant la rédaction : la limite de pages du règlement avec sa source (« Source :
+ * RC · page 7 », « Voir dans le dossier »), seulement si l'analyse l'a relevée. Sinon l'écran dit ce que Synorix a lu
+ * (« aucune limite relevée »), jamais ce que le règlement ne fixerait pas.
+ */
+export function carteLongueur(limite: VuePlan['limite_pages'], voir?: (s: SourcePlan) => void): CarteResume {
+  if (!limite) return { libelle: 'Longueur', valeur: 'Libre', detail: 'Aucune limite de pages relevée dans le dossier.' }
+  const origine = limite.source
+  const libelle = origine?.document ? libelleSource({ document: origine.document, page: origine.page ?? null }) : null
+  return {
+    // l'étiquette dit d'où vient le chiffre ; la source suit, sans phrase de plus
+    libelle: 'Limite du règlement', valeur: libelleLongueur(limite.pages),
+    source: origine && libelle ? { libelle, onVoir: voir ? () => voir(origine) : undefined } : undefined,
+  }
+}
