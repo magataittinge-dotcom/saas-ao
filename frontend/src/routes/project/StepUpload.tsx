@@ -26,7 +26,7 @@ import { MenuElement, MenuPoints } from '@/components/ui/menu'
 import { Message } from '@/components/ui/message'
 import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
 import { estAClasser, faitsDepot, ETATS_LECTURE_SERVEUR } from '@/lib/depotDossier'
-import { ZoneDepot, SUITE_DEPOT } from '@/components/depot/ZoneDepot'
+import { ZoneDepot, SUITE_DEPOT, TitreDepot } from '@/components/depot/ZoneDepot'
 import { SqueletteListe } from '@/components/project/SqueletteListe'
 import CarteLotUnique from '@/components/depot/CarteLotUnique'
 import EntreeFichier from '@/components/depot/EntreeFichier'
@@ -512,7 +512,7 @@ export default function StepUpload({ project }: Props) {
                     racine={getRootProps()}
                     entree={<EntreeFichier {...getInputProps()} />}
                     survol={isDragActive}
-                    titre={isDragActive ? 'Lâchez les fichiers ici' : 'Glissez ici le dossier de l’acheteur'}
+                    titre={isDragActive ? 'Lâchez les fichiers ici' : <TitreDepot />}
                     phrase={<>Le <Sigle code="DCE" /> entier en ZIP, tel que vous l’avez téléchargé, ou plusieurs fichiers à la fois.</>}
                     className="md:min-h-72"
                     bouton={<Bouton variante={enLecture ? 'secondaire' : 'principal'} onClick={open} disabled={anyUploading}>Choisir des fichiers</Bouton>}

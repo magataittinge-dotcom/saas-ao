@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { LotCard, intituleRenomme } from '@/routes/project/StepLotSelection'
 import { phraseDocumentsAnalyses } from '@/lib/analyseLibelles'
+import { TitreDepot, ZoneDepot, SUITE_DEPOT } from '@/components/depot/ZoneDepot'
 import { lire, sansCommentaires } from './outils/sources'
 
 const rien = () => undefined
@@ -49,4 +50,12 @@ test('Pièces à 390 px : la case du système garde son dessin, « Déposer » t
   const formulaires = sansCommentaires(lire('src/components/project/CandidatureSectionTemplates.tsx'))
   assert.match(formulaires, /\{isPresent \? 'Remplacer' : 'Déposer'\}/)
   assert.match(formulaires, /aria-label=\{isPresent \? `Remplacer\\u00a0: \$\{label\}` : `Déposer le formulaire\\u00a0: \$\{label\}`\}/)
+})
+
+test('zone de dépôt : « Choisissez » au téléphone, « Glissez ici » à l’ordinateur ; les deux têtes de colonne partent de la même ligne', () => {
+  const html = renderToStaticMarkup(<ZoneDepot racine={{}} entree={null} survol={false} titre={<TitreDepot />} suite={SUITE_DEPOT} />)
+  assert.match(html, /<span class="max-sm:hidden">Glissez ici le dossier de l’acheteur<\/span><span class="sm:hidden">Choisissez le dossier de l’acheteur<\/span>/)
+  assert.match(html, /class="grid p-8 max-sm:p-5 content-start"/)
+  const seule = renderToStaticMarkup(<ZoneDepot racine={{}} entree={null} survol={false} titre="Titre" />)
+  assert.match(seule, /content-center/)
 })

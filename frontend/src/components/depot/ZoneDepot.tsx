@@ -15,6 +15,16 @@ export const SUITE_DEPOT: readonly string[] = [
  * acceptés) ; à droite, quand `suite` est donnée, ce que Synorix fera du dossier. Pendant un glisser : le trait d'accent.
  * Présentation seule : le dépôt lui-même (react-dropzone) est branché par l'écran, qui passe `racine` et `entree`.
  */
+/** Le titre de la zone : on glisse à l'ordinateur, on choisit au téléphone (jury, tour 3 : « Glissez ici » n'a pas de sens au doigt). */
+export function TitreDepot() {
+  return (
+    <>
+      <span className="max-sm:hidden">Glissez ici le dossier de l’acheteur</span>
+      <span className="sm:hidden">Choisissez le dossier de l’acheteur</span>
+    </>
+  )
+}
+
 export function ZoneDepot({ racine, entree, survol, titre, phrase, bouton, formats, suite, centree, className }: {
   racine: HTMLAttributes<HTMLDivElement>
   /** Le sélecteur de fichier caché (`<EntreeFichier {...getInputProps()} />`). */
@@ -43,7 +53,8 @@ export function ZoneDepot({ racine, entree, survol, titre, phrase, bouton, forma
       )}
     >
       {entree}
-      <div className={cn('grid content-center p-8 max-sm:p-5', centree && 'justify-items-center')}>
+      {/* Avec la colonne « Ensuite », les deux têtes de colonne partent de la même ligne (jury, tour 3 : l'une centrée, l'autre en haut) */}
+      <div className={cn('grid p-8 max-sm:p-5', suite ? 'content-start' : 'content-center', centree && 'justify-items-center')}>
         <p className="text-lg font-semibold text-fg">{titre}</p>
         {phrase && <p className="mt-1.5 max-w-[52ch] text-sm text-fg-2">{phrase}</p>}
         {bouton && <div className="mt-5">{bouton}</div>}
