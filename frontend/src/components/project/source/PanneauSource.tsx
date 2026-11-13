@@ -120,6 +120,7 @@ export function PanneauSourceVue({
   const largeurPage = largeurPourConteneur(largeurCorps || 600, typeof window !== 'undefined' ? window.devicePixelRatio : 1)
 
   const lien = reponse ? lienPiece(reponse) : null
+  const route = reponse ? aiguiller(reponse) : null
   const nom = reponse?.document?.nom ?? titre ?? 'Extrait du dossier'
   const lienOuvrir = lien && (
     <Bouton asChild variante="secondaire" className="source-ouvrir">
@@ -138,12 +139,15 @@ export function PanneauSourceVue({
               {feuille
                 ? <SheetTitle className="source-piece pr-12">{nom}</SheetTitle>
                 : <Infobulle texte={nom} cote="bottom"><h2 id={idTitre} className="source-piece">{nom}</h2></Infobulle>}
+              {/* Un fait, une fois (jury, tour 3). La coche ne se pose que sur un passage retrouvé ; une page seulement
+                  citée se dit sans icône de réussite. La page n'est pas redite ici quand le pied la porte (vue Document),
+                  et un classeur n'a pas de « page ». */}
               {reponse && reponse.niveau !== 'aucun' && (
                 <p className="source-meta">
                   <span className="source-niveau">
-                    <Check size={14} aria-hidden="true" /> {libelleNiveau(reponse)}
+                    {reponse.niveau === 'passage' && <Check size={14} aria-hidden="true" />} {libelleNiveau(reponse)}
                   </span>
-                  {reponse.page && (
+                  {reponse.page && route === 'pdf' && vue !== 'document' && (
                     <span>page {reponse.page}{totalPages ? ` sur ${totalPages}` : ''}</span>
                   )}
                 </p>
@@ -196,7 +200,6 @@ export function PanneauSourceVue({
             </div>
           )}
           {reponse && (() => {
-            const route = aiguiller(reponse)
             if (route === 'tableur') {
               return rendreTableur ? rendreTableur(reponse) : (
                 <VueSansPage reponse={reponse} lien={lienOuvrir}>

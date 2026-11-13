@@ -730,6 +730,18 @@ p { text-wrap: pretty; }
 }
 .zone-saisie:empty::before { content: "\200b"; }
 
+/* Un tableau du mémoire de plus de deux colonnes, au téléphone : chaque rangée entre deux filets, sa première cellule en
+   titre, les suivantes précédées du nom de leur colonne. Ni carte dans la carte du document, ni défilement de côté. */
+@media (max-width: 767.98px) {
+  .table-memoire-liste, .table-memoire-liste tbody, .table-memoire-liste tr, .table-memoire-liste td { display: block; }
+  .table-memoire-liste thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .table-memoire-liste tbody { border-bottom: 1px solid var(--border-2); }
+  .table-memoire-liste tr { border-top: 1px solid var(--border-2); padding: 0.625rem 0; }
+  .table-memoire-liste td { border: 0; padding: 0.0625rem 0; text-align: left !important; }
+  .table-memoire-liste td:first-child { font-weight: 600; color: var(--text-1); }
+  .table-memoire-liste td:not(:first-child)[data-colonne]:not([data-colonne=""])::before { content: attr(data-colonne) "\00a0: "; color: var(--text-3); }
+}
+
 /* Legal documents — typography for /legal markdown content */
 .legal-prose {
   color: var(--ink);
@@ -829,8 +841,10 @@ p { text-wrap: pretty; }
 .source-panneau:focus-visible { outline: 2px solid var(--lum); outline-offset: -2px; }
 @media (min-width: 1024px) {
   /* sous l'en-tête et le bandeau d'étapes collant (≈ 6,5 rem), au-dessus de la barre du bas */
+  /* le panneau prend la hauteur de ce qu'il montre, jusqu'à celle de l'écran (un extrait de trois lignes ne laisse plus un
+     grand blanc dessous) ; la vue Document, plus haute que l'écran, défile dans le corps comme avant */
   .source-panneau {
-    position: sticky; top: 6.5rem; height: calc(100svh - 16rem); min-height: 22rem;
+    position: sticky; top: 6.5rem; max-height: calc(100svh - 16rem); min-height: 12rem;
     scroll-margin: 6.5rem 0 5rem;
   }
   .source-poignee, .source-voile { display: none; }
@@ -839,7 +853,7 @@ p { text-wrap: pretty; }
   .source-voile { position: fixed; inset: 0; z-index: 65; background: var(--scrim); }
   .source-panneau {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
-    height: 90dvh; max-height: 90dvh;
+    height: auto; max-height: 90dvh;
     border-radius: 20px 20px 0 0; border-bottom: 0;
   }
 }
@@ -942,7 +956,7 @@ p { text-wrap: pretty; }
   padding-bottom: max(10px, env(safe-area-inset-bottom));
 }
 .source-pages { display: inline-flex; align-items: center; gap: 8px; }
-.source-pages-texte { font-size: .875rem; color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 6.5rem; text-align: center; }
+.source-pages-texte { font-size: .875rem; color: var(--ink-2); min-width: 6.5rem; text-align: center; }
 .source-ouvrir {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-left: auto;
   padding: 8px 16px; border-radius: 10px; font-size: .875rem; font-weight: 600; text-decoration: none;
