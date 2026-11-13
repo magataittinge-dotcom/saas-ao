@@ -181,7 +181,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
           className={cn('flex w-full flex-col gap-0 bg-surface-0 p-0 sm:max-w-none', selection ? 'sm:w-[min(46rem,100vw)]' : 'sm:w-[min(30rem,100vw)]')}
         >
           <header className="shrink-0 border-b border-bord px-5 py-4 pr-14">
-            <SheetTitle className="font-memoire text-xl font-semibold text-fg">Relire mon mémoire</SheetTitle>
+            <SheetTitle className="text-lg font-semibold text-fg">Relire mon mémoire</SheetTitle>
             <SheetDescription className="mt-1 text-sm text-fg-2">
               Synorix compare votre texte au règlement, sans le réécrire : critères, pièces citées, passages à compléter, normes citées, longueur.
             </SheetDescription>

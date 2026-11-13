@@ -7,6 +7,7 @@ import { Message } from '@/components/ui/message'
 import { TexteMisEnForme } from '@/components/memoire/BlocsMemoire'
 import TroisPropositions, { type Trois } from '@/components/project/TroisPropositions'
 import { useFonctionsIA } from '@/lib/fonctionsIA'
+import { cn } from '@/lib/utils'
 
 export interface PassageSelection {
   text: string
@@ -79,17 +80,19 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
 
   return (
     <>
-      <div data-barre-reecriture="" className="flex min-w-0 flex-1 items-center gap-2 max-lg:overflow-x-auto lg:justify-end">
-        <p className="mr-1 shrink-0 text-sm text-fg-2" aria-live="polite">
+      {/* Ordinateur : une rangée, à droite des outils. Téléphone : rien ne défile de côté ; le paragraphe choisi, ses trois
+          gestes tiennent sur une rangée et « Insister sur… » sur la suivante ; sans paragraphe choisi, une phrase seulement. */}
+      <div data-barre-reecriture="" data-paragraphe-choisi={hasSelection ? '' : undefined} className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
+        <p className={cn('mr-1 shrink-0 text-sm max-md:basis-full', hasSelection ? 'font-medium text-fg' : 'text-fg-2')} aria-live="polite">
           {hasSelection ? 'Réécrire ce paragraphe :' : 'Placez-vous dans un paragraphe pour le réécrire'}
         </p>
         {ACTIONS.map((a) => (
-          <Bouton key={a.id} variante="secondaire" className="px-3" disabled={bloque} enCours={enCours === a.id} libelleEnCours="Réécriture…" onClick={() => run(a.id)}>
+          <Bouton key={a.id} variante="secondaire" className={cn('px-3 max-md:flex-1 max-md:px-2', !hasSelection && 'max-md:hidden')} disabled={bloque} enCours={enCours === a.id} libelleEnCours="Réécriture…" onClick={() => run(a.id)}>
             {a.label}
           </Bouton>
         ))}
         <form
-          className="flex shrink-0 items-center gap-2"
+          className={cn('flex shrink-0 items-center gap-2 max-md:basis-full', !hasSelection && 'max-md:hidden')}
           onSubmit={(e) => { e.preventDefault(); if (insistText.trim()) void run('insister') }}
         >
           <Champ
@@ -98,7 +101,7 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
             placeholder="Insister sur…"
             aria-label="Insister sur : ce que le passage doit mettre en avant"
             disabled={bloque}
-            className="w-40 min-w-0"
+            className="h-11 w-40 min-w-0 disabled:bg-surface-0 disabled:opacity-45 max-md:w-auto max-md:flex-1"
           />
           <Bouton type="submit" variante="secondaire" disabled={bloque || !insistText.trim()} enCours={enCours === 'insister'} libelleEnCours="Réécriture…">
             Insister

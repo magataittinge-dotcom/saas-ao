@@ -5,6 +5,7 @@ import { BoutonRefaire, type CibleRefaire } from '@/components/memoire/RefaireSe
 import { etatDe, type EtatPartie, type EtatsSections } from '@/lib/memoireEtats'
 import { ANNEXES_MEMOIRE, sectionsDuContenu, type SectionMemoire } from '@/lib/memoireSections'
 import { titrePartieLisible } from '@/lib/planMemoire'
+import { titreEnTete } from '@/lib/memoireAffichage'
 import type { MemoireContent, Project } from '@/types'
 
 /** Le titre d'une partie du document (h2) : en serif, comme dans le mémoire imprimé, sans barre latérale. */
@@ -31,11 +32,14 @@ export function DocumentView({
   etats?: EtatsSections
   onEtat?: (cible: { part: string; cle: string }, etat: EtatPartie) => void
 }) {
-  const entete = (part: string, cle: string, label: string) => (
+  // Un seul titre par partie (jury, tour 3) : celui que le texte porte en première ligne, tel qu'il sera imprimé ; à défaut,
+  // celui du plan. Les gestes gardent le nom du plan (`label`), celui du sommaire.
+  const entete = (part: string, cle: string, label: string, titre: string) => (
     <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-      <h3 className="min-w-0 break-words font-memoire text-lg font-semibold text-fg">{label}</h3>
+      <h3 className="min-w-0 break-words font-memoire text-lg font-semibold text-fg">{titre}</h3>
       {(onEtat || onRefaire) && (
-        <div className="-mx-3 flex flex-wrap items-center">
+        // passée sous un titre long, la rangée part du bord de la colonne (elle en sortait de 12 px à gauche)
+        <div className="-mr-3 flex flex-wrap items-center">
           {onEtat && (
             <EtatPartieChoix titre={label} etat={etatDe(etats, part, cle)} desactive={refaireDesactive}
               onChange={(e) => onEtat({ part, cle }, e)} />
@@ -51,18 +55,23 @@ export function DocumentView({
   const items = (part: SectionMemoire['part']): [string, string][] =>
     sectionsDuContenu(content).filter((s) => s.part === part).map((s) => [s.cle, s.titre])
   const a = textes('partie_a')
+  // Le préambule : son titre écrit dans le texte (« Préambule — Engagement de… ») remplace « Préambule », il ne le suit pas.
+  const lu = titreEnTete(content.preambule ?? '')
+  const preambule = lu.titre && /^pr[ée]ambule/i.test(lu.titre) ? lu : { titre: null, corps: content.preambule ?? '' }
 
   const partie = (part: SectionMemoire['part'], id: string) => (
     <section id={id}>
       <TitrePartie>{titrePartieLisible(part)}</TitrePartie>
-      {items(part).map(([key, label]) =>
-        textes(part)[key] ? (
+      {items(part).map(([key, label]) => {
+        if (!textes(part)[key]) return null
+        const { titre, corps } = titreEnTete(textes(part)[key])
+        return (
           <div key={key} id={`sec-${key}`} className="mt-8 scroll-mt-6">
-            {entete(part, key, label)}
-            <LecteurMarkdown text={textes(part)[key]} />
+            {entete(part, key, label, titre ?? label)}
+            <LecteurMarkdown text={corps} />
           </div>
-        ) : null,
-      )}
+        )
+      })}
     </section>
   )
 
@@ -76,10 +85,10 @@ export function DocumentView({
         </header>
 
         <section id="preambule">
-          <TitrePartie>Préambule</TitrePartie>
+          <TitrePartie>{preambule.titre ?? 'Préambule'}</TitrePartie>
           <div id="preambule-intro" />
           <div id="preambule-contexte" />
-          <div className="mt-6"><LecteurMarkdown text={content.preambule ?? ''} /></div>
+          <div className="mt-6"><LecteurMarkdown text={preambule.corps} /></div>
         </section>
 
         {partie('partie_a', 'partie-a')}

@@ -115,7 +115,16 @@ test('source d’un champ du bandeau : extrait cité non surligné, pas de loupe
   assert.equal(r.niveau, 'page')
   const html = rendre(r, { exigenceId: null })
   assert.ok(html.includes('Remise des offres avant le 12 mars.') && !html.includes('<mark>'))
-  assert.ok(html.includes('Extrait cité par Synorix') && html.includes('Page citée par Synorix'))
+  // jury, tour 3 : le fait une fois. L'en-tête dit « Page citée par Synorix », sans coche ; la phrase du corps dit que le
+  // passage n'est pas retrouvé mot pour mot ; la légende de l'extrait ne le redit plus.
+  assert.ok(html.includes('Page citée par Synorix') && html.includes('data-passage-non-retrouve'))
+  assert.equal(html.split('non retrouvé mot pour mot').length - 1, 1)
+  assert.ok(!html.includes('lucide-check'))
+  // un classeur sans aperçu en pages : ni « page », ni panneau blanc ; la phrase et « Ouvrir la pièce »
+  const classeur = reponseDeChamp({ id: 'd3', file_name: 'DPGF Lot 01.xlsx' }, { page: 1, excerpt: null }, { pdf: null, origine: '/api/files/view/dpgf' })
+  assert.equal(classeur.format, 'tableur')
+  const vueClasseur = rendre(classeur, { exigenceId: null })
+  assert.ok(vueClasseur.includes('Cette pièce est un tableur') && vueClasseur.includes('Ouvrir la pièce') && !vueClasseur.includes('page 1'), vueClasseur)
   assert.ok(!html.includes('Sur la page'))
   assert.deepEqual([...html.matchAll(/role="tab"[^>]*>([^<]+)</g)].map((m) => m[1]), ['Passage', 'Document'])
   const sansPage = reponseDeChamp({ id: 'd2', file_name: 'rc.pdf' }, { page: null, excerpt: null }, { pdf: null, origine: '/o' })
