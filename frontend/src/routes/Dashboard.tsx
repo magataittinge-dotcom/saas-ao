@@ -2,7 +2,8 @@ import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
-import BandeAO from '@/components/dashboard/BandeAO'
+import { useAplatReserve } from '@/stores/uiStore'
+import BandeAO, { COLONNES_BANDE, RANGEE_BANDE } from '@/components/dashboard/BandeAO'
 import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
 import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
 import { classesBouton } from '@/components/ui/bouton'
@@ -109,6 +110,9 @@ export default function Dashboard() {
   // délai sur les requêtes, un quota qui ne répond pas les cacherait.
   const attenteHaut = useAttente(phaseRequete(projets, () => false) === 'chargement')
   const hautPose = attenteHaut === 'contenu'
+  // Une coupure = un message (jury, tour 3 : trois cartes d'erreur pour une seule cause). Sans les appels d'offres, l'écran
+  // ne montre que l'erreur et son « Réessayer », qui relance tout ; la veille et « Votre entreprise » reviennent avec eux.
+  const panne = hautPose && phaseRequete(projets, () => false) === 'erreur'
 
   const maintenant = useMemo(() => new Date(), [projets.data]) // eslint-disable-line react-hooks/exhaustive-deps
   const comptes = useMemo(() => (projets.data ? comptesAO(projets.data, maintenant) : null), [projets.data, maintenant])
@@ -141,6 +145,7 @@ export default function Dashboard() {
   const parole = quotaAtteint
     ? { phrase: `${quotaAtteint} Vos appels d’offres déjà analysés restent ouverts.`, lien: { to: '/settings/billing', libelle: 'Voir l’abonnement' } }
     : paroleDuJour
+  const profilDitEnHaut = parole?.lien?.to === '/company'
   const s = stats.data
   const nbDocuments = documents.data?.length
   const aRenouveler = s ? s.documents_expires + s.documents_expirant_bientot : 0
@@ -169,8 +174,9 @@ export default function Dashboard() {
       {/* ── Vos appels d'offres : en cours (trois au plus), puis ceux à mettre à jour ── */}
       <EtatRequete requete={projets} attente={attenteHaut} estVide={() => false} vide={null} squelette={<BandeEnChargement />}
         erreur={(
-          <EtatErreur className="mt-10 max-md:mt-7.5" titre="Vos appels d’offres n’ont pas pu se charger"
-            detail={'La connexion a été interrompue. Vos dossiers ne\u00a0sont\u00a0pas\u00a0touchés.'} onReessayer={() => { void projets.refetch() }} enCours={projets.isFetching} />
+          <EtatErreur className="mt-6 md:w-fit" titre="Vos appels d’offres n’ont pas pu se charger"
+            detail="La connexion a été interrompue. Vos dossiers sont intacts."
+            onReessayer={() => { void projets.refetch(); void stats.refetch(); void documents.refetch() }} enCours={projets.isFetching} />
         )}>
         {(liste) => <BandeAO projets={liste} maintenant={maintenant} onStatut={setStatutPour} onNouveau={() => navigate('/projects/new')} />}
       </EtatRequete>
@@ -178,18 +184,34 @@ export default function Dashboard() {
       {/* ── La veille : la carte et la liste des avis, chargées à la demande (l'accueil seulement) ── */}
       {/* montée tout de suite (ses lectures partent avec celles du haut), affichée une fois le haut posé ; la carte se mesure à
           l'affichage (ResizeObserver de CarteFrance). `data-bloc-en-attente` : le pied de page attend aussi (index.css) */}
-      <div className={cn('mt-10 max-md:mt-7.5', !hautPose && 'hidden')} data-bloc-en-attente={hautPose ? undefined : ''}>
-        <Suspense fallback={<VeilleEnChargement />}>
-          <VeilleAccueil />
-        </Suspense>
-      </div>
+      {!panne && (
+        <div className={cn('mt-10 max-md:mt-7.5', !hautPose && 'hidden')} data-bloc-en-attente={hautPose ? undefined : ''}>
+          <Suspense fallback={<VeilleEnChargement />}>
+            <VeilleAccueil />
+          </Suspense>
+        </div>
+      )}
+      {/* pendant l'attente du haut, la suite de l'écran a déjà sa silhouette : la veille, puis « Votre entreprise » */}
+      {attenteHaut === 'squelette' && (
+        <div aria-hidden className="mt-10 max-md:mt-7.5">
+          <VeilleEnChargement />
+          <Squelette className="mb-4 mt-10 h-5 w-40 max-md:mt-7.5" />
+          <Carte sansMarge>
+            {[0, 1].map((i) => (
+              <div key={i} className="flex min-h-[60px] items-center justify-between gap-6 border-t border-bord px-5 py-3 first:border-t-0 sm:px-6">
+                <Squelette className="h-3.5 w-28" /><Squelette className="h-3.5 w-36" />
+              </div>
+            ))}
+          </Carte>
+        </div>
+      )}
 
       {/* ── Coffre-fort, entreprise et bilan : une bande de cases ; une case n'apparaît qu'une fois sa donnée lue ── */}
-      <section aria-labelledby="t-suivi" className={cn('mt-10 max-md:mt-7.5', !hautPose && 'hidden')}>
+      {!panne && <section aria-labelledby="t-suivi" className={cn('mt-10 max-md:mt-7.5', !hautPose && 'hidden')}>
         <TitreSection id="t-suivi">Votre entreprise</TitreSection>
         {suiviEnErreur ? (
           // le même modèle d'erreur que le reste de l'écran : il rejoint le « Réessayer » unique (le premier état le porte)
-          <EtatErreur titre="Le coffre-fort et le bilan n’ont pas pu se charger" detail={'La connexion a été interrompue. Vos données ne\u00a0sont\u00a0pas\u00a0touchées.'}
+          <EtatErreur className="md:w-fit" titre="Les informations de votre entreprise n’ont pas pu se charger" detail="La connexion a été interrompue. Vos données sont intactes."
             onReessayer={() => { void stats.refetch(); void documents.refetch() }} enCours={stats.isFetching || documents.isFetching} />
         ) : (
           // des lignes de faits, pas des cases égales (jury, tour 1) : un intitulé, ce qu'il en est, le lien pour y aller
@@ -202,11 +224,15 @@ export default function Dashboard() {
                     ? 'Vos pièces administratives apparaîtront ici, avec leur date de validité.'
                     : <><span className="font-semibold text-fg">{pluriel(nbDocuments, 'pièce', 'pièces')}</span>{aRenouveler > 0 && <PastilleEtat sens={s && s.documents_expires > 0 ? 'rouge' : 'ambre'}>{aRenouveler} à renouveler</PastilleEtat>}</>}
               </LigneFait>
-              <LigneFait intitule="Profil d’entreprise" lien={{ to: '/company', libelle: profilRenseigne === false ? 'Compléter le profil' : 'Ouvrir Mon entreprise' }}>
-                {/* sans raison sociale vérifiée, pas de nom : « Mon entreprise » redirait l'intitulé */}
-                {nomDuCompte(organization, null) && <span className="font-semibold text-fg">{nomDuCompte(organization, null)}</span>}
-                {profilRenseigne !== null && <span className={nomDuCompte(organization, null) ? 'text-fg-2' : 'font-semibold text-fg'}>{profilRenseigne ? 'Profil renseigné' : 'Profil à compléter'}</span>}
-              </LigneFait>
+              {/* le profil « à compléter » se dit une fois (jury, tour 3 : en haut par Synorix, en bas par cette ligne, avec deux
+                  verbes) : quand Synorix le dit, la ligne ne garde que le nom de l'entreprise, ou se retire */}
+              {(!profilDitEnHaut || nomDuCompte(organization, null)) && (
+                <LigneFait intitule="Profil d’entreprise" lien={{ to: '/company', libelle: profilRenseigne === false && !profilDitEnHaut ? 'Compléter Mon entreprise' : 'Ouvrir Mon entreprise' }}>
+                  {/* sans raison sociale vérifiée, pas de nom : « Mon entreprise » redirait l'intitulé */}
+                  {nomDuCompte(organization, null) && <span className="font-semibold text-fg">{nomDuCompte(organization, null)}</span>}
+                  {profilRenseigne !== null && !profilDitEnHaut && <span className={nomDuCompte(organization, null) ? 'text-fg-2' : 'font-semibold text-fg'}>{profilRenseigne ? 'Profil renseigné' : 'Profil à compléter'}</span>}
+                </LigneFait>
+              )}
               {s && s.projects_soumis_ce_mois > 0 && (
                 <LigneFait intitule="Déposés ce mois-ci"><span className="font-semibold text-fg">{pluriel(s.projects_soumis_ce_mois, 'dossier', 'dossiers')}</span></LigneFait>
               )}
@@ -219,7 +245,7 @@ export default function Dashboard() {
             </dl>
           </Carte>
         )}
-      </section>
+      </section>}
 
       {statutPour && <MettreAJourStatut projet={statutPour} ouvert onOuvert={(o) => { if (!o) setStatutPour(null) }} />}
     </Page>
@@ -239,15 +265,19 @@ function LigneFait({ intitule, lien, children }: { intitule: string; lien?: { to
 
 /* ── Attente des AO : le titre et trois lignes, à la forme des vraies lignes (nom, acheteur, date), au bureau comme au téléphone ── */
 function BandeEnChargement() {
+  // l'action de l'écran arrive avec la liste : le bouton de la barre ne prend pas l'aplat en attendant
+  useAplatReserve()
   return (
     <div className="mt-10 max-md:mt-7.5">
-      <Squelette className="mb-4 h-5 w-36" />
+      <Squelette className="mb-4 h-5 w-64" />
       <Carte sansMarge>
+        {/* la silhouette de la rangée réelle, sur la même grille : le nom et l'acheteur, le fil et l'étape, la remise, le bouton */}
         {[0, 1, 2].map((i) => (
-          <div key={i} className="grid min-h-[77px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 border-t border-bord px-5 py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:px-6">
-            <div className="grid gap-2"><Squelette className="h-4 w-3/5 max-sm:w-4/5" /><Squelette className="h-3.5 w-2/5" /><Squelette className="h-3.5 w-1/3 sm:hidden" /></div>
-            <Squelette className="h-3.5 w-32 max-sm:hidden" />
-            <span aria-hidden className="size-[18px]" />
+          <div key={i} className={`${RANGEE_BANDE} ${COLONNES_BANDE} min-h-[94px]`}>
+            <div className="grid content-center gap-2"><Squelette className="h-4 w-3/5 max-sm:w-4/5" /><Squelette className="h-3.5 w-4/5" /></div>
+            <div className="grid content-center gap-2.5"><Squelette className="h-1.5 w-full rounded-pilule" /><Squelette className="h-3.5 w-16" /></div>
+            <div className="flex items-center gap-2.5"><Squelette className="h-6 w-16 rounded-pilule" /><Squelette className="h-3.5 w-28" /></div>
+            <Squelette className="h-11 w-52 rounded-lg max-sm:w-full lg:justify-self-end" />
           </div>
         ))}
       </Carte>

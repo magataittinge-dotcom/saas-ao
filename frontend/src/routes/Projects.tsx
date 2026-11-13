@@ -27,6 +27,8 @@ import { messageErreur } from '@/lib/erreurs'
 import { aDecider } from '@/lib/intelligence/action'
 import { comparerParRemise, quandCourt, resumeMesAO, STATUTS_TERMINES } from '@/lib/mesAO'
 import { phaseRequete } from '@/lib/requete'
+import { cn } from '@/lib/utils'
+import { useAplatReserve } from '@/stores/uiStore'
 import { api } from '@/services/api'
 import type { Project } from '@/types'
 
@@ -53,9 +55,9 @@ export default function Projects() {
   // Aucun AO (et le serveur a répondu) : l'écran du premier dossier, qui porte son propre titre.
   if (phaseRequete(requete) === 'vide') return <VideMesAO />
   return (
-    <Page titre="Mes appels d’offres" sousTitre={<SousTitre projets={requete.data} />}>
+    <Page titre="Mes appels d’offres" sousTitre={<SousTitre projets={requete.data} enAttente={phaseRequete(requete) === 'chargement'} />}>
       <EtatRequete requete={requete} squelette={<SqueletteMesAO />} vide={null}
-        erreur={<EtatErreur titre="Vos appels d’offres n’ont pas pu se charger" detail={'La connexion a été interrompue. Vos dossiers ne\u00a0sont\u00a0pas\u00a0touchés.'} onReessayer={() => { void requete.refetch() }} enCours={requete.isFetching} />}>
+        erreur={<EtatErreur className="md:w-fit" titre="Vos appels d’offres n’ont pas pu se charger" detail="La connexion a été interrompue. Vos dossiers sont intacts." onReessayer={() => { void requete.refetch() }} enCours={requete.isFetching} />}>
         {(projets) => <ListeMesAO projets={projets} />}
       </EtatRequete>
     </Page>
@@ -63,31 +65,61 @@ export default function Projects() {
 }
 
 /** La sous-ligne dit autre chose que la première case : la prochaine remise, quand il y en a une. */
-function SousTitre({ projets }: { projets: Project[] | undefined }) {
+function SousTitre({ projets, enAttente }: { projets: Project[] | undefined; enAttente: boolean }) {
+  // pendant la lecture, la ligne garde sa place sans rien affirmer : elle ne se réécrit pas à l'arrivée des données (jury, tour 3)
+  if (enAttente) return '\u00a0'
   const une = projets ? aLaUne(projets) : null
   const quand = une ? quandCourt(une) : null
   if (!une || !quand) return 'Vos dossiers, de l’analyse du dossier de l’acheteur au dépôt.'
   return <>Prochaine remise <strong className="font-semibold text-fg">{quand}</strong>{quand.endsWith('.') ? '' : '.'}</>
 }
 
-/** Le squelette de Mes AO, à la forme de la page réelle : le résumé, la recherche et le tri, le titre, puis les rangées (nom, acheteur, date). */
+/**
+ * Le squelette de Mes AO, à la silhouette de l'écran qui arrive (jury, tour 3 : une carte de 448 px tenait lieu de la bande,
+ * « À la une » n'avait aucune place, deux contours de champ vides) : la bande de cases pleine largeur, « À la une », la
+ * recherche et le tri en glace, le titre, puis le tableau sur ses colonnes.
+ */
 export function SqueletteMesAO() {
+  // l'action de l'écran (« À la une ») arrive avec la liste : le bouton de la barre ne prend pas l'aplat en attendant
+  useAplatReserve()
+  const cellule = 'shrink-0 px-4 max-md:px-0'
   return (
     <div data-squelette-mes-ao="">
-      <Carte sansMarge className="grid gap-3 p-5 md:max-w-md max-md:p-4"><Squelette className="h-3.5 w-24" /><Squelette className="h-6 w-28" /><Squelette className="h-3.5 w-36" /></Carte>
-      <div className="mt-10 flex flex-wrap items-center gap-2 max-md:mt-7.5">
-        {/* la recherche et le tri ne dépendent pas des données : leur contour est déjà là, pas un pavé gris */}
-        <div aria-hidden className="h-11 rounded-pilule border border-bord-champ bg-surface-0 max-md:basis-full md:w-80" />
-        <div aria-hidden className="h-11 w-56 rounded-lg border border-bord-champ bg-surface-0 max-md:w-full md:ml-auto" />
+      <div className="flex flex-col gap-10 max-md:flex-col-reverse max-md:gap-7.5">
+        <Carte sansMarge className="grid grid-cols-3 max-md:grid-cols-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={cn('grid min-h-[150px] content-start gap-3 border-bord p-5 max-md:min-h-[92px] max-md:p-4', i > 0 && 'border-l', i === 2 && 'max-md:hidden')}>
+              <Squelette className="h-3.5 w-24" /><Squelette className="h-9 w-12" />
+            </div>
+          ))}
+        </Carte>
+        <div>
+          <Squelette className="mb-4 h-5 w-52" />
+          <Carte className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:items-center lg:gap-8">
+            <div className="grid gap-3">
+              <Squelette className="h-6 w-44 rounded-pilule" /><Squelette className="h-6 w-3/5" /><Squelette className="h-3.5 w-2/5" /><Squelette className="h-3.5 w-4/5" />
+              <Squelette className="mt-1 h-1.5 w-3/5 rounded-pilule" /><Squelette className="mt-3 h-11 w-52 rounded-pilule max-sm:w-full" />
+            </div>
+            <div className="grid gap-6 border-bord max-lg:hidden lg:border-l lg:pl-6">
+              {[0, 1, 2, 3].map((i) => <div key={i} className="flex justify-between gap-3"><Squelette className="h-3.5 w-32" /><Squelette className="h-3.5 w-20" /></div>)}
+            </div>
+          </Carte>
+        </div>
       </div>
-      <Squelette className="mb-4 mt-10 h-5 w-36 max-md:mt-7.5" />
+      <div className="mt-10 flex flex-wrap items-center gap-2 max-md:mt-7.5">
+        <Squelette className="h-11 rounded-pilule max-md:basis-full md:w-80" />
+        <Squelette className="h-11 w-56 rounded-lg max-md:w-full md:ml-auto" />
+      </div>
+      <Squelette className="mb-4 mt-10 h-5 w-28 max-md:mt-7.5" />
       <Carte sansMarge>
-        <div className="h-11 border-b border-bord max-md:hidden" />
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="flex min-h-[73px] items-center gap-6 border-t border-bord px-4 py-3 first:border-t-0 max-md:min-h-[92px]">
-            <div className="grid flex-1 gap-2"><Squelette className="h-4 w-3/5 max-md:w-4/5" /><Squelette className="h-3.5 w-2/5 max-md:w-3/5" /><Squelette className="h-3.5 w-1/3 md:hidden" /></div>
-            <Squelette className="h-3.5 w-28 max-md:hidden" />
-            <span aria-hidden className="w-16 max-md:hidden" />
+        {[0, 1, 2, 3].map((i) => (
+          // la première rangée est l'en-tête du tableau (44 px), les suivantes les rangées, sur les colonnes de `colonnesEnCours`
+          <div key={i} className={cn('flex items-center border-t border-bord first:border-t-0 max-md:grid max-md:gap-2.5 max-md:px-4 max-md:py-3', i === 0 ? 'h-11 max-md:hidden' : 'min-h-[73px]', i === 1 && 'max-md:border-t-0')}>
+            <div className={cn(cellule, 'grid min-w-0 flex-1 gap-2')}><Squelette className={i === 0 ? 'h-3 w-24' : 'h-4 w-3/5 max-md:w-4/5'} />{i > 0 && <Squelette className="h-3.5 w-4/5 max-md:w-3/5" />}</div>
+            <div className={cn(cellule, 'grid w-[13rem] gap-2 max-lg:hidden max-md:grid max-md:w-auto')}>{i === 0 ? <Squelette className="h-3 w-24" /> : <><Squelette className="h-1.5 w-full rounded-pilule" /><Squelette className="h-3.5 w-14" /></>}</div>
+            <div className={cn(cellule, 'flex w-[14rem] items-center gap-2.5 max-lg:hidden max-md:flex max-md:w-auto')}>{i === 0 ? <Squelette className="h-3 w-14" /> : <><Squelette className="h-6 w-16 rounded-pilule" /><Squelette className="h-3.5 w-24" /></>}</div>
+            <div className={cn(cellule, 'w-[11rem] max-xl:hidden')}><Squelette className={i === 0 ? 'h-3 w-12' : 'h-3.5 w-28'} /></div>
+            <div className={cn(cellule, 'flex w-[17rem] justify-end max-lg:hidden', i > 0 && 'pr-16')}><Squelette className={i === 0 ? 'h-3 w-24' : 'h-3.5 w-40'} /></div>
           </div>
         ))}
       </Carte>
@@ -122,9 +154,10 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
   const resume = useMemo(() => resumeMesAO(projets, maintenant), [projets, maintenant])
   const une = useMemo(() => aLaUne(projets, maintenant), [projets, maintenant])
   const nbADecider = resume.aDecider.n
+  // « À la une » est l'action de l'écran, même quand une recherche la retire : le bouton de la barre reste au trait
+  useAplatReserve(Boolean(une))
 
   const cherche = recherche.trim() !== ''
-  const filtres = (filtre !== 'tous' ? 1 : 0) + (cherche ? 1 : 0)
   const { enCours, aMettreAJour, termines } = useMemo(() => {
     const q = sansAccent(recherche.trim())
     const garde = (p: Project) => !q || [p.name, p.maitre_ouvrage, p.selected_lot_name].some((t) => t && sansAccent(t).includes(q))
@@ -154,8 +187,9 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
       {/* Au téléphone, « À la une » passe avant le résumé : l'action de l'écran reste sous le pouce, au premier écran. */}
       <div className="flex flex-col gap-10 max-md:flex-col-reverse max-md:gap-7.5">
         <ResumeMesAOCartes comptes={comptes} resume={resume} quota={quota} />
-        {/* « À la une » suit la recherche et les filtres : elle se retire dès qu'on cherche */}
-        {une && filtres === 0 && <ALaUne projet={une} maintenant={maintenant} />}
+        {/* « À la une » se retire dès qu'on cherche un nom ; sous une puce de filtre elle reste tant que son AO passe le filtre
+            (jury, tour 3 : elle disparaissait avec « Remise sous 7 jours », alors que c'est le dossier urgent qu'elle montre) */}
+        {une && !cherche && (filtre === 'tous' || enCours.some((p) => p.id === une.id)) && <ALaUne projet={une} maintenant={maintenant} />}
       </div>
 
       <div role="search" aria-label="Chercher et filtrer mes appels d’offres" className="mt-10 flex flex-wrap items-center gap-2 max-md:mt-7.5">
@@ -179,11 +213,11 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
       {rienTrouve && (
         cherche ? (
           // une recherche n'est pas un filtre : le bouton dit ce qu'il efface, la phrase donne une piste
-          <EtatVide className="mt-6" titre={`Aucun nom, acheteur ni lot ne contient « ${recherche.trim()} »`}
+          <EtatVide className="mt-6 md:w-fit" titre={`Aucun nom, acheteur ni lot ne contient « ${recherche.trim()} »`}
             phrase="Vérifiez l’orthographe, ou cherchez un mot du nom de l’acheteur."
             action={<Bouton variante="secondaire" onClick={effacer}>Effacer la recherche</Bouton>} />
         ) : (
-          <EtatVide className="mt-6" parFiltre={effacer} titre="Aucun appel d’offres en cours ne passe ce filtre" />
+          <EtatVide className="mt-6 md:w-fit" parFiltre={effacer} titre="Aucun appel d’offres en cours ne passe ce filtre" />
         )
       )}
 
@@ -208,7 +242,7 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
       {statutPour && <MettreAJourStatut projet={statutPour} ouvert onOuvert={(o) => { if (!o) setStatutPour(null) }} />}
       <DialogueConfirmation ouvert={aSupprimer !== null} onOuvert={(o) => { if (!o) setASupprimer(null) }} danger
         titre={aSupprimer ? `Supprimer « ${aSupprimer.name} » ?` : 'Supprimer cet appel d’offres ?'}
-        description="Le dossier, son analyse et le mémoire de cet appel d’offres sont supprimés. Cette action ne s’annule pas."
+        description="Le dossier, son analyse et le mémoire de cet appel d’offres seront supprimés. Cette suppression est définitive."
         libelleConfirmer="Supprimer" libelleEnCours="Suppression…" enCours={suppression} erreur={erreurSuppression}
         onConfirmer={() => { if (aSupprimer) supprimer(aSupprimer) }} />
     </>

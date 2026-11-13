@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
@@ -31,3 +32,16 @@ export const useUIStore = create<UIState>()(
     { name: 'ui-prefs', partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed, animerFond: s.animerFond }) },
   ),
 )
+
+/**
+ * L'écran a une action principale qui n'est pas affichée en ce moment (chargement, recherche) : « Nouvel appel d'offres »
+ * de la barre reste au trait (jury, tour 3 : l'aplat sautait sur ce bouton pendant le squelette, puis revenait à l'écran).
+ */
+export function useAplatReserve(actif = true): void {
+  const declarer = useUIStore((s) => s.declarerAplat)
+  useEffect(() => {
+    if (!actif) return undefined
+    declarer(1)
+    return () => declarer(-1)
+  }, [actif, declarer])
+}

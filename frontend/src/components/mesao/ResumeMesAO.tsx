@@ -28,7 +28,7 @@ export function ResumeMesAOCartes({ comptes, resume, quota }: {
           <>
             {/* au téléphone, un fait par ligne : aucun point médian en fin de ligne */}
             <span aria-hidden className="max-md:hidden">·</span>
-            <span>Unités du mois{'\u00a0'}: <strong className="font-semibold text-fg">{unites.utilisees} sur {unites.total}</strong></span>
+            <span>Unités utilisées ce mois-ci{'\u00a0'}: <strong className="font-semibold text-fg">{unites.utilisees} sur {unites.total}</strong></span>
             <span aria-hidden className="max-md:hidden">·</span>
             <Link to="/settings/billing" className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>Voir l’abonnement</Link>
           </>
@@ -42,12 +42,13 @@ export function ResumeMesAOCartes({ comptes, resume, quota }: {
       <CaseResume etiquette="Remise sous 7 jours" valeur={resume.remise7.n} rien="Aucune" precision={resume.remise7.n > 0 ? listeDates(resume.remise7.dates) : undefined} />
       {/* les unités : la case n'apparaît qu'une fois le quota lu (jamais « Aucune » pendant la lecture) */}
       {unites && (
-        <CaseResume etiquette="Unités du mois"
+        <CaseResume etiquette="Unités utilisées ce mois-ci"
           valeur={unites.utilisees}
           unite={`sur ${unites.total}`}
           rien="Aucune"
-          precision={unites.utilisees === 0 ? `${unites.total} disponibles ce mois-ci` : `${unites.restantes} restantes`}
-          action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir l’abonnement</Link>} />
+          precision={unites.utilisees === 0 ? `${unites.total} disponibles` : `${unites.restantes} restantes`}
+          // rien d'utilisé : pas de lien, la case rejoint la ligne de faits sous la bande (jury, tour 3 : deux cases « Aucune » sur trois)
+          action={unites.utilisees === 0 ? undefined : <Link to="/settings/billing" className={classesBouton('lien')}>Voir l’abonnement</Link>} />
       )}
     </BandeCases>
   )

@@ -46,8 +46,8 @@ export interface PropsBandeAO {
 
 // Les colonnes ne dépendent pas du contenu d'une rangée (jury, tour 3 : la largeur du bouton décalait le fil et la date
 // d'une rangée à l'autre) : le nom prend le reste, le fil, la remise et l'action ont leur largeur.
-const COLONNES = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_12.5rem_auto] lg:items-center xl:grid-cols-[minmax(0,1fr)_15rem_13rem_17.5rem]'
-const RANGEE = 'grid min-w-0 gap-x-6 gap-y-3 border-t border-bord px-5 py-4 first:border-t-0 sm:px-6'
+export const COLONNES_BANDE = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_12.5rem_auto] lg:items-center xl:grid-cols-[minmax(0,1fr)_15rem_13rem_17.5rem]'
+export const RANGEE_BANDE = 'grid min-w-0 gap-x-6 gap-y-3 border-t border-bord px-5 py-4 first:border-t-0 sm:px-6'
 
 export default function BandeAO({ projets, maintenant = new Date(), onStatut, onNouveau }: PropsBandeAO) {
   const enCours = aoDansEtat(projets, 'en_cours', maintenant)
@@ -81,7 +81,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
               const sousTitre = [acheteurCourt(p.maitre_ouvrage), p.selected_lot_name].filter(Boolean).join(' · ')
               const traitement = enTraitement(p)
               return (
-                <li key={p.id} data-ao={p.id} className={`${RANGEE} ${COLONNES}`}>
+                <li key={p.id} data-ao={p.id} className={`${RANGEE_BANDE} ${COLONNES_BANDE}`}>
                   <div className="min-w-0">
                     <Link to={`/projects/${p.id}`} {...precharger(p)} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{lierNumero(p.name)}</span></Link>
                     {sousTitre && <p className="mt-0.5 line-clamp-2 break-words text-sm text-fg-2">{sousTitre}</p>}

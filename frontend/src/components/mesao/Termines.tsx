@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Ban, ChevronDown, Send, Trophy, X, type LucideIcon } from 'lucide-react'
 import { Bouton, classesBouton } from '@/components/ui/bouton'
-import { TitreSection } from '@/components/ui/page'
 import { PastilleEtat } from '@/components/ui/pastille'
 import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
 import { echeanceAO, momentLimite } from '@/lib/echeance'
@@ -54,22 +53,25 @@ export function Termines({ projets, ouvertParDefaut = false, ...gestes }: { proj
   const parStatut = repartitionTermines(projets)
   return (
     <section aria-labelledby="titre-termines" className="mt-10 max-md:mt-7.5">
-      <TitreSection id="titre-termines" action={(
+      {/* replié : une rangée sur sa surface, le titre, le décompte et « Afficher » ensemble (jury, tour 3 : un texte nu sur la
+          page, le bouton à 1 100 px du titre, « Terminés 1 · 1 gagné ») ; ouvert : le titre de section du tableau */}
+      <div className={cn('flex flex-wrap items-center justify-between gap-x-4 gap-y-1', ouvert ? 'titre-section' : 'rounded-carte border border-bord bg-surface-0 py-1.5 pl-5 pr-2 shadow-card max-md:pl-4')}>
+        <h2 id="titre-termines" className="text-lg font-semibold text-fg">
+          Terminés{ouvert && <> <span className="font-normal text-fg-3">{projets.length}</span></>}
+          {!ouvert && (
+            <span data-decompte-termines="" className="text-sm font-normal text-fg-2">
+              {' · '}{parStatut.map(([statut, n]) => {
+                const premier = projets.find((p) => p.status === statut)
+                return premier ? `${n} ${lectureAO(premier, gestes.maintenant).libelle.toLowerCase()}` : null
+              }).filter(Boolean).join(' · ')}
+            </span>
+          )}
+        </h2>
         <Bouton variante="discret" aria-expanded={ouvert} aria-controls="liste-terminees" onClick={() => setOuvert((v) => !v)}>
           {ouvert ? 'Replier' : 'Afficher'}
           <ChevronDown aria-hidden strokeWidth={1.75} className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', ouvert && 'rotate-180')} />
         </Bouton>
-      )}>
-        Terminés <span className="font-normal text-fg-3">{projets.length}</span>
-        {!ouvert && (
-          <span data-decompte-termines="" className="ml-3 text-sm font-normal text-fg-2">
-            {parStatut.map(([statut, n]) => {
-              const premier = projets.find((p) => p.status === statut)
-              return premier ? `${n} ${lectureAO(premier, gestes.maintenant).libelle.toLowerCase()}` : null
-            }).filter(Boolean).join(' · ')}
-          </span>
-        )}
-      </TitreSection>
+      </div>
       {ouvert && (
         <div id="liste-terminees">
           <Tableau libelle="Appels d’offres terminés" colonnes={colonnesTermines(gestes, precharger)} lignes={projets} cle={(p) => p.id} vide={null} />
