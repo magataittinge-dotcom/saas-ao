@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { heureParis, jourCourtParis, jourLongParis } from '@/lib/dateParis'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -198,6 +198,11 @@ export default function StepExport({ project }: Props) {
   const { data: score } = useQuery(lectureScoreExport<{ conformes: number; total: number }>(project.id))
   // 1.16 — un livrable qui ne se télécharge pas : on le dit, avec « Réessayer »
   const [echec, setEchec] = useState<{ lieu: Lieu; message: string; relancer: () => void } | null>(null)
+  // Le dossier n'a pas pu être téléchargé : son message est sous l'en-tête ; la page y revient (jury, tour 3 : au téléphone,
+  // le bouton est dans la barre du bas, et le message restait à demi sous la barre du haut).
+  useEffect(() => {
+    if (echec?.lieu === 'dossier') document.querySelector('main [data-message="erreur"]')?.scrollIntoView({ block: 'center' })
+  }, [echec])
   // Avertissements du dernier ZIP (pièces écartées, livrables à finaliser)
   const [avertissementsZip, setAvertissementsZip] = useState<string[] | null>(null)
 
@@ -436,7 +441,8 @@ export default function StepExport({ project }: Props) {
   // le seul bouton « Télécharger le dossier » de la page ; les autres disent ce qu'ils téléchargent.
   const boutonTelecharger = (
     <Bouton variante={boutons.telecharger} onClick={telechargerDossier} disabled={dossierVide} enCours={isExportingZip} libelleEnCours="Préparation du dossier…" className="max-[768px]:flex-1">
-      <Archive aria-hidden />
+      {/* au téléphone, deux boutons se partagent la barre : le libellé seul, il garde ses marges */}
+      <Archive aria-hidden className="max-[768px]:hidden" />
       Télécharger le dossier
     </Bouton>
   )
@@ -504,10 +510,13 @@ export default function StepExport({ project }: Props) {
         )}
         message={messageEnTete ?? undefined}
         resume={<BandeResume libelle="L’état du dossier" cartes={[
-          // une case sans valeur ne dessine pas de jauge vide (« Prêtes : Aucune » le dit déjà)
-          ...cartesPieces(piecesVisibles, echeance).map((c) => ({ ...c, rien: 'Aucune' as const, jauge: c.valeur === '0' ? undefined : c.jauge })),
+          // Chaque fait une fois (jury, tour 3) : seules les cases qui comptent quelque chose (plus de « Prêtes : aucune ·
+          // À renouveler : aucune » sous la bande) ; le nombre de pièces à joindre se dit sans pastille (le message du dessus
+          // et la liste le disent) ; les passages à compléter se lisent dans la section du mémoire, à côté de ses boutons.
+          ...cartesPieces(piecesVisibles, echeance).filter((c) => c.valeur !== '0')
+            .map((c) => ({ ...c, rien: 'Aucune' as const, etat: c.libelle === 'À joindre' ? 'neutre' as const : c.etat })),
           { libelle: 'Mémoire technique', valeur: mem ? `${mem.estimated_pages} pages` : 'À rédiger', etat: memoireOk && !passages ? 'pret' as const : 'a-verifier' as const,
-            detail: passages || (mem ? `Version ${mem.version}` : undefined) },
+            detail: mem ? `Version ${mem.version}, rédigée le ${jourCourtParis(mem.generated_at)}` : undefined },
         ]} />}
         barre={bottomBar}
       >
@@ -517,14 +526,19 @@ export default function StepExport({ project }: Props) {
           {piecesVisibles.length === 0 ? (
             <p className="text-sm text-fg-2">La liste des pièces apparaît après l’analyse du <Sigle code="RC" />.</p>
           ) : (
-            <Carte sansMarge>
-              {/* Un état, dit une fois, puis ses pièces (jury, tour 1 : quatorze fois « À joindre » ne triait rien). */}
+            <Carte sansMarge className="overflow-hidden">
+              {/* Un état, dit une fois, puis ses pièces (jury, tour 1 : quatorze fois « À joindre » ne triait rien). La carte
+                  coupe ce qui dépasse de ses coins (tour 3 : la bande du premier état sortait à angles droits). */}
               <ul aria-label="Pièces demandées">
                 {groupesPieces.map((g) => (
                   <li key={g.lu.texte ?? g.lu.etat} className="border-t border-bord first:border-t-0">
-                    <div className="flex items-center gap-2 bg-surface-1 px-4 py-2 sm:px-5">
+                    <div className="flex min-h-11 items-center gap-2 bg-surface-1 px-4 sm:px-5">
                       <EtatElement etat={g.lu.etat} texte={g.lu.texte} perimee={g.lu.perimee} />
                       <span className="text-xs text-fg-3">· {g.pieces.length}</span>
+                      {/* le geste de la liste, une fois par état : ces pièces se traitent à l'étape Pièces */}
+                      {g.lu.etat !== 'pret' && boutons.reunirPieces && (
+                        <Bouton variante="lien" className="ml-auto" onClick={allerAuxPieces}>Les réunir à l’étape Pièces</Bouton>
+                      )}
                     </div>
                     <ul>
                       {g.pieces.map((item) => (
@@ -544,7 +558,6 @@ export default function StepExport({ project }: Props) {
 
         {/* ── Mémoire technique ── */}
         <SectionEtape titre="Mémoire technique">
-          {echecIci('formats')}
           <Carte className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
             {mem ? (
               <>
@@ -570,6 +583,8 @@ export default function StepExport({ project }: Props) {
               </>
             )}
           </Carte>
+          {/* l'échec d'un format se lit sous ses boutons : il ne sépare plus le titre de sa carte (jury, tour 3) */}
+          {echecIci('formats')}
         </SectionEtape>
 
         {/* ── Tableau des prix : vérification de forme seulement ── */}
@@ -636,7 +651,8 @@ export default function StepExport({ project }: Props) {
         </SectionEtape>
 
         {/* ── Exigences relevées, confirmées par l'utilisateur (export « 0/N ») ── */}
-        <SectionEtape titre="Exigences relevées" description={resumeDesExigences}>
+        <SectionEtape titre="Exigences relevées"
+          description={detail.compliance_items.length > 0 ? `${resumeDesExigences}. Cochez celles que vous avez vérifiées, ou confirmez tout un groupe.` : resumeDesExigences}>
           {echecIci('exigences')}
           <Carte sansMarge>
             <ExigencesDuDossier

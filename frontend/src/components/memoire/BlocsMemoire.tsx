@@ -4,6 +4,7 @@ import {
   cellulesLigneTable, estNumerotee, estSeparateurTable, htmlFragments, lireFragments, niveauTitre, prefixeDe, remplacerCellule, retraitPuce,
   texteDeLaSaisie, type Bloc, type NoeudLu,
 } from '@/lib/memoireBlocs'
+import { PARTIES, TITRES_PARTIES, TITRES_PARTIES_SOMMAIRE } from '@/lib/memoireSections'
 
 /** Ce qu'un bloc dit à l'éditeur : « on écrit ici » (ses nouvelles lignes), « on y entre », « on en sort ». */
 export interface GestesBloc {
@@ -93,7 +94,18 @@ function Saisie({
   )
 }
 
-const ZONE = '-mx-2 px-2 py-0.5 hover:bg-surface-1 focus:bg-surface-1'
+// La zone où l'on écrit : un trait fin à la couleur de l'action, pas un aplat (jury, tour 3 : l'aplat gris-bleu se lisait
+// comme une sélection du navigateur). Le paragraphe garde ce trait tant que la barre de réécriture agit sur lui (`ACTIF`).
+const ZONE = '-mx-2 px-2 py-0.5 hover:bg-surface-1 focus:bg-surface-0 focus:ring-1 focus:ring-accent-ring'
+const ACTIF = 'bg-surface-0 ring-1 ring-accent-ring hover:bg-surface-0'
+
+/** Les titres qui découpent le texte enregistré sont en capitales (« # PRÉAMBULE », « # PARTIE A — … ») : l'écran les écrit
+ *  comme le document lu (« Préambule », « Partie A — Présentation générale »). Le texte enregistré ne change pas. */
+function titreDePartieLisible(texte: string): string {
+  if (texte === 'PRÉAMBULE') return 'Préambule'
+  const partie = PARTIES.find((p) => TITRES_PARTIES[p] === texte)
+  return partie ? TITRES_PARTIES_SOMMAIRE[partie] : texte
+}
 
 /** Un paragraphe : Entrée ouvre un nouveau paragraphe (une ligne vide), Maj + Entrée passe à la ligne. */
 const rangerParagraphe = (texte: string): string[] => texte.replace(/\n{3,}/g, '\n\n').replace(/\n+$/, '').split('\n')
@@ -160,7 +172,7 @@ function BlocMemoireBrut({ bloc, actif, onSaisie, onEntree, onSortie }: { bloc: 
     case 'structure': {
       const texte = ligne.slice(prefixeDe(ligne).length)
       return niveauTitre(ligne) === 1
-        ? <h2 data-bloc="partie" className="mb-6 mt-2 font-sans text-sm font-semibold text-fg-3">{texte}</h2>
+        ? <h2 data-bloc="partie" className="mb-6 mt-2 font-sans text-sm font-semibold text-fg-2">{titreDePartieLisible(texte)}</h2>
         : <h3 data-bloc="section" className="mb-3 mt-10 font-memoire text-xl font-semibold leading-snug text-fg">{texte}</h3>
     }
     case 'titre': {
@@ -181,7 +193,7 @@ function BlocMemoireBrut({ bloc, actif, onSaisie, onEntree, onSortie }: { bloc: 
           <span aria-hidden="true" className={cn('shrink-0 select-none py-0.5 text-fg-3', numero ? 'min-w-5 text-right' : 'w-3 text-center')}>{numero ?? '•'}</span>
           <Saisie
             texte={ligne.slice(prefixe.length)} nom="Ligne de liste" entree="ligne" {...gestes}
-            className={cn(ZONE, 'flex-1 text-fg-2')}
+            className={cn(ZONE, 'flex-1 text-fg', actif && ACTIF)}
             onSaisie={(t) => {
               const nettes = t.split('\n').map((l) => l.trim()).filter(Boolean)
               onSaisie(bloc.id, nettes.length ? nettes.map((l) => `${prefixe}${l}`) : [''])
@@ -196,7 +208,7 @@ function BlocMemoireBrut({ bloc, actif, onSaisie, onEntree, onSortie }: { bloc: 
       return (
         <Saisie
           texte={bloc.lignes.join('\n')} nom="Paragraphe" entree="paragraphe" {...gestes}
-          className={cn(ZONE, 'my-3 text-fg-2')}
+          className={cn(ZONE, 'my-3 text-fg', actif && ACTIF)}
           onSaisie={(t) => onSaisie(bloc.id, rangerParagraphe(t))}
         />
       )
