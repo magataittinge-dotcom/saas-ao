@@ -14,8 +14,9 @@ export function FilSeptEtapes({ className }: { className?: string }) {
   return (
     <ol aria-label="Les sept étapes d’un appel d’offres" className={cn('grid grid-cols-7', className)}>
       {FIL_ETAPES.map((etape, i) => (
-        <li key={etape} className="relative flex min-w-0 flex-col items-center gap-1.5 text-center">
-          {i > 0 && <span aria-hidden className="absolute right-[calc(50%+18px)] top-3.5 h-px w-[calc(100%-36px)] bg-bord-2" />}
+        <li key={etape} className="relative flex min-w-0 flex-col items-start gap-1.5">
+          {/* le premier rond est au bord gauche, sous le titre qui le précède, comme le fil du site (jury, tour 3 : deux dessins du même composant) */}
+          {i > 0 && <span aria-hidden className="absolute right-[calc(100%+4px)] top-3.5 h-px w-[calc(100%-36px)] bg-bord-2" />}
           <span aria-hidden className="relative grid size-7 place-items-center rounded-pilule border border-bord-2 bg-surface-0 text-xs font-medium text-fg-2">{i + 1}</span>
           <span className="text-xs font-medium text-fg max-sm:text-micro">{etape}</span>
         </li>

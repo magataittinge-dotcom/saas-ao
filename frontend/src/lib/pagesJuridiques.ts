@@ -63,13 +63,27 @@ export type BlocJuridique = { type: 'texte'; texte: string } | { type: 'definiti
  * l'apostrophe droite devient courbe, le pictogramme d'alerte en couleur part (le ton interdit l'alarme, la phrase suffit),
  * et la mention d'attente est balisée pour être dessinée comme un champ et non comme un mot de la phrase.
  */
+/**
+ * Ce que la mise en page doit au texte sans le récrire (jury, tour 3) : une adresse électronique est un lien, et une référence
+ * d'article (« art. L. 123-22 », « art. 6.1.b ») ne se coupe ni à son espace ni à son trait d'union.
+ */
+export function affinerTexte(texte: string): string {
+  return texte
+    .replace(/(^|[\s(])([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/gm, (_t, avant: string, adresse: string) => avant + '[' + adresse + '](mailto' + ':' + adresse + ')')
+    .replace(/\bart\. (?:[LRD]\. )?\d[\d.-]*\w*/g, (ref) => ref.replace(/ /g, '\u00a0').replace(/-/g, '\u2011'))
+}
+
 export function mettreEnPage(corps: string): { miseAJour: string | null; corps: string } {
   const m = corps.match(MISE_A_JOUR)
   const sansDate = m ? corps.replace(MISE_A_JOUR, '') : corps
   const propre = sansDate
     .replace(/(?<=\p{L})'(?=\p{L})/gu, '’')
     .replace(/\u26A0\uFE0F?\s*/g, '')
-    .replace(new RegExp(MENTION_EN_ATTENTE, 'gi'), (mention) => `[${mention}](#en-attente)`)
+    // devant une ponctuation, le champ se resserre à droite (jury, tour 3 : « [champ] , cf. » se lisait avec une espace)
+    .replace(new RegExp(MENTION_EN_ATTENTE, 'gi'), (mention, ...reste) => {
+      const [position, tout] = reste.slice(-2) as [number, string]
+      return `[${mention}](#en-attente${/^[,.;)]/.test(tout.slice(position + mention.length)) ? '-ponctuation' : ''})`
+    })
   return { miseAJour: m ? m[1].replace(/\s*:\s*/, ' : ').trim() : null, corps: propre }
 }
 

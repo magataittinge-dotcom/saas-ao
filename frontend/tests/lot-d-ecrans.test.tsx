@@ -187,7 +187,9 @@ test('adresse inconnue : un écran, plus un renvoi muet ; connecté, on reste da
   }
   // jury, tour 1 : un visiteur n'a pas de dossier ; « Se connecter » est dans l'en-tête du site ; le bas de l'écran est composé
   assert.ok(visiteur.includes('href="/"') && !visiteur.includes('Vos dossiers') && connecte.includes('Vos dossiers ne sont pas touchés'))
-  assert.ok(visiteur.includes('data-synorix-parle') && visiteur.includes('href="/#comment"') && !connecte.includes('data-synorix-parle'))
+  // jury, tour 3 : le slogan recollé sous un filet meublait, et « Voir comment ça marche » menait à la même page : un seul chemin, et le fil d'aurore
+  assert.ok(!visiteur.includes('data-synorix-parle') && !visiteur.includes('href="/#comment"') && !connecte.includes('data-synorix-parle'))
+  assert.ok(visiteur.includes('fil-aurore') && connecte.includes('fil-aurore'), 'la signature des écrans d’état')
   assert.match(lire('src/App.tsx'), /<CoquillePublique nav=\{<NavSite \/>\}><AdresseInconnue connecte=\{false\} \/>/)
   assert.ok(connecte.includes('href="/dashboard"') && connecte.includes('href="/projects"') && !connecte.includes('href="/"'))
   const ao = rendre(<AOIntrouvable />)
@@ -232,14 +234,15 @@ test('hors ligne : « Connexion interrompue » ; un morceau qui ne se charge pas
 })
 
 // ─── Premiers jours ───
-test('Mes AO sans AO : la page du système, un seul geste (déposer), Synorix dit le partage des rôles, plus de vignette ni de capitales', () => {
+test('Mes AO sans AO : la page du système, un seul geste (déposer), aligné à gauche ; le partage des rôles est dit sous « Ensuite, sept étapes », sans visage (jury, tour 3)', () => {
   const html = rendre(<VideMesAO />)
   assert.ok(/<h1[^>]*>Mes appels d’offres<\/h1>/.test(html))
   assert.equal(nb(html, /<h1/g), 1)
   assert.equal(nb(html, /bg-accent-fill/g), 1)
   assert.ok(html.includes('Choisir des fichiers'))   // FIN-B1 : la zone accepte plusieurs fichiers à la fois
-  assert.equal(nb(html, /data-synorix-parle/g), 1)
-  assert.ok(html.includes(`Synorix lit et rédige${NB}; vous décidez et vous déposez.`))
+  assert.equal(nb(html, /data-synorix-parle/g), 0, 'le slogan n’est pas une phrase de Synorix sur cet écran')
+  assert.ok(html.includes(`Synorix lit et rédige${NB}; vous décidez et vous déposez.`) && html.includes('Ensuite, sept étapes'))
+  assert.doesNotMatch(html.slice(html.indexOf('data-zone-depot'), html.indexOf('Ensuite, sept étapes')), /text-center|place-items-center|justify-items-center/, 'la zone de dépôt part du bord gauche')
   const src = sansCommentaires(lire('src/components/mesao/VideMesAO.tsx'))
   assert.doesNotMatch(src, /uppercase|VisagePetit|rounded-\[|text-\[/)
 })

@@ -8,6 +8,7 @@ import ListeAvis, { type PropsListeAvis } from '@/components/veille/ListeAvis'
 import CarteAvis from '@/components/veille/CarteAvis'
 import FiltresVeille, { nombreFiltres, resumeChoix } from '@/components/veille/FiltresVeille'
 import { FILTRES_PAR_DEFAUT, basculerValeur, jourMois, urlSure } from '@/lib/veille'
+import { jourCourt } from '@/lib/mesAO'
 import { lire, sansCommentaires } from './outils/sources'
 import type { AvisVeille } from '@/services/veille'
 
@@ -59,7 +60,7 @@ test('le délai s’affiche en J−x, avec la date limite en jour et mois', () =
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1', { date_limite: plusJours(12) }), avis('2', { date_limite: plusJours(3) })], total: 2 })} />)
   assert.ok(html.includes('J−12'))
   assert.ok(html.includes('J−3'))
-  assert.ok(html.includes(jourMois(plusJours(12))))
+  assert.ok(html.includes(jourCourt(new Date(plusJours(12)))), 'la date comme sur Mes AO : « 16 nov. », jamais « 16/11 »')
   assert.equal(jourMois('2026-11-12'), '12/11')
   assert.equal(jourMois(null), '')
 })
@@ -73,7 +74,8 @@ test('la pastille « Nouveau » n’apparaît que sur les avis nouveaux', () =
 test('« Voir l’avis » : lien externe sûr ; « Créer l’AO » : un bouton par avis', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1'), avis('2')], total: 2 })} />)
   assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) ?? []).length, 2)
-  assert.equal((html.match(/Créer l’AO/g) ?? []).length, 2)
+  assert.equal((html.match(/Préparer cet AO/g) ?? []).length, 2)
+  assert.ok(!html.includes('Créer l’AO'), 'un seul verbe pour un avis (jury, tour 3)')
   assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 0, 'aucun aplat dans la liste des avis : l’action pleine de l’Accueil est celle du prochain AO')
   assert.ok(html.includes('s’ouvre dans un nouvel onglet'))
   const piege = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('9', { url_avis: 'javascript:alert(1)' })], total: 1 })} />)
@@ -88,7 +90,7 @@ test('« Voir l’avis » : lien externe sûr ; « Créer l’AO » : un 
 test('« Créer l’AO » remonte l’identifiant de l’avis', () => {
   const recus: string[] = []
   const el = CarteAvis({ avis: avis('42'), libellesMetiers: {}, nomsDepartements: NOMS, onCreerAO: (id) => recus.push(id) }) as ReactElement
-  const bouton = trouver(el, (e) => typeof e.props.onClick === 'function' && texteDe(e.props.children).includes('Créer'))
+  const bouton = trouver(el, (e) => typeof e.props.onClick === 'function' && texteDe(e.props.children).includes('Préparer'))
   assert.ok(bouton, 'bouton trouvé')
   ;(bouton!.props.onClick as () => void)()
   assert.deepEqual(recus, ['42'])

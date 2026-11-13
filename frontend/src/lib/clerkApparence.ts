@@ -46,7 +46,7 @@ export function construireApparence(lire: (jeton: string) => string): ApparenceC
       formFieldInput: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ !text-sm max-[768px]:!text-saisie [@media(pointer:coarse)]:!text-saisie placeholder:!text-fg-3 focus:!border-accent-ring aria-[invalid=true]:!border-rouge-mark',
       formFieldLabel: '!text-xs !font-medium',
       formFieldHintText: '!hidden',
-      formFieldErrorText: '!text-xs !text-rouge-ink [&>svg]:!hidden',
+      formFieldErrorText: '!text-sm !text-rouge-ink [&>svg]:!hidden',
       formFieldInputShowPasswordButton: '!min-h-11 !min-w-11',
       socialButtonsBlockButton: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ',
       socialButtonsBlockButtonText: '!text-sm !font-medium !text-fg',

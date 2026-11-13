@@ -9,7 +9,6 @@ import { Page, TitreSection } from '@/components/ui/page'
 import { Carte } from '@/components/ui/carte'
 import { classesBouton } from '@/components/ui/bouton'
 import { PastilleEtat } from '@/components/ui/pastille'
-import { SynorixParle } from '@/components/ui/synorix-parle'
 import { Squelette } from '@/components/ui/squelette'
 
 // Les avis de la veille (et leurs données) ne sont chargés que sur cet écran vide, à la demande.
@@ -35,22 +34,26 @@ export function VideMesAO() {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         {/* la zone de dépôt prend la hauteur de la carte voisine : les deux bords bas se répondent */}
         <div className="flex min-w-0 flex-col">
-          <ZoneDepotAO geste className="flex-1"
+          <ZoneDepotAO geste aGauche className="flex-1"
             titre="Déposez le dossier de l’acheteur"
             precision="Le ZIP complet de préférence : Synorix reconnaît chaque pièce et chaque lot. PDF ou ZIP." />
           {offert && <PastilleEtat sens="vert" className="mt-4">Votre premier dossier est offert</PastilleEtat>}
         </div>
 
-        <Carte className="flex min-w-0 flex-col">
-          <SynorixParle>{PARTAGE_DES_ROLES}</SynorixParle>
-          <FilSeptEtapes className="mt-6" />
-          <div className="mt-6 border-t border-bord pt-5">
+        {/* une surface, deux rangées séparées par un filet : ce qui suit le dépôt, puis Mon entreprise (jury, tour 3 : le slogan en plus en faisait un fourre-tout) */}
+        <Carte sansMarge className="flex min-w-0 flex-col">
+          <div className="p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-fg">Ensuite, sept étapes</h2>
+            <p className="mt-1.5 text-sm text-fg-2">{PARTAGE_DES_ROLES}</p>
+            <FilSeptEtapes className="mt-5" />
+          </div>
+          <div className="flex flex-1 flex-col border-t border-bord p-5 sm:p-6">
             <h2 className="text-lg font-semibold text-fg">Mon entreprise</h2>
             <p className="mt-1.5 text-sm text-fg-2">Identité, moyens et certifications : renseignés une fois, repris dans chaque mémoire.</p>
+            <Link to="/company" className={classesBouton('secondaire', 'mt-5 self-start max-sm:w-full')}>
+              Compléter Mon entreprise<ArrowRight aria-hidden strokeWidth={1.75} />
+            </Link>
           </div>
-          <Link to="/company" className={classesBouton('secondaire', 'mt-5 self-start max-sm:w-full')}>
-            Compléter Mon entreprise<ArrowRight aria-hidden strokeWidth={1.75} />
-          </Link>
         </Carte>
       </div>
 
