@@ -38,7 +38,8 @@ test('la liste des lots ne marque que l\'exception ; « tout le dossier » ne di
   assert.match(douteux, /data-etat="a-verifier"/)
   assert.match(douteux, /À vérifier/)
   const tout = renderToStaticMarkup(<LotCard lot={{ id: 'all', nom: 'Analyser l’ensemble du dossier (tous les lots)' }} selected={false} onSelect={rien} pieces={[{ file_name: 'a.pdf' }, { file_name: 'b.pdf' }]} />)
-  assert.match(tout, /2 pièces lues dans le dossier/)
+  // COR-B1 : « dans le dossier » est déjà dit par l'intitulé de la rangée ; la rangée tient dans la carte à 390 px
+  assert.match(tout, /2 pièces lues</)
   assert.doesNotMatch(tout, /pour ce lot/)
   // une liste (une surface, des filets), plus une grille de cartes ; plus de bande de cases avec une jauge
   assert.match(lots, /<ListeLots>\{lots\.map\(carteLot\)\}<\/ListeLots>/)

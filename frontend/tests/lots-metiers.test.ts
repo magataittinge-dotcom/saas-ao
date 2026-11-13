@@ -44,7 +44,9 @@ test('l’écran Lots passe par le gabarit : « Lire ce dossier » grisé sans c
   assert.match(code, /\{aOuvrir \? 'Ouvrir ce lot' : libelleBoutonLire\(nbChoisis, lots\.length\)\}/)
   assert.match(code, /const lectureBloquee = isAnalyzing \|\| isSuccess \|\| !peutLancer\(selectedIds\)/)
   assert.match(code, /<Bouton variante="principal" onClick=\{handleLaunch\} disabled=\{lectureBloquee\}>/)
-  assert.match(code, /cout=\{project\.lots_analyses\?\.includes\(lot\.id\) \? 'Analysé' : libelleUnites\(1\)\}/, 'un lot déjà lu ne coûte plus rien à rouvrir (E2E-2)')
+  // COR-B1 : l'état « Analysé » se dessine (icône et mot) à la place du coût
+  assert.match(code, /analyse=\{project\.lots_analyses\?\.includes\(lot\.id\)\}/, 'un lot déjà lu ne coûte plus rien à rouvrir (E2E-2)')
+  assert.match(code, /\{analyse \? \(\s*<span data-etat="analyse"[\s\S]*?Analysé\s*<\/span>\s*\) : cout &&/)
   assert.match(code, /cout=\{libelleUnites\(lots\.length\)\}/)
   assert.match(code, /<SectionEtape titre="Dans vos métiers"/)
   assert.match(code, /autres\.some\(\(l\) => selectedIds\.has\(l\.id\)\)/, 'un lot choisi parmi les autres n’est jamais caché')
