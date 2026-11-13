@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
 import SceneVisage from '@/components/entreprise/SceneVisage'
 import { ContexteVisage } from '@/components/entreprise/ContexteVisage'
@@ -56,6 +56,7 @@ function SqueletteEntreprise() {
 export default function Company() {
   // /company?rubrique=moyens (Équipe) ou =certifications (Mes références) ouvre la rubrique demandée, même si l'écran est déjà affiché.
   const { search } = useLocation()
+  const navigate = useNavigate()
   const demandee = rubriqueDepuisRecherche(search)
   const [rubrique, setRubrique] = useState<RubriqueId>(demandee ?? 'identite')
   useEffect(() => { if (demandee) setRubrique(demandee) }, [demandee])
@@ -73,7 +74,8 @@ export default function Company() {
   // Choisir une rubrique : elle s'ouvre et le visage joue l'éclair.
   const choisir = (r: RubriqueId) => { setRubrique(r); visage.current?.eclair() }
   // Le lien de la phrase de Synorix ramène en plus le formulaire à l'écran.
-  const choisirDepuisLaPhrase = (r: RubriqueId) => { choisir(r); setADefiler((n) => n + 1) }
+  // B6 : « La renseigner » ouvre aussi le champ de l'information (/company?rubrique=…&champ=…, repris par useFocusChamp).
+  const choisirDepuisLaPhrase = (r: RubriqueId, lien?: string) => { choisir(r); setADefiler((n) => n + 1); if (lien) navigate(lien, { replace: true }) }
   useEffect(() => {
     if (aDefiler === 0) return
     document.querySelector('[role="tabpanel"]')?.scrollIntoView({ behavior: mouvementReduit ? 'auto' : 'smooth', block: 'start' })
