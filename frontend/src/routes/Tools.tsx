@@ -175,7 +175,7 @@ export default function Tools() {
 
       {/* La place du résultat est dessinée dès l'ouverture : ce que le calcul rendra, avec un tiret tant qu'il n'est pas fait. */}
       {!resultat && (
-        <section aria-label="Résultat, avant le calcul" data-resultat-attendu="" className="max-w-xl">
+        <section aria-label="Résultat, avant le calcul" data-resultat-attendu="" className="mt-10 max-w-xl max-md:mt-[30px]">
           <TitreSection>Résultat</TitreSection>
           <dl className="divide-y divide-bord border-y border-bord text-sm">
             {['Montant TTC du marché', 'Retenue de garantie', 'Pénalités de retard', 'Intérêts moratoires'].map((ligne) => (

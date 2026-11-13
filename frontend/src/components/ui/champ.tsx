@@ -72,10 +72,10 @@ export function ChampDate({ valeur, onChange, className, onBlur, ...props }: Omi
   )
 }
 
-/** « 250000,5 » → « 250 000,5 » (espace fine insécable entre les milliers de la partie entière). */
+/** « 250000,5 » → « 250 000,5 » (espace insécable entre les milliers de la partie entière). */
 export const separerMilliers = (saisie: string): string => {
   const [entier, ...reste] = saisie.split(/(?=[,.])/)
-  return entier.replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f') + reste.join('')
+  return entier.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + reste.join('')
 }
 
 /**
