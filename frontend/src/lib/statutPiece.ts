@@ -19,7 +19,7 @@
 //     (D8222-5 cite l'extrait K ou Kbis sans durée ; service-public F21000).
 
 export type CodeStatutPiece =
-  | 'a-joindre' | 'pret' | 'a-renouveler' | 'a-confirmer'
+  | 'a-joindre' | 'pret' | 'a-renouveler' | 'a-confirmer' | 'a-relire'
   | 'si-concerne' | 'facultatif' | 'attribution' | 'non-concerne'
 
 export interface EntreeStatutPiece {
@@ -29,6 +29,9 @@ export interface EntreeStatutPiece {
   valable_jusqu_au?: string | null
   obligation?: 'obligatoire' | 'si_concerne' | 'facultatif' | string
   phase?: 'depot' | 'attribution' | string
+  /** B7 — formulaire rempli déposé, que le serveur n'a pas pu relier à l'entreprise (ni raison sociale ni SIRET dans son
+   *  texte, scan sans texte, DPGF à lignes sans prix) : le motif est dans `details` (schemas/compliance.py, `a_relire`). */
+  a_relire?: boolean
 }
 
 export interface StatutPiece {
@@ -67,6 +70,8 @@ export function statutPiece(p: EntreeStatutPiece, echeance?: string | null): Sta
   if (p.status === 'expire') {
     return { ...fait('a-renouveler', fin ? `À renouveler — fin de validité le ${dateFr(fin)}` : 'À renouveler', true), classe: 'statut-piece statut-piece--a-renouveler statut-piece--perimee' }
   }
+  // B7 : un formulaire déposé à relire n'a pas de date de validité ; il se relit, puis se remplace au besoin.
+  if (p.a_relire) return { ...fait('a-relire', 'À relire', true), classe: 'statut-piece statut-piece--a-confirmer' }
   if (p.status === 'warning') return fait('a-confirmer', 'Date de validité à confirmer', true)
   if (p.phase === 'attribution') return fait('attribution', 'Pour l’attribution — à préparer', false)
   if (p.obligation === 'facultatif') return fait('facultatif', 'Facultatif', false)

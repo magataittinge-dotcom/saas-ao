@@ -72,24 +72,35 @@ export function ChampDate({ valeur, onChange, className, onBlur, ...props }: Omi
   )
 }
 
+/** « 250000,5 » → « 250 000,5 » (espace insécable entre les milliers de la partie entière). */
+export const separerMilliers = (saisie: string): string => {
+  const [entier, ...reste] = saisie.split(/(?=[,.])/)
+  return entier.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + reste.join('')
+}
+
 /**
  * Nombre : une saisie numérique alignée à droite, chiffres tabulaires, sans les flèches du navigateur ; `unite` à droite du champ.
  * `valeur` et `onChange` parlent en nombre (null = vide) ; la virgule française est admise.
  */
-export function ChampNombre({ valeur, onChange, unite, className, min, max, ...props }: Omit<React.ComponentProps<'input'>, 'value' | 'onChange' | 'type' | 'min' | 'max'> & {
+export function ChampNombre({ valeur, onChange, unite, className, min, max, milliers, onFocus, onBlur, ...props }: Omit<React.ComponentProps<'input'>, 'value' | 'onChange' | 'type' | 'min' | 'max'> & {
   valeur: number | null | undefined
   onChange: (n: number | null) => void
   unite?: string
   min?: number
   max?: number
+  /** Un montant : hors saisie, les milliers sont séparés (« 250 000 ») ; pendant la saisie, le nombre reste tel qu'il est tapé. */
+  milliers?: boolean
 }) {
+  const [enSaisie, setEnSaisie] = React.useState(false)
   const [saisie, setSaisie] = React.useState(valeur == null ? '' : String(valeur).replace('.', ','))
   React.useEffect(() => { setSaisie((s) => (Number(s.replace(',', '.')) === valeur ? s : valeur == null ? '' : String(valeur).replace('.', ','))) }, [valeur])
   return (
     <span className={cn('relative block', className)}>
       <input
         type="text" inputMode="decimal" autoComplete="off"
-        value={saisie}
+        value={milliers && !enSaisie ? separerMilliers(saisie) : saisie}
+        onFocus={(e) => { setEnSaisie(true); onFocus?.(e) }}
+        onBlur={(e) => { setEnSaisie(false); onBlur?.(e) }}
         onChange={(e) => {
           const texte = e.target.value.replace(/[^\d,.-]/g, '')
           setSaisie(texte)

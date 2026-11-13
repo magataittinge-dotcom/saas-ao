@@ -244,11 +244,12 @@ async function etapePieces(ctx) {
   const { page } = ctx
   await page.waitForURL(/\/verification$/, { timeout: 30_000 })
   await controler(ctx, 'pieces', { fil: FIL[3] })
-  // Une pièce déposée : le DC2 inventé, sur la ligne du formulaire de l'acheteur qui le demande.
-  const ligne = page.getByText(PIECE_JOINTE, { exact: true })
-    .locator(`xpath=ancestor::*[.//button[normalize-space()="${VERBES.deposerFormulaire}"]][1]`)
+  // Une pièce déposée : le DC2 inventé, sur la ligne du formulaire de l'acheteur qui le demande. Le bouton dit « Déposer »
+  // à l'écran et porte son nom entier « Déposer le formulaire : <formulaire> » (COR-B1, 7adfc87 : carte dans la gouttière à 390).
+  const deposer = page.getByRole('button', { name: new RegExp(`^${echapper(VERBES.deposerFormulaire)}\\s:\\s${echapper(PIECE_JOINTE)}$`) })
   const envoi = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/api/') && r.status() < 300, { timeout: 30_000 })
-  const [choix] = await Promise.all([page.waitForEvent('filechooser'), ligne.getByRole('button', { name: VERBES.deposerFormulaire }).click()])
+  envoi.catch(() => {})
+  const [choix] = await Promise.all([page.waitForEvent('filechooser'), deposer.click()])
   await choix.setFiles(ctx.dossier.dc2)
   await envoi
   await page.waitForTimeout(1500)

@@ -29,7 +29,7 @@ test('le moment limite est l’heure murale de Paris (été, hiver, sans heure =
 
 test('autour de minuit à Paris (UTC est encore la veille) : J−1 à 23:59, « Aujourd’hui » à 0:00', () => {
   const veille = etatEcheanceParis(REMISE, utc('2026-04-09T21:59:00Z'))   // 23:59 le 9 à Paris
-  assert.deepEqual([veille.etat, veille.jours, veille.libelle], ['proche', 1, 'J−1'])
+  assert.deepEqual([veille.etat, veille.jours, veille.libelle], ['proche', 1, 'J−1 · 1 jour ouvré'])
   const minuit = etatEcheanceParis(REMISE, utc('2026-04-09T22:00:00Z'))   // 0:00 le 10 à Paris, 22:00 le 9 en UTC
   assert.deepEqual([minuit.etat, minuit.jours, minuit.libelle], ['aujourdhui', 0, 'Aujourd’hui, 14h00'])
 })
@@ -39,7 +39,7 @@ test('heure limite comprise, puis « Date de remise passée » ; le lendemain à
   const passee = etatEcheanceParis(REMISE, utc('2026-04-10T12:01:00Z'))
   assert.deepEqual([passee.etat, passee.libelle], ['passee', 'Date de remise passée'])
   assert.equal(etatEcheanceParis(REMISE, utc('2026-04-10T22:30:00Z')).jours, -1)  // 0:30 le 11 à Paris
-  assert.deepEqual(etatEcheanceParis(null), { etat: 'sans_date', jours: null, libelle: '—', limite: null })
+  assert.deepEqual(etatEcheanceParis(null), { etat: 'sans_date', jours: null, ouvres: null, libelle: '—', limite: null })
   assert.equal(etatEcheanceParis(REMISE, utc('2026-03-25T09:00:00Z')).etat, 'a_venir')
 })
 

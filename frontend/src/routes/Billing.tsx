@@ -24,7 +24,8 @@ interface Compteur { used: number; limit: number }
 /** L'état d'un compteur du mois : le mot, le sens (COULEURS.md : vert sous 70 %, ambre de 70 à 90 %, rouge au-delà) et la barre. */
 export function lectureCompteur(c: { used: number; limit: number }): { sens: Sens; mot: string; barre: string; part: number } {
   const part = c.limit > 0 ? Math.min(1, c.used / c.limit) : 1
-  if (c.used >= c.limit) return { sens: 'rouge', mot: 'Tout est utilisé', barre: 'bg-fg-3', part }
+  // une seule couleur pour un seul état (jury, tour 3 : barres ardoise, pastille rouge, anneau rouge) : au plafond, la barre est rouge
+  if (c.used >= c.limit) return { sens: 'rouge', mot: 'Tout est utilisé', barre: 'bg-rouge-mark', part }
   const ton = tonConsommation(part)
   if (ton === 'rouge') return { sens: 'rouge', mot: 'Presque atteint', barre: 'bg-rouge-mark', part }
   if (ton === 'ambre') return { sens: 'ambre', mot: 'À surveiller', barre: 'bg-ambre-mark', part }
@@ -32,8 +33,9 @@ export function lectureCompteur(c: { used: number; limit: number }): { sens: Sen
 }
 
 /**
- * Une unité du mois : son nom, ce qui est utilisé sur ce qui est prévu, l'état en un mot, et la jauge (jamais la couleur seule).
- * Au plafond, la rangée ne porte ni pastille ni rouge : le message de la carte le dit une fois, avec son bouton.
+ * Une unité du mois : son nom, puis LE chiffre (ce qui est utilisé, en grand, « sur 70 » à côté) et la jauge. Tant que tout
+ * va bien, rien d'autre : la pastille ne vient que hors du normal (« À surveiller », « Presque atteint »). Au plafond, la
+ * rangée ne porte pas de pastille : le message de la carte le dit une fois, avec son bouton ; la barre pleine est rouge.
  */
 function JaugeUnite({ libelle, compteur }: { libelle: string; compteur: Compteur }) {
   const l = lectureCompteur({ used: compteur.used, limit: compteur.limit })
@@ -42,12 +44,15 @@ function JaugeUnite({ libelle, compteur }: { libelle: string; compteur: Compteur
   const utilise = Math.min(compteur.used, compteur.limit)
   return (
     <RangeeCarte className="block py-4">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p className="text-sm font-medium text-fg">{libelle}</p>
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-fg-2">{utilise} sur {compteur.limit}</p>
-          {!plein && <PastilleEtat sens={l.sens}>{l.mot}</PastilleEtat>}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+        <div>
+          <p className="text-sm font-medium text-fg-2">{libelle}</p>
+          <p data-compte-unites="" className="mt-0.5 flex items-baseline gap-1.5">
+            <span className="chiffres text-xl font-semibold text-fg">{utilise}</span>
+            <span className="text-sm text-fg-2">sur {compteur.limit}</span>
+          </p>
         </div>
+        {!plein && l.sens !== 'vert' && <PastilleEtat sens={l.sens}>{l.mot}</PastilleEtat>}
       </div>
       <div role="meter" aria-label={`${libelle} du mois`} aria-valuemin={0} aria-valuemax={compteur.limit} aria-valuenow={utilise}
         aria-valuetext={`${utilise} sur ${compteur.limit}${plein ? ', tout est utilisé' : ''}`}
@@ -60,6 +65,11 @@ function JaugeUnite({ libelle, compteur }: { libelle: string; compteur: Compteur
 
 /** « 1 décembre » → « 1er décembre » : le premier du mois s'écrit en ordinal. */
 export const premierDuMois = (jour: string): string => jour.replace(/^1 /, '1er ')
+
+/** Le jour, à l'écran : « 1er » avec son exposant (« 1ᵉʳ décembre »), les autres jours tels quels. */
+function Jour({ jour }: { jour: string }) {
+  return jour.startsWith('1er ') ? <>1<sup>er</sup>{jour.slice(3)}</> : <>{jour}</>
+}
 
 function SqueletteUnites() {
   return (
@@ -80,6 +90,9 @@ export default function Billing() {
   const offreActive = trouverOffre(plan)
   const isPaid = offreActive !== undefined
   const quota = useQuota()
+  // Les unités du mois sont utilisées et une offre plus large existe : « Changer d'offre » est l'action de l'écran.
+  const changerEnAvant = isPaid && plan !== 'business' && !!quota.data?.analyses && !!quota.data.memoires
+    && [quota.data.analyses, quota.data.memoires].some((c) => c.used >= c.limit)
 
   const [searchParams, setSearchParams] = useSearchParams()
   const [showSuccess, setShowSuccess] = useState(false)
@@ -196,19 +209,28 @@ export default function Billing() {
                 serveur le compte (une seule source à l'écran : jamais deux nombres pour la même chose). */}
             {!offreActive && <p className="mt-1.5 text-sm text-fg-2">{ESSAI_LIBELLE}</p>}
           </div>
+          {/* L'action de la page : le portail de paiement (aplat), sauf quand les unités sont utilisées et qu'une offre plus
+              large existe : « Changer d'offre » la porte alors, et ce bouton passe au trait (un seul aplat par écran). */}
           {isPaid && (
-            <Bouton variante="secondaire" onClick={() => { void handlePortal() }} enCours={portalLoading} libelleEnCours="Ouverture du portail…">
+            <Bouton variante={changerEnAvant ? 'secondaire' : 'principal'} onClick={() => { void handlePortal() }} enCours={portalLoading} libelleEnCours="Ouverture du portail…">
               Ouvrir le portail de paiement sécurisé<ExternalLink aria-hidden />
             </Bouton>
           )}
         </RangeeCarte>
         {/* Où l'on paie, où l'on change d'offre, où l'on résilie : dit une fois, en clair (le testeur cherchait « résilier »). */}
         <RangeeCarte className="py-4" data-ou-gerer="">
+          {isPaid ? (
+            <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[11rem_minmax(0,1fr)]">
+              <dt className="font-medium text-fg">Payer, changer, factures</dt>
+              <dd className="text-pretty text-fg-2">Le paiement par carte, le changement d’offre et les factures se font sur le portail de paiement sécurisé de Stripe. Il s’ouvre à la place de cette page ; un lien vous ramène ici.</dd>
+              <dt className="font-medium text-fg max-sm:mt-2">Résilier</dt>
+              <dd className="text-pretty text-fg-2">Vous pouvez résilier à tout moment : l’accès reste ouvert jusqu’à la fin de la période payée, et le mois entamé n’est pas remboursé.</dd>
+            </dl>
+          ) : (
           <p className="text-pretty text-sm text-fg-2">
-            {isPaid
-              ? 'Le paiement par carte, le changement d’offre, les factures et la résiliation se font sur le portail de paiement sécurisé de Stripe. Il s’ouvre à la place de cette page ; un lien vous ramène ici. Vous pouvez résilier à tout moment : l’accès reste ouvert jusqu’à la fin de la période payée, et le mois entamé n’est pas remboursé.'
-              : 'Vous payez par carte sur la page de paiement sécurisée de Stripe, qui s’ouvre quand vous choisissez une offre. Ensuite, vous changez d’offre, retrouvez vos factures et résiliez depuis cette page, à tout moment.'}
+            {'Vous payez par carte sur la page de paiement sécurisée de Stripe, qui s’ouvre quand vous choisissez une offre. Ensuite, vous changez d’offre, retrouvez vos factures et résiliez depuis cette page, à tout moment.'}
           </p>
+          )}
         </RangeeCarte>
       </Carte>
 
@@ -236,15 +258,20 @@ export default function Billing() {
           const plein = atteint && (
             <RangeeCarte className="flex-wrap justify-between gap-x-6 gap-y-3 py-4" data-unites-utilisees="">
               <div className="min-w-0 flex-1 basis-64">
-                <PastilleEtat sens="rouge">Unités du mois utilisées</PastilleEtat>
+                {/* le mot de l'état (le titre de section dit déjà « Unités du mois ») */}
+                <PastilleEtat sens="rouge">Tout est utilisé</PastilleEtat>
                 <p className="mt-2 text-pretty text-sm text-fg-2">
-                  {retour ? `Elles reviennent le ${retour}.` : 'Elles reviennent au début de la prochaine période.'}
-                  {' '}Vos dossiers en cours restent ouverts ; {business ? 'le nombre d’unités peut être relevé sur demande.' : 'une offre plus large vous en redonne tout de suite.'}
+                  {retour ? <>Vos unités reviennent le <Jour jour={retour} />.</> : 'Vos unités reviennent au début de la prochaine période.'}
+                  {' '}Vos dossiers en cours restent ouverts ; {business ? 'le nombre d’unités peut être relevé sur demande.' : 'avec une offre supérieure, vous continuez dès aujourd’hui.'}
                 </p>
               </div>
-              {business ? null : isPaid
-                ? <Bouton variante="secondaire" onClick={() => { void handlePortal() }} enCours={portalLoading} libelleEnCours="Ouverture du portail…">Changer d’offre</Bouton>
-                : <Bouton variante="secondaire" asChild><a href="#offres">Voir les offres</a></Bouton>}
+              {/* le geste qui fait avancer : l'aplat de l'écran (abonné : le portail ; à l'essai : les offres, plus bas) */}
+              {!business && (
+                <Bouton variante="principal" asChild={!isPaid} onClick={isPaid ? () => { void handlePortal() } : undefined}
+                  enCours={isPaid && portalLoading} libelleEnCours="Ouverture du portail…">
+                  {isPaid ? 'Changer d’offre' : <a href="#offres">Voir les offres</a>}
+                </Bouton>
+              )}
             </RangeeCarte>
           )
           return (
@@ -254,7 +281,7 @@ export default function Billing() {
                 <JaugeUnite libelle="Analyses" compteur={q.analyses} />
                 <JaugeUnite libelle="Mémoires" compteur={q.memoires} />
               </Carte>
-              {!atteint && retour && <p className="text-xs text-fg-3">Les compteurs repartent de zéro le {retour}.</p>}
+              {!atteint && retour && <p className="text-sm text-fg-2">Les compteurs repartent de zéro le <Jour jour={retour} />.</p>}
             </div>
           )
         }}

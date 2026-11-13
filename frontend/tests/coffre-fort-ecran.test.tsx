@@ -43,7 +43,7 @@ test('P20 : plus de rubrique « (0) Aucun document » ; les rubriques sans pièc
   assert.ok(!html.includes('Aucun document'))
   assert.ok(!/\(\d+\)/.test(html), 'aucun compteur entre parenthèses')
   assert.ok(html.includes('>À déposer</h2>'))
-  for (const rubrique of ['Documents légaux', 'Assurances', 'Qualifications', 'Références &amp; moyens', 'Autres']) {
+  for (const rubrique of ['Documents légaux', 'Assurances', 'Qualifications', 'Références et moyens', 'Autres']) {
     assert.ok(html.includes(rubrique), rubrique)
   }
   assert.ok(html.indexOf('>À ranger</h2>') < html.indexOf('Attestations sociales'), 'ce qui reste à ranger passe en premier')

@@ -83,13 +83,13 @@ export function QuotaRond() {
   return (
     <Link to="/settings/billing" aria-label={`Abonnement et quota. ${detail}`} title={detail}
       className="relative grid size-11 place-items-center rounded-pilule text-fg-2 transition-colors duration-survol hover:bg-surface-2 hover:text-fg">
-      <svg viewBox="0 0 36 36" data-anneau-quota="" className="size-10 -rotate-90" aria-hidden>
+      <svg viewBox="0 0 36 36" data-anneau-quota="" className="size-11 -rotate-90" aria-hidden>
         <circle cx="18" cy="18" r={R} fill="none" strokeWidth="2.5" className="stroke-bord-2" />
         <circle cx="18" cy="18" r={R} fill="none" strokeWidth="2.5" strokeLinecap="round"
           strokeDasharray={C} strokeDashoffset={C * (1 - part)}
           className={cn('transition-[stroke-dashoffset] duration-pop ease-survol', ton === 'rouge' ? 'stroke-rouge-mark' : ton === 'ambre' ? 'stroke-ambre-mark' : 'stroke-vert-mark')} />
       </svg>
-      <span data-chiffre-quota="" className="absolute text-micro font-semibold leading-none tracking-[-0.02em] text-fg-2">{`${Math.round(part * 100)}%`}</span>
+      <span data-chiffre-quota="" className="absolute text-micro font-semibold leading-none tracking-[-0.02em] text-fg-2">{`${Math.round(part * 100)}\u202f%`}</span>
     </Link>
   )
 }

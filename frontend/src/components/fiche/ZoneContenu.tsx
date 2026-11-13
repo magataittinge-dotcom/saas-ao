@@ -70,12 +70,12 @@ export default function ZoneContenu({ rubrique, donnees, libres, onLibres }: {
             return (
               <li key={l.cle} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 border-t border-bord px-4 py-2 first:border-t-0" data-section={l.cle} data-etat={l.etat}>
                 {/* téléphone : le titre sur sa ligne, puis l'état à gauche et le lien à droite */}
-                <span className="min-w-0 flex-1 basis-full text-sm font-medium text-fg sm:basis-48">
+                <span className="min-w-0 flex-1 basis-40 text-sm font-medium text-fg sm:basis-48">
                   {l.numero && <span className="chiffres mr-2 text-fg-3" aria-hidden>{l.numero}</span>}{l.titre}
                 </span>
                 {/* l'état ne se dit qu'une fois : « Prête » en pastille ; une section à renseigner n'a que son lien « Renseigner » */}
                 {prete && <PastilleEtat sens="vert">{LIBELLE_ETAT[l.etat]}</PastilleEtat>}
-                <Link to={l.lien} aria-label={`${prete ? 'Modifier' : 'Renseigner'} : ${l.titre}`} className={classesBouton('lien', 'ml-auto min-h-11 text-sm')}>
+                <Link to={l.lien} aria-label={`${prete ? 'Modifier' : 'Renseigner'} : ${l.titre}`} className={classesBouton('lien', 'ml-auto min-h-11 min-w-20 justify-end text-sm')}>
                   {prete ? 'Modifier' : 'Renseigner'}
                 </Link>
               </li>

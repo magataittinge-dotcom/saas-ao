@@ -33,7 +33,7 @@ import { Squelette, SqueletteLignes } from '@/components/ui/squelette'
 import { cn } from '@/lib/utils'
 import { enMiseAJour, type FormatFiche } from '@/lib/apercuFiche'
 import {
-  LIBELLE_FICHE, RUBRIQUES_FICHE, bordereauModifie, lienFiche, paletteFiche, sousTitreFiche,
+  RUBRIQUES_FICHE, TITRE_FICHES, bordereauModifie, lienFiche, paletteFiche, sousTitreFiche,
   type FicheBordereau, type FicheReponse, type RubriqueFiche,
 } from '@/lib/fiche'
 
@@ -183,7 +183,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
 
   return (
     <Page
-      titre={LIBELLE_FICHE}
+      titre={TITRE_FICHES}
       sousTitre={sousTitreFiche(!!data && etat.phase === 'pret')}
     >
       <nav aria-label="Fiches" className="mb-8 flex flex-wrap gap-1">
@@ -195,7 +195,8 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
               r.id === rubrique ? 'border-bord bg-surface-0 font-semibold text-fg' : 'border-transparent font-medium text-fg-2 hover:bg-surface-1 hover:text-fg',
             )}
           >
-            {r.court}
+            {/* les mêmes noms que les rubriques de Mon entreprise */}
+            {r.libelle}
           </Link>
         ))}
       </nav>
@@ -205,7 +206,8 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
         squelette={<SqueletteFiche />}
         erreur={(
           <EtatErreur
-            titre="La fiche n’a pas pu se charger"
+            className="max-w-xl"
+            titre={<span className="block text-balance">{`La fiche « ${RUBRIQUES_FICHE.find((r) => r.id === rubrique)?.libelle ?? ''} » n’a pas pu se charger`}</span>}
             detail={<span className="block text-pretty">La connexion au serveur a échoué. Vos informations et vos réglages sont toujours enregistrés.</span>}
             onReessayer={() => { void refetch() }}
             enCours={isFetching}

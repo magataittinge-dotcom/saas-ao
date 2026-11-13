@@ -48,7 +48,7 @@ export default function ApercuPages({ etat, pages, enRetard, donnees, bordereau,
       ) : (
         <ol className={`grid gap-4 transition-opacity duration-survol ease-survol motion-reduce:transition-none ${maj ? 'opacity-50' : ''}`}>
           {pages.map((p) => (
-            <li key={p.numero} className="overflow-hidden rounded-md border border-bord bg-surface-0 shadow-card" style={{ aspectRatio: String(ratio) }}>
+            <li key={p.numero} className="overflow-hidden rounded-md border border-bord bg-surface-0 shadow-card dark:brightness-90" style={{ aspectRatio: String(ratio) }}>
               {p.src ? (
                 <img
                   src={p.src} alt={`Page ${p.numero} sur ${total} de la fiche`}

@@ -17,7 +17,8 @@ import { useALEcran, useOngletVisible } from './useVisibilite'
  */
 const SceneVisage = forwardRef<VisageAnimeRef, {
   donnees: DonneesEntreprise
-  onChoisir: (rubrique: RubriqueId) => void
+  /** `lien` (B6) : l'adresse qui ouvre le champ de la prochaine information, quand le geste vient de la phrase. */
+  onChoisir: (rubrique: RubriqueId, lien?: string) => void
   children?: ReactNode
 }>(function SceneVisage({ donnees, onChoisir, children }, visageRef) {
   const scene = useRef<HTMLElement>(null)
@@ -95,7 +96,7 @@ const SceneVisage = forwardRef<VisageAnimeRef, {
           {voix.prochaine && (
             <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base text-fg-2">
               <span>{`Prochaine information utile\u00a0: «\u00a0${voix.prochaine.libelle}\u00a0».`}</span>
-              <Bouton variante="lien" onClick={() => onChoisir(voix.prochaine!.rubrique)}>La renseigner<span className="sr-only">{` (rubrique ${voix.prochaine.titreRubrique})`}</span></Bouton>
+              <Bouton variante="lien" onClick={() => onChoisir(voix.prochaine!.rubrique, voix.prochaine!.lien)}>La renseigner<span className="sr-only">{` (rubrique ${voix.prochaine.titreRubrique})`}</span></Bouton>
             </p>
           )}
         </div>

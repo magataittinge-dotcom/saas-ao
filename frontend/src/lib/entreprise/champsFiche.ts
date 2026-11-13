@@ -22,6 +22,13 @@ export const CHAMPS: Record<string, CibleChamp> = {
   raison_sociale: { rubrique: 'identite', label: "Nom de l’entreprise" },
   dirigeant: { rubrique: 'identite', label: 'Nom du dirigeant' },
   activites: { rubrique: 'identite', label: 'Activités principales' },
+  // B6 : les autres champs de l'identité, visés par « La renseigner »
+  forme_juridique: { rubrique: 'identite', label: 'Forme juridique' },
+  adresse_siege: { rubrique: 'identite', label: 'Adresse du siège' },
+  fonction_dirigeant: { rubrique: 'identite', label: 'Fonction du dirigeant' },
+  email: { rubrique: 'identite', label: 'E-mail de l’entreprise' },
+  tel: { rubrique: 'identite', label: 'Téléphone' },
+  zone: { rubrique: 'identite', label: 'Zone d’intervention géographique' },
   chiffres: { rubrique: 'certifications', groupe: 'Chiffres demandés dans la' },
   // Moyens
   effectifs: { rubrique: 'moyens', groupe: 'Équipe' },
@@ -55,6 +62,27 @@ export function lienChamp(champ: string | null | undefined, repli: RubriqueFiche
 /** Lien d'une section de la fiche ; sans champ précis connu pour elle, la rubrique de la fiche s'ouvre. */
 export const lienSection = (rubrique: RubriqueFiche, section: string): string =>
   lienChamp(CHAMP_DE_SECTION[rubrique][section], rubrique)
+
+/**
+ * B6 — information indispensable (lib/entreprise/avancement.ts) → champ de Mon entreprise où la donner. Une information
+ * sans champ précis connu (le SIRET, saisi par son propre composant) ouvre sa rubrique.
+ */
+export const CHAMP_DE_INFORMATION: Record<string, string> = {
+  I01: 'raison_sociale', I03: 'forme_juridique', I08: 'adresse_siege', I09: 'dirigeant', I10: 'fonction_dirigeant',
+  I11: 'email', I12: 'tel', I16: 'activites', I18: 'zone',
+  M02: 'effectifs', M03: 'effectifs', M06: 'habilitations', M07: 'habilitations', M10: 'habilitations',
+  M13: 'materiel', M15: 'materiel', M21: 'securite', M22: 'securite',
+  C01: 'qualifications', C04: 'assurances', C05: 'assurances', C19: 'coffre', C20: 'coffre', C21: 'coffre',
+  I20: 'chiffres', I23: 'chiffres',
+  C07: CHAMP_DES_REFERENCES, C08: CHAMP_DES_REFERENCES, C12: CHAMP_DES_REFERENCES, C13: CHAMP_DES_REFERENCES,
+  C15: CHAMP_DES_REFERENCES, C16: CHAMP_DES_REFERENCES, C17: CHAMP_DES_REFERENCES,
+}
+
+/** L'adresse qui ouvre le champ d'une information (sa rubrique seule si aucun champ précis n'est connu). */
+export function lienInformation(i: { id: string; rubrique: RubriqueId }): string {
+  const champ = CHAMP_DE_INFORMATION[i.id]
+  return champ && CHAMPS[champ]?.rubrique === i.rubrique ? `/company?rubrique=${i.rubrique}&champ=${champ}` : `/company?rubrique=${i.rubrique}`
+}
 
 /** Le champ demandé par l'adresse (``?champ=forme_juridique``), s'il est connu et dans la bonne rubrique. */
 export function champDepuisRecherche(recherche: string): string | null {

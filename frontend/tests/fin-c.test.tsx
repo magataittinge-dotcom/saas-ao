@@ -47,14 +47,14 @@ test('Mon entreprise : un SIRET tapé puis « Enregistrer », sans passer par «
 
 test('Mon entreprise : l’échec d’un enregistrement est un message du système au-dessus des boutons ; « Enregistrer » existe aussi en bas (bloquant du jury à 390)', () => {
   const cadre = sansCommentaires(lire('src/components/entreprise/CadreFormulaire.tsx'))
-  assert.match(cadre, /<Message ton="erreur" className=\{cn\('basis-full', className\)\}>/, 'pleine largeur : il passe à la ligne')
+  assert.match(cadre, /<div className=\{cn\('basis-full', className\)\}>\s*<Message ton="erreur" className="max-w-2xl"/, 'sur sa ligne, à la largeur d’une phrase')
+  assert.match(cadre, /data-reessayer-enregistrement=""/, 'le message porte le geste')
   assert.match(cadre, /Ce que vous avez saisi reste à l’écran/)
   assert.doesNotMatch(cadre, /max-w-md text-sm|text-rouge-ink/, 'plus de texte rouge nu dans la rangée des boutons')
   assert.doesNotMatch(cadre, /flex shrink-0 flex-wrap/, 'la rangée des boutons peut passer à la ligne sans sortir de l’écran')
-  assert.match(cadre, /data-enregistrer-bas=""[\s\S]*<Bouton type="submit" data-bas="" variante="secondaire"[^>]*>Enregistrer<\/Bouton>/)
-  // une fois, là où l'on a cliqué : en haut (ou dans la copie collée), ou en bas
-  assert.match(cadre, /\{!depuisLeBas && !colle && <Echec etat=\{etat\} \/>\}/)
-  assert.match(cadre, /\{depuisLeBas && <Echec etat=\{etat\} \/>\}/)
+  // jury, tour 3 : un seul « Enregistrer » (l'en-tête, puis sa copie collée au défilement) ; plus de second bouton en bas
+  assert.doesNotMatch(cadre, /data-enregistrer-bas|data-bas|depuisLeBas/)
+  assert.match(cadre, /\{!colle && <Echec etat=\{etat\} idFormulaire=\{idFormulaire\} \/>\}/)
   assert.equal((cadre.match(/variante="principal"/g) ?? []).length, 1, 'un seul aplat : celui de l’en-tête')
 })
 
@@ -83,7 +83,7 @@ test('Abonnement : l’écran dit où l’on paie, où l’on change d’offre e
 
 test('Abonnement, unités utilisées : dit une fois, avec un bouton ; « unités » et non « quota » ; « 1er décembre » (bloquant du jury)', () => {
   assert.deepEqual(lectureCompteur({ used: 30, limit: 30 }).mot, 'Tout est utilisé')
-  assert.doesNotMatch(lectureCompteur({ used: 30, limit: 30 }).barre, /rouge/, 'la barre pleine ne redit pas le rouge')
+  assert.match(lectureCompteur({ used: 30, limit: 30 }).barre, /rouge-mark/, 'une seule couleur pour l’état : la barre pleine est rouge, comme la pastille et l’anneau (jury, tour 3)')
   assert.equal(lectureCompteur({ used: 3, limit: 30 }).mot, 'Disponible')
   assert.equal(premierDuMois('1 décembre'), '1er décembre')
   assert.equal(premierDuMois('11 décembre'), '11 décembre')
@@ -129,7 +129,9 @@ test('Mon entreprise dégabarisée : Équipe en tableau, dépôts sur une ligne,
   assert.doesNotMatch(depots, /c\.usage|ligneFormats\(c\)/, 'ni troisième niveau de texte ni note de format par dépôt')
   const rubriques = sansCommentaires(lire('src/components/entreprise/RubriquesEntreprise.tsx'))
   assert.match(rubriques, /av\.rempli === 0 \? 'À commencer'/)
-  assert.match(rubriques, /\{av\.rempli > 0 && <Jauge/)
+  // jury, tour 3 : la même jauge sur les trois rangées (piste seule quand rien n'est saisi), jamais un point de 8 px
+  assert.match(rubriques, /<Jauge \{\.\.\.av\} \/>/)
+  assert.doesNotMatch(rubriques, /ChevronDown/, 'aucun chevron d’accordéon : la rubrique choisie a sa marque')
   for (const f of ['FormIdentite.tsx', 'FormMoyens.tsx', 'EditeursCertifications.tsx', 'ListesMoyens.tsx']) {
     const code = sansCommentaires(lire(`src/components/entreprise/${f}`))
     assert.equal((code.match(/<ZoneTexte /g) ?? []).length, (code.match(/<ZoneTexte className="resize-none"/g) ?? []).length, `${f} : aucune poignée native`)
