@@ -9,7 +9,7 @@ import { EtatErreur, EtatRequete } from '@/components/ui/etats'
 import { SqueletteLignes } from '@/components/ui/squelette'
 import { Tableau } from '@/components/ui/tableau'
 import { Bouton } from '@/components/ui/bouton'
-import { DOCUMENTS_JURIDIQUES, ancreDe, decouperDefinitions, estSlugJuridique, mettreEnPage, preparerDocument, sommaireDe, type SlugJuridique } from '@/lib/pagesJuridiques'
+import { DOCUMENTS_JURIDIQUES, affinerTexte, ancreDe, decouperDefinitions, estSlugJuridique, mettreEnPage, preparerDocument, sommaireDe, type SlugJuridique } from '@/lib/pagesJuridiques'
 import { decouperTables, type SegmentTable } from '@/lib/tablesMarkdown'
 import { cn } from '@/lib/utils'
 
@@ -22,22 +22,27 @@ const TitreArticle = ({ children }: { children?: ReactNode }) => (
 )
 /** Un lien : un nom, jamais une adresse brute. Un chemin « /legal/… » écrit tel quel prend le nom du document. */
 function Lien({ children, href = '' }: { children?: ReactNode; href?: string }) {
-  if (href === '#en-attente') return <span data-en-attente="" className="whitespace-nowrap rounded-md bg-surface-1 px-1.5 py-0.5 text-sm text-fg-2">{children}</span>
+  // un champ que l'éditeur n'a pas encore renseigné : il se coupe comme du texte au téléphone (jamais seul sur sa ligne), et
+  // se resserre devant une ponctuation
+  if (href.startsWith('#en-attente')) return <span data-en-attente="" className={cn('box-decoration-clone rounded-md bg-surface-1 py-0.5 pl-1.5 text-sm text-fg-2', href.endsWith('-ponctuation') ? 'pr-0.5' : 'pr-1.5')}>{children}</span>
   const brut = texteDe(children).trim() === href
   const classe = 'font-medium text-accent-text underline underline-offset-4'
   if (href.startsWith('/legal')) {
     const cible = DOCUMENTS_JURIDIQUES.find((d) => href === `/legal/${d.slug}`)
     return <Link to={href} className={classe}>{brut ? (cible ? cible.titre : 'Documents juridiques') : children}</Link>
   }
+  if (href.startsWith('mailto:')) return <a href={href} className={cn(classe, 'whitespace-nowrap')}>{children}</a>
   return <a href={href} className={classe}>{brut ? href.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : children}</a>
 }
+// La mesure de lecture : 70 à 75 signes par ligne en 15 px (jury, tour 3 : 90 à 95 sur 680 px). Les tableaux gardent la colonne.
+const MESURE = 'max-w-[600px]'
 const RENDU: Components = {
   h1: TitreArticle,
   h2: TitreArticle,
   h3: ({ children }) => <h3 className="mb-2 mt-8 text-base font-semibold text-fg">{children}</h3>,
-  p: ({ children }) => <p className="mb-4 text-base text-fg-2">{children}</p>,
-  ul: ({ children }) => <ul className="mb-4 list-disc space-y-1.5 pl-5 text-base text-fg-2 marker:text-fg-3">{children}</ul>,
-  ol: ({ children }) => <ol className="mb-4 list-decimal space-y-1.5 pl-5 text-base text-fg-2 marker:text-fg-3">{children}</ol>,
+  p: ({ children }) => <p className={cn('mb-4 text-base text-fg-2', MESURE)}>{children}</p>,
+  ul: ({ children }) => <ul className={cn('mb-4 list-disc space-y-1.5 pl-5 text-base text-fg-2 marker:text-fg-3', MESURE)}>{children}</ul>,
+  ol: ({ children }) => <ol className={cn('mb-4 list-decimal space-y-1.5 pl-5 text-base text-fg-2 marker:text-fg-3', MESURE)}>{children}</ol>,
   a: ({ children, href }) => <Lien href={href}>{children}</Lien>,
   strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
   code: ({ children }) => <code className="rounded bg-surface-1 px-1 font-sans text-sm text-fg">{children}</code>,
@@ -46,7 +51,7 @@ const RENDU: Components = {
 
 /** Une cellule : du texte courant (gras, code), sans paragraphe autour. */
 function Cellule({ texte }: { texte: string }) {
-  return <ReactMarkdown components={{ ...RENDU, p: ({ children }) => <Fragment>{children}</Fragment> }}>{texte}</ReactMarkdown>
+  return <ReactMarkdown components={{ ...RENDU, p: ({ children }) => <Fragment>{children}</Fragment> }}>{affinerTexte(texte)}</ReactMarkdown>
 }
 
 /** Un tableau du document, rendu par le tableau du système. Au téléphone chaque rangée s'empile et chaque valeur garde le
@@ -152,7 +157,7 @@ export default function Legal() {
                   ? [<TableauJuridique key={i} table={s} />]
                   : decouperDefinitions(s.texte).map((b, j) => (b.type === 'definitions'
                     ? <Definitions key={`${i}-${j}`} lignes={b.lignes} />
-                    : <ReactMarkdown key={`${i}-${j}`} components={RENDU}>{b.texte}</ReactMarkdown>))))}
+                    : <ReactMarkdown key={`${i}-${j}`} components={RENDU}>{affinerTexte(b.texte)}</ReactMarkdown>))))}
               </article>
             </div>
           )}
