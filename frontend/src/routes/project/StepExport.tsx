@@ -19,7 +19,7 @@ import { PastilleEtat } from '@/components/ui/pastille'
 import { cartesPieces, etatDeStatut } from '@/lib/resumePieces'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
-  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, phraseDepot, phrasePiecesAJoindre, pieceDemandee, resumeExigences, type GroupeExigences,
+  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, phraseDepot, phrasePiecesAJoindre, phrasePiecesARelire, bilanPiecesExport, resumeExigences, type GroupeExigences,
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 import { Sigle } from '@/components/common/Sigle'
@@ -415,13 +415,12 @@ export default function StepExport({ project }: Props) {
 
   // ── Gate ZIP (C10) : X < Y pièces conformes → avertissement, sans bloquer ──────
   const gateBlocked = !!score && score.total > 0 && score.conformes < score.total
-  const CONFORME_STATUSES = new Set(['present', 'expiration_proche', 'non_applicable'])
   // Signature : règle serveur (signature_required) — DC1, DC2, DUME et AE seulement si le RC l'exige.
   // Mêmes lignes que le score du serveur : pièces à fournir et à compléter. Une pièce facultative n'est pas comptée :
-  // même nombre que les cartes de l'écran Pièces.
-  const nonConformes = lignesDuScore(detail?.checklist_items ?? []).filter((i) =>
-    i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)) && pieceDemandee(i, echeance),
-  )
+  // même nombre que les cartes de l'écran Pièces. B7 : un formulaire « À relire » part dans le dossier ; il est compté à part.
+  const bilan = bilanPiecesExport(piecesDemandees, echeance, signatureAConfirmer)
+  const nonConformes = bilan.aFaire
+  const aRelire = bilan.aRelire.length
 
   const readyForDeposit = !gateBlocked && alertCount === 0
   const piecesVisibles = piecesDemandees.filter((p) => p.status !== 'non_applicable')
@@ -443,8 +442,7 @@ export default function StepExport({ project }: Props) {
   // Aucune pièce n'est encore jointe : le dossier ne contiendrait que le mémoire. L'écran le dit, et son action devient
   // « Réunir les pièces » ; le téléchargement reste possible, au trait (jury, tour 1 : un aplat « Télécharger » sur un
   // dossier que l'écran déclarait lui-même sans pièce).
-  const pretes = piecesVisibles.filter((p) => pieceDemandee(p, echeance) && !nonConformes.includes(p)).length
-  const aucunePieceJointe = gateBlocked && nonConformes.length > 0 && pretes === 0
+  const aucunePieceJointe = gateBlocked && bilan.aucuneJointe
   const allerAuxPieces = () => navigate(`/projects/${project.id}/verification`)
   // Un AO terminé (gagné, perdu…) : aucune action de préparation en bouton principal (lib/etatAO.ts).
   const boutons = boutonsExport(project, aucunePieceJointe)
@@ -474,7 +472,7 @@ export default function StepExport({ project }: Props) {
   ))
 
   // ── Barre du bas : l'état du dossier ; au téléphone, l'action de l'écran (au pouce).
-  const etatDossier = ligneEtatDossier(gateBlocked ? nonConformes.length : 0, alertCount, readyForDeposit)
+  const etatDossier = ligneEtatDossier(gateBlocked ? nonConformes.length : 0, alertCount, readyForDeposit, aRelire)
   const bottomBar = (
     <BarreEtape className="justify-between gap-3">
       <BilanBarre bureau={<p role="status" className="text-sm text-fg-2">{etatDossier}</p>} />
@@ -482,7 +480,9 @@ export default function StepExport({ project }: Props) {
     </BarreEtape>
   )
 
-  const phrasePieces = gateBlocked ? phrasePiecesAJoindre(nonConformes.length) : null
+  // Ce qui reste hors du dossier, puis ce qui y part à relire (B7) : deux phrases, jamais un seul compte.
+  const phrasePieces = [gateBlocked ? phrasePiecesAJoindre(nonConformes.length) : null, phrasePiecesARelire(aRelire)]
+    .filter(Boolean).join(' ') || null
   // UN message à la fois sous l'en-tête, du plus pressant au moins pressant : le téléchargement qui n'a pas abouti, le
   // dossier qui se prépare, le dossier téléchargé, puis les pièces qui restent à joindre.
   const echecIci = (lieu: Lieu) => (echec && echec.lieu === lieu ? (
@@ -534,7 +534,7 @@ export default function StepExport({ project }: Props) {
       >
         {/* ── Pièces demandées : mêmes lignes et même règle que le résumé ── */}
         <SectionEtape titre="Pièces demandées"
-          description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
+          description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête ou à relire part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
           {piecesVisibles.length === 0 ? (
             <p className="text-sm text-fg-2">La liste des pièces apparaît après l’analyse du <Sigle code="RC" />.</p>
           ) : (

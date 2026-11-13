@@ -20,7 +20,7 @@ const PIECES = [
 
 test('Pièces : un seul calcul — prêtes + à joindre + à renouveler = pièces demandées ; les autres statuts sortent du total', () => {
   const c = comptesDetailles(PIECES, '2027-03-01')
-  assert.deepEqual(c, { pretes: 2, aJoindre: 2, aRenouveler: 2, total: 6, autres: 1 })
+  assert.deepEqual(c, { pretes: 2, aJoindre: 2, aRenouveler: 2, aRelire: 0, total: 6, autres: 1 })
   assert.equal(c.pretes + c.aJoindre + c.aRenouveler, c.total)
   assert.equal(phraseComptes(c), '2 prêtes · 2 à joindre · 2 à renouveler')
   // la même fonction nourrit le résumé : mêmes nombres, jamais deux calculs
