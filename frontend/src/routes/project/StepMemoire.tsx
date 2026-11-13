@@ -91,7 +91,10 @@ export function cartesRedaction({ version, completionPct, rattachement, nbARefai
   const aCompleter = libellePassagesACompleter(passages)
   return [
     {
-      libelle: 'Rédaction', valeur: `${completionPct} %`, jauge: { rempli: completionPct, total: 100 },
+      // tout est rédigé : la case le dit en mots, sans jauge pleine (jury, tour 3 : « 100 % » et une barre pleine au-dessus
+      // de « 135 passages à compléter » se contredisaient)
+      libelle: 'Rédaction', valeur: completionPct >= 100 ? 'Toutes les parties' : `${completionPct} %`,
+      jauge: completionPct >= 100 ? undefined : { rempli: completionPct, total: 100 },
       etat: aCompleter ? ETAT_A_VERIFIER : undefined, detail: aCompleter ?? `Version ${version}`,
     },
     total > 0

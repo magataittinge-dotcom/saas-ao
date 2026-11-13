@@ -61,11 +61,17 @@ test('Décider : au téléphone, les catégories d’exigences arrivent repliée
   assert.match(c, /defaultOpen=\{search\.trim\(\)\.length > 0\}/)
 })
 
-test('Rédiger : un tableau du mémoire devient une liste de rangées au téléphone, chaque cellule redit sa colonne (P28)', () => {
+// Jury, tour 3 : plus de cartes dans la carte du document. Deux colonnes : le tableau reste un tableau. Au-delà : des rangées
+// entre deux filets, la première cellule en titre, les suivantes précédées du nom de leur colonne (index.css).
+test('Rédiger : au téléphone, un tableau de deux colonnes reste un tableau ; au-delà, une liste de rangées où chaque cellule redit sa colonne (P28)', () => {
   const c = code('src/components/memoire/LecteurMarkdown.tsx')
-  assert.match(c, /<thead className="max-md:sr-only">/)
+  assert.match(c, /const enListe = table\.entetes\.length > 2/)
+  assert.match(c, /enListe && 'table-memoire-liste'/)
   assert.match(c, /data-colonne=\{titreColonne\(table\.entetes\[k\]\)\}/)
-  assert.match(c, /max-md:before:content-\[attr\(data-colonne\)\]/)
+  assert.doesNotMatch(c, /max-md:rounded-lg max-md:border/)
+  const css = lire('src/index.css')
+  assert.match(css, /\.table-memoire-liste td:not\(:first-child\)\[data-colonne\]:not\(\[data-colonne=""\]\)::before \{ content: attr\(data-colonne\)/)
+  assert.match(css, /\.table-memoire-liste thead \{ position: absolute;/)
 })
 
 test('notifications dans le tiroir du compte : le panneau est calé sur le bord droit du tiroir (il sortait par la gauche à 360 px)', () => {
