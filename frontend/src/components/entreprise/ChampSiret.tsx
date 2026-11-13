@@ -68,7 +68,7 @@ const ChampSiret = forwardRef<ChampSiretHandle, { siret?: string | null; verifie
         <div className="min-w-0 flex-1">
           <Field label="SIRET" rempli={chiffres(siret ?? '') !== ''} source={verifie && !modifie ? 'Vérifié au répertoire Sirene' : undefined}>
             <Champ
-              className="chiffres"
+              className="chiffres placeholder:[font-variant-numeric:normal]"
               value={valeur}
               onChange={(e) => { setValeur(e.target.value); setMessage(null); setConfirme(false) }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void verifier() } }}

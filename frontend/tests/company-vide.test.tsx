@@ -49,7 +49,11 @@ test('Mon entreprise vide : une seule première action, pas les rubriques', () =
   assert.match(html, /Commencer par votre SIRET/)
   assert.match(html, /aria-label="Numéro SIRET"/)
   assert.doesNotMatch(html, /role="tablist"/)
-  assert.doesNotMatch(html, /Moyens humains et matériels/)
+  // les trois rubriques sont annoncées (ce qui apparaîtra), sans être proposées : aucun onglet, aucun compteur
+  assert.match(html, /data-ensuite=""[\s\S]*Moyens humains et matériels/)
+  assert.doesNotMatch(html, /role="tab"|information[s]? sur/)
+  assert.match(html, />Commencer<\/button>/, 'le verbe du bouton répond au titre')
+  assert.match(html, /data-visage=""/, 'le visage de Synorix signe le premier écran')
   assert.doesNotMatch(html, /manquant|incomplet|absent/i)
 })
 

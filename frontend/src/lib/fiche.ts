@@ -17,7 +17,9 @@ export const COULEUR_PAR_DEFAUT = '#008cf8' // accent du thème Synorix (palier 
 export const lienFiche = (rubrique: RubriqueFiche) => `/entreprise/fiche/${rubrique}`
 
 /** Le libellé du lien vers la fiche d'une rubrique (cartes, formulaire, bulles, fil d'Ariane), partout le même. */
-export const LIBELLE_FICHE = 'Fiche à télécharger'
+export const LIBELLE_FICHE = 'Télécharger la fiche'
+/** Le titre de la page des fiches : un nom (le libellé ci-dessus est un geste, celui du bouton). */
+export const TITRE_FICHES = 'Fiches de l’entreprise'
 
 export interface FicheLigne { libelle: string; valeur: string }
 export interface LigneLibre { section: string; libelle: string; valeur: string }

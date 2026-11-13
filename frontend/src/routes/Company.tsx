@@ -34,15 +34,36 @@ const DecrireEtDeposer = ({ rubrique }: { rubrique: RubriqueId }) => (
   </div>
 )
 
-/** L'attente : la place du visage, de la phrase et des trois rubriques (fixe, aux dimensions du contenu). */
+/**
+ * L'attente, à la forme du contenu : l'ovale du visage en glace (plus de trou blanc à gauche), la phrase de Synorix, les
+ * trois rangées de rubriques dans leur surface à filets, puis le titre de la rubrique et les premiers champs : la page ne
+ * saute pas à l'arrivée.
+ */
 function SqueletteEntreprise() {
   return (
-    <div className="grid items-center gap-x-10 gap-y-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-      {/* la place du visage est gardée (aucun saut à l'arrivée), sans bloc gris : un visage n'est pas un rectangle */}
-      <div aria-hidden="true" className="h-[336px] w-[240px] justify-self-center lg:h-[420px] lg:w-[300px]" />
-      <div className="grid gap-6">
-        <SqueletteLignes lignes={2} className="max-w-xl" />
-        <Squelette className="h-48 rounded-carte" />
+    <div aria-hidden="true">
+      <div className="grid items-center gap-x-10 gap-y-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="grid h-[336px] w-[240px] place-items-center justify-self-center lg:h-[420px] lg:w-[300px]">
+          <Squelette data-squelette-visage="" className="h-[86%] w-[78%] rounded-pilule" />
+        </div>
+        <div className="grid gap-6">
+          <SqueletteLignes lignes={2} className="max-w-xl" />
+          <div className="overflow-hidden rounded-carte border border-bord bg-surface-0 shadow-card">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex min-h-16 items-center gap-4 border-t border-bord px-5 py-3 first:border-t-0 sm:px-6">
+                <div className="grid flex-1 gap-2"><Squelette className="h-3.5 w-48 max-w-full" /><Squelette className="h-3 w-32" /></div>
+                <Squelette className="h-1.5 w-24 rounded-pilule max-sm:w-14" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="mt-8 border-t border-bord pt-8 max-md:mt-6 max-md:pt-6">
+        <Squelette className="h-6 w-40" />
+        <Squelette className="mt-3 h-3.5 w-full max-w-xl" />
+        <div className="mt-8 grid gap-x-6 gap-y-5 md:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="grid gap-1.5"><Squelette className="h-3 w-28" /><Squelette className="h-11 rounded-lg" /></div>)}
+        </div>
       </div>
     </div>
   )
@@ -94,7 +115,8 @@ export default function Company() {
           squelette={<SqueletteEntreprise />}
           erreur={(
             <EtatErreur
-              titre="Vos informations n’ont pas pu s’afficher"
+              className="max-w-xl"
+              titre={<span className="block text-balance">Vos informations n’ont pas pu s’afficher</span>}
               detail={<span className="block text-pretty">La connexion au serveur a échoué. Vos informations sont toujours enregistrées : rien n’a été modifié.</span>}
               onReessayer={donnees.recharger}
               enCours={donnees.rechargement}
