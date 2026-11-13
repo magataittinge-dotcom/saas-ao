@@ -8,7 +8,7 @@ import {
 import { Bouton } from '@/components/ui/bouton'
 import { useProjects } from '@/hooks/useProject'
 import { aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
-import { acheteurCourt } from '@/lib/mesAO'
+import { acheteurCourt, comparerParRemise } from '@/lib/mesAO'
 import { scorePalette } from '@/lib/recherchePalette'
 import { ACCES_PALETTE } from './navigation'
 
@@ -50,14 +50,15 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
   }
 
   // les mêmes états que l'Accueil et Mes AO (lib/etatAO.ts) : une remise passée n'est plus « en cours »
-  const enCours = aoDansEtat(projects, 'en_cours')
+  // le même ordre que l'Accueil et Mes AO : la remise la plus proche d'abord (jury, tour 3)
+  const enCours = aoDansEtat(projects, 'en_cours').sort((a, b) => comparerParRemise(a, b, new Date()))
   const aMettreAJour = aoDansEtat(projects, 'a_mettre_a_jour')
   const autres = aoDansEtat(projects, 'termine')
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} filter={scorePalette}>
       <CommandInput placeholder="Rechercher un AO, une page…" value={saisie} onValueChange={setSaisie} />
-      <CommandList className="max-h-[min(440px,60vh)] min-h-40 pb-1.5">
+      <CommandList className="max-h-[min(560px,68vh)] min-h-40 pb-1.5">
         {/* les mêmes mots que la recherche de Mes AO, alignés à gauche comme le reste du panneau */}
         <CommandEmpty className="px-5 pb-2 pt-5 text-left text-sm text-fg-2">
           {aoEnErreur
@@ -121,13 +122,14 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         {/* une recherche sans réponse garde un geste : cette ligne reste quoi qu'on tape */}
         {cherche !== '' && (
           <CommandGroup forceMount heading="Sinon">
-            <CommandItem forceMount value="geste-nouvel-appel-d-offres" onSelect={() => aller('/projects/new')}>
-              <Plus strokeWidth={1.8} />
-              Déposer un nouvel appel d’offres
-            </CommandItem>
+            {/* la veille d'abord : la rangée présélectionnée après une recherche sans réponse ne crée rien (jury, tour 3) */}
             <CommandItem forceMount value="geste-avis-de-la-veille" onSelect={() => aller('/dashboard')}>
               <ArrowRight strokeWidth={1.8} />
               Chercher dans les avis de la veille
+            </CommandItem>
+            <CommandItem forceMount value="geste-nouvel-appel-d-offres" onSelect={() => aller('/projects/new')}>
+              <Plus strokeWidth={1.8} />
+              Nouvel appel d’offres
             </CommandItem>
           </CommandGroup>
         )}

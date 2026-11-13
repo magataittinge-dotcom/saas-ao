@@ -99,7 +99,9 @@ function PageAO({ project }: { project: ProjetAO }) {
           {contexte || project.name}
         </p>
         {lecture.echeance.etat !== 'sans_date' && !remisePassee && (
-          <PastilleEtat sens={lecture.etat === 'termine' ? 'gris' : niveau === 'rouge' ? 'rouge' : niveau === 'ambre' ? 'ambre' : 'gris'} icone={lecture.etat === 'termine' || niveau === 'neutre' ? null : undefined}>
+          <PastilleEtat sens={lecture.etat === 'termine' ? 'gris' : niveau === 'rouge' ? 'rouge' : niveau === 'ambre' ? 'ambre' : 'gris'} icone={lecture.etat === 'termine' || niveau === 'neutre' ? null : undefined}
+            // une phrase, pas un nombre isolé : chiffres proportionnels (jury, tour 3 : « Remise dans 2 1 jours · … 1 4 h »)
+            className="![font-variant-numeric:proportional-nums]">
             {libelleRemise(lecture.echeance)}{quand ? ` · ${quand}` : ''}
           </PastilleEtat>
         )}

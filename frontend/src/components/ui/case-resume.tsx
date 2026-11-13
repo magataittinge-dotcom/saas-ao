@@ -29,7 +29,7 @@ export function CaseResume({ etiquette, valeur, unite, rien = 'Aucun', precision
   return (
     <div data-case-resume="" className={cn('grid min-w-0 content-start gap-1.5 p-5', className)}>
       {/* la pastille ne passe jamais sur deux lignes : dans une case étroite (téléphone), elle se pose sous l'étiquette */}
-      <div className="flex min-h-6 items-center justify-between gap-3 max-md:flex-col max-md:items-start max-md:gap-1.5">
+      <div className="flex min-h-6 flex-wrap items-center justify-between gap-x-3 gap-y-1.5 max-md:flex-col max-md:items-start">
         <p data-etiquette="" className="text-sm font-medium text-fg-2">{etiquette}</p>
         {etat && <span data-etat-case="" className="shrink-0 [&>*]:whitespace-nowrap">{etat}</span>}
       </div>

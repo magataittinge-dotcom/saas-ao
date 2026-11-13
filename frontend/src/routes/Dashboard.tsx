@@ -143,7 +143,8 @@ export default function Dashboard() {
   const quotaAtteint = phraseQuotaAtteint(quotaStatus)
   // le plafond du mois passe avant tout : c'est Synorix qui le dit, à la place de sa phrase du jour (un seul message, pas trois)
   const parole = quotaAtteint
-    ? { phrase: `${quotaAtteint} Vos appels d’offres déjà analysés restent ouverts.`, lien: { to: '/settings/billing', libelle: 'Voir l’abonnement' } }
+    // un nombre ne se sépare pas de son nom en fin de ligne (jury, tour 3 : « 30 analyses sur 30, 30 » puis « mémoires sur 30 »)
+    ? { phrase: `${quotaAtteint.replace(/(\d+) (analyses|mémoires) sur (\d+)/g, '$1\u00a0$2\u00a0sur\u00a0$3')} Vos appels d’offres déjà analysés restent ouverts.`, lien: { to: '/settings/billing', libelle: 'Voir l’abonnement' } }
     : paroleDuJour
   const profilDitEnHaut = parole?.lien?.to === '/company'
   const s = stats.data

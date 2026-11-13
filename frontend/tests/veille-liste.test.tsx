@@ -60,7 +60,7 @@ test('le délai s’affiche en J−x, avec la date limite en jour et mois', () =
   assert.ok(html.includes('J−12'))
   assert.ok(html.includes('J−3'))
   assert.ok(html.includes(jourMois(plusJours(12))))
-  assert.equal(jourMois('2026-11-12'), '12/11')
+  assert.equal(jourMois('2026-11-12'), '12\u00a0nov.')
   assert.equal(jourMois(null), '')
 })
 

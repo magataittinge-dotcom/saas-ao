@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, ChevronRight, ExternalLink, HelpCircle, MapPin } from 'lucide-react'
 import { Bouton, classesBouton } from '@/components/ui/bouton'
 import { MenuElement, MenuPoints } from '@/components/ui/menu'
-import { PastilleEtat } from '@/components/ui/pastille'
 import type { ColonneTableau } from '@/components/ui/tableau'
 import { lectureAO } from '@/lib/etatAO'
 import { momentParis } from '@/lib/remiseParis'
@@ -46,7 +45,13 @@ export function CelluleAO({ projet, detail = true, large = false, sansLien = fal
           {lot && <span className="min-w-0 break-words max-md:line-clamp-1 md:truncate">{lot}</span>}
         </span>
       )}
-      {questions > 0 && <PastilleEtat sens="ambre" icone={HelpCircle} className="w-fit">{questions} question{questions > 1 ? 's' : ''} à poser à l’acheteur</PastilleEtat>}
+      {/* un fait de la rangée, pas une alerte : une icône et un texte à l'ambre, sans fond (jury, tour 3 : 25 pastilles ambre par
+          page, l'ambre ne signalait plus rien) ; la pastille reste dans « À la une » */}
+      {questions > 0 && (
+        <span className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-ambre-ink">
+          <HelpCircle size={13} strokeWidth={2} aria-hidden className="shrink-0" />{questions}{'\u00a0'}question{questions > 1 ? 's' : ''} à poser à l’acheteur
+        </span>
+      )}
       {origine && (
         <a href={origine.url} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit max-w-full items-center gap-1.5 text-xs font-medium text-turquoise-ink underline-offset-4 hover:underline [@media(pointer:coarse)]:min-h-11">
           <MapPin size={13} aria-hidden className="shrink-0" />

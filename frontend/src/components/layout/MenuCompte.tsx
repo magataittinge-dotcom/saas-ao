@@ -52,9 +52,11 @@ export default function MenuCompte() {
         <Menu.Content side="right" align="end" sideOffset={24} collisionPadding={12} data-theme={theme}
           className="menu-flottant z-50 w-72 rounded-carte border border-bord bg-surface-pop p-1.5 text-fg shadow-flottant">
           <div className="px-3 py-2">
+            {/* le nom, l'adresse, puis l'entreprise si elle est vérifiée (jury, tour 3 : « Votre compte » entre le nom et l'adresse) */}
             {prenom && <p className="truncate text-sm font-semibold">{prenom}</p>}
-            <p className={prenom ? 'truncate text-sm text-fg-2' : 'truncate text-sm font-semibold'}>{entreprise}</p>
+            {!prenom && <p className="truncate text-sm font-semibold">{entreprise}</p>}
             {user?.email && <p className="truncate text-xs text-fg-3">{user.email}</p>}
+            {prenom && nomDuCompte(organization, null) && <p className="truncate text-xs text-fg-3">{nomDuCompte(organization, null)}</p>}
           </div>
           <Menu.Separator className="my-1 h-px bg-bord" />
           <Menu.Item asChild>
@@ -65,7 +67,7 @@ export default function MenuCompte() {
           </Menu.Item>
           <Menu.Separator className="my-1 h-px bg-bord" />
           <Menu.Label className="px-3 pb-1 pt-1.5 text-xs font-medium text-fg-3">Thème</Menu.Label>
-          <Menu.RadioGroup value={choix} onValueChange={(v) => choisir(v as ChoixTheme)} className="flex gap-1 px-1.5 pb-1">
+          <Menu.RadioGroup value={choix} onValueChange={(v) => choisir(v as ChoixTheme)} className="mx-1.5 mb-1 flex gap-1 rounded-lg border border-bord p-1">
             {OPTIONS_THEME.map(({ valeur, libelle, icone: Icone }) => (
               <Menu.RadioItem key={valeur} value={valeur} onSelect={(e) => e.preventDefault()}
                 className={cn(classeSegmentTheme(choix === valeur), 'cursor-pointer select-none data-[highlighted]:bg-surface-1 data-[highlighted]:text-fg', choix === valeur && 'data-[highlighted]:bg-surface-2')}>

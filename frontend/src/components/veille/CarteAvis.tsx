@@ -6,7 +6,7 @@ import { Bouton, classesBouton } from '@/components/ui/bouton'
 import { Infobulle } from '@/components/ui/infobulle'
 import { PastilleEtat } from '@/components/ui/pastille'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
-import { departementsAAfficher, jourMois, urlSure } from '@/lib/veille'
+import { departementsAAfficher, jourMois, objetAvis, urlSure } from '@/lib/veille'
 import type { AvisVeille } from '@/services/veille'
 
 export interface PropsCarteAvis {
@@ -38,7 +38,7 @@ export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, zon
   return (
     <article aria-labelledby={idTitre} data-avis={avis.id} className="rounded-lg border border-bord bg-surface-0 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <h4 id={idTitre} className="line-clamp-3 min-w-0 text-base font-semibold leading-snug text-fg">{avis.objet}</h4>
+        <h4 id={idTitre} className="line-clamp-3 min-w-0 text-base font-semibold leading-snug text-fg">{objetAvis(avis.objet)}</h4>
         {avis.nouveau && <PastilleEtat sens="turquoise" icone={Sparkles} className="shrink-0">Nouveau</PastilleEtat>}
       </div>
       <p className="mt-1 text-sm text-fg-2">{avis.acheteur}</p>

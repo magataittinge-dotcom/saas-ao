@@ -294,11 +294,16 @@ export const PROCEDURES_LIBELLES: readonly { code: string; libelle: string }[] =
 
 export const DELAIS_JOURS: readonly (7 | 15 | 30 | null)[] = [7, 15, 30, null]
 
-/** « 12/11 » depuis « 2026-11-12 » (jour et mois du tableau de bord). */
+const MOIS_AVIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+/** « 12 nov. » depuis « 2026-11-12 » : la même écriture que les remises de l'Accueil (jury, tour 3 : « 16/11 » à côté de
+ *  « jeu. 3 déc. »). Espace insécable. */
 export const jourMois = (iso: string | null) => {
   const m = iso?.match(/^\d{4}-(\d{2})-(\d{2})/)
-  return m ? `${m[2]}/${m[1]}` : ''
+  return m ? `${Number(m[2])}\u00a0${MOIS_AVIS[Number(m[1]) - 1] ?? ''}` : ''
 }
+
+/** L'objet d'un avis tel que le BOAMP le publie, sans sa ponctuation de fin (« …venaison-. » → « …venaison »). Affichage. */
+export const objetAvis = (objet: string | null | undefined): string => (objet ?? '').replace(/[\s.,;:\-–—]+$/u, '')
 
 /** Ajoute la valeur à la liste, ou la retire si elle y est (puces de filtre à bascule). */
 export const basculerValeur = (liste: readonly string[], v: string): string[] => (liste.includes(v) ? liste.filter((x) => x !== v) : [...liste, v])

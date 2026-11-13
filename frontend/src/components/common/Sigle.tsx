@@ -83,7 +83,8 @@ export function Sigle({ code, majuscule = false }: Props) {
             {code}
           </button>
         </TooltipTrigger>
-        <TooltipContent className="max-w-64 whitespace-normal text-pretty font-normal">{entree.explication}</TooltipContent>
+        {/* sous le mot, calée sur lui, et inversée : elle ne recouvre plus le titre et se détache de la carte (jury, tour 3) */}
+        <TooltipContent side="bottom" align="start" className="max-w-64 whitespace-normal text-pretty border-transparent bg-fg font-normal text-fg-inverse shadow-flottant">{entree.explication}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   )

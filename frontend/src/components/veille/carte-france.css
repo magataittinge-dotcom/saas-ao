@@ -67,7 +67,8 @@
 .cf-chiffre {
   fill: var(--text-1);
   font: 600 12px var(--font-ui);
-  font-variant-numeric: tabular-nums;
+  /* proportionnels : dans une bulle, les tabulaires écrivaient « 1 1 » pour 11 (jury, tour 3) */
+  font-variant-numeric: proportional-nums;
   text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;

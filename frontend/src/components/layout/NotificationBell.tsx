@@ -89,9 +89,10 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
       </BoutonIcone>
 
       {open && (
-        <div data-panneau-notifications="" className={cn('absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-bord bg-surface-pop text-fg shadow-flottant', versLeHaut ? 'bottom-full -right-12 mb-2' : 'top-full mt-2 max-[768px]:fixed max-[768px]:inset-x-4 max-[768px]:top-14 max-[768px]:mt-1 max-[768px]:w-auto max-[768px]:max-w-none')}>
+        <div data-panneau-notifications="" className={cn('absolute right-0 z-50 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-bord bg-surface-pop text-fg shadow-flottant', versLeHaut ? 'bottom-full -right-12 mb-2' : 'top-full mt-2 max-[768px]:fixed max-[768px]:inset-x-4 max-[768px]:top-14 max-[768px]:mt-1 max-[768px]:w-auto max-[768px]:max-w-none')}>
           <div className="flex min-h-11 items-center justify-between gap-3 border-b border-bord px-4">
-            <span className="text-sm font-semibold">Notifications</span>
+            {/* le compte dit qu'il y en a d'autres sous le pli (jury, tour 3 : trente notifications, six visibles, rien ne le disait) */}
+            <span className="text-sm font-semibold">Notifications{items.length > 0 && <span className="ml-2 font-normal text-fg-3">{items.length}</span>}</span>
             {unread > 0 && <Bouton variante="lien" onClick={() => markAllRead()}>Tout marquer comme lu</Bouton>}
           </div>
           {/* le panneau prend la hauteur que l'écran offre (il n'en montrait que trois lignes et demie sur 425 px) */}
@@ -108,7 +109,7 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
                   <span className="min-w-0">
                     {/* deux lignes au plus : `line-clamp` pose son propre affichage, `block` l'annulait (les titres tenaient sur trois lignes) */}
                     <span className={cn('line-clamp-2 text-sm', n.read ? 'text-fg-2' : 'font-semibold text-fg')}>{n.titre}</span>
-                    {n.corps && <span className="mt-0.5 line-clamp-2 text-xs text-fg-2">{n.corps}</span>}
+                    {n.corps && <span className="mt-0.5 line-clamp-3 text-xs text-fg-2">{n.corps}</span>}
                     <span className="mt-1 block text-xs text-fg-3">{quandNotification(n.created_at)}</span>
                   </span>
                 </button>
@@ -116,7 +117,8 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
             )}
           </div>
           {/* l'annonce du produit : ici, hors du flux des écrans */}
-          <LigneNouveau onSuivre={() => setOpen(false)} />
+          {/* une longue liste garde sa place : l'annonce ne ferme pas le panneau comme une fin de liste */}
+          {items.length <= 5 && <LigneNouveau onSuivre={() => setOpen(false)} />}
         </div>
       )}
     </div>

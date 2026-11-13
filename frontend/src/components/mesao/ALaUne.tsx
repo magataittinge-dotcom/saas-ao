@@ -30,7 +30,7 @@ export function ALaUne({ projet, maintenant = new Date() }: { projet: Project; m
         <div className="flex min-w-0 flex-col gap-2.5">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
             <PastilleRemise libelle={lecture.echeance.libelle} niveau={niveauRemise(projet, maintenant)} />
-            {quand && <span className="chiffres text-sm font-semibold text-fg">{quand}</span>}
+            {quand && <span className="whitespace-nowrap text-sm font-semibold text-fg">{quand}</span>}
           </div>
           <h3 id="une-titre" className="line-clamp-3 break-words text-xl font-semibold leading-tight tracking-[-0.01em] text-fg">{projet.name}</h3>
           {complement && <p className="truncate text-sm text-fg-2">{complement}</p>}
