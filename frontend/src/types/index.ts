@@ -303,6 +303,8 @@ export interface ChecklistItem {
   template_project_doc_id?: string
   completed_project_doc_id?: string
   status: ChecklistStatus
+  /** B7 — formulaire rempli déposé, à relire avant le dépôt (fait du serveur ; le motif est dans `details`). */
+  a_relire?: boolean
   details?: string
   source_in_rc?: string
   signature_confirmed?: boolean

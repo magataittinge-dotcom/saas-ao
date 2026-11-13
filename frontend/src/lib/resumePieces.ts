@@ -25,7 +25,7 @@ export function comptesDetailles(pieces: readonly EntreeStatutPiece[], echeance:
     const code = statutPiece(p, echeance).code
     if (code === 'pret') pretes += 1
     else if (code === 'a-renouveler') aRenouveler += 1
-    else if (code === 'a-joindre' || code === 'a-confirmer') aJoindre += 1
+    else if (code === 'a-joindre' || code === 'a-confirmer' || code === 'a-relire') aJoindre += 1
     else if (code !== 'non-concerne') autres += 1
   }
   return { pretes, aJoindre, aRenouveler, total: pretes + aJoindre + aRenouveler, autres }
