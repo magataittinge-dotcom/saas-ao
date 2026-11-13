@@ -18,7 +18,7 @@ export const ERREUR_SIRET = 'Un numéro SIRET compte 14 chiffres. Vérifiez votr
 /**
  * C15, A6 : le premier écran d'un nouveau client, sur l'accueil. Il dit en une ligne ce que fait Synorix, montre les sept
  * étapes et le partage des rôles (le visage : ici Synorix parle), puis demande UNE chose : le SIRET (le répertoire Sirene
- * remplit le profil), et ensuite le dossier de l'acheteur, offert. Un seul geste à la fois : « Valider », puis « Choisir un
+ * remplit le profil), et ensuite le dossier de l'acheteur, offert. Un seul geste à la fois : « Trouver mon entreprise », puis « Choisir un
  * fichier ». Le profil se complète ensuite au fil des réponses.
  */
 export default function FirstAOWelcome() {
@@ -62,12 +62,12 @@ export default function FirstAOWelcome() {
           <h2 className="text-lg font-semibold text-fg">Pour commencer, votre numéro SIRET</h2>
           <p className="mt-1.5 text-sm text-fg-2">Rien d’autre à saisir : le répertoire Sirene remplit le reste de votre profil.</p>
           <form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); void submitSiret() }}>
-            <GroupeChamp libelle="Numéro SIRET" aide="14 chiffres, sans espace." erreur={siretErreur ?? undefined} className="min-w-0 flex-1 basis-64">
+            <GroupeChamp libelle="Numéro SIRET" aide="14 chiffres, par exemple 123 456 789 00012." erreur={siretErreur ?? undefined} className="w-full sm:max-w-72">
               <Champ value={siret} onChange={(e) => { setSiret(e.target.value); setSiretErreur(null) }} aria-label="Numéro SIRET" inputMode="numeric" autoComplete="off" />
             </GroupeChamp>
           </form>
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
-            <Bouton variante="principal" onClick={() => { void submitSiret() }} enCours={siretBusy} libelleEnCours="Vérification…">Valider</Bouton>
+            <Bouton variante="principal" onClick={() => { void submitSiret() }} enCours={siretBusy} libelleEnCours="Vérification…">Trouver mon entreprise</Bouton>
             <Bouton variante="lien" onClick={() => setSiretDone(true)}>Passer cette étape</Bouton>
           </div>
         </Carte>

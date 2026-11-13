@@ -96,10 +96,19 @@ test('500 AO à mettre à jour : l’accueil en montre trois et renvoie à Mes 
   assert.ok(html.includes('Voir les 497 autres dans Mes AO'))
 })
 
-test("sans AO : la bande dit ce qui apparaîtra ici, et le bouton « Nouvel appel d’offres » est présent", () => {
+test('les rangées des AO en cours partagent une seule grille : leurs colonnes sont alignées (jury, tour 3)', () => {
+  const src = sansCommentaires(lire('src/components/dashboard/BandeAO.tsx'))
+  assert.match(src, /<ul className="lg:grid lg:grid-cols-\[[^\]]+\]">/)
+  assert.match(src, /lg:col-span-4 lg:grid-cols-subgrid/)
+})
+
+test("sans AO : la bande dit ce qui apparaîtra ici (les sept étapes), un seul geste au verbe du dépôt, jamais un second « Nouvel appel d’offres » (jury, tour 3)", () => {
   const html = rendre([])
   assert.ok(html.includes('Aucun appel d’offres en cours'))
-  assert.ok(/<button[^>]*>Nouvel appel d’offres<\/button>/.test(html))
+  assert.ok(/<button[^>]*data-variante="principal"[^>]*>Déposer le dossier de l’acheteur/.test(html), 'le geste, en aplat : le bouton de la barre passe au trait')
+  assert.ok(!html.includes('Nouvel appel d’offres'), 'le bouton de la barre n’est pas répété dans la carte')
+  assert.ok(!html.includes('Tous mes appels d’offres'), 'pas de lien vers une liste vide')
+  assert.ok(html.includes('Chaque dossier suit sept étapes') && html.includes('data-etat-vide'))
   assert.ok(!/bg-encre|sur-encre/.test(html), 'plus d’encre sombre écrite en dur')
 })
 
@@ -220,7 +229,7 @@ test("l’écran du premier dossier (affiché sur le tableau de bord) : page, c
   assert.ok(html.includes('le répertoire Sirene remplit le reste de votre profil.'))
   const champ = html.match(/<input[^>]*aria-label="Numéro SIRET"[^>]*>/)?.[0] ?? ''
   assert.ok(champ.includes('border-bord-champ'), 'champ du socle')
-  const valider = html.match(/<button[^>]*>Valider<\/button>/)?.[0] ?? ''
+  const valider = html.match(/<button[^>]*>Trouver mon entreprise<\/button>/)?.[0] ?? ''
   assert.ok(valider.includes('bg-accent-fill'), 'bouton du socle')
   assert.equal((html.match(/bg-accent-fill/g) ?? []).length, 1, 'un seul aplat d’accent')
   // A6 : les sept étapes dans l'ordre, et le partage des rôles dit par Synorix (le visage, une fois)

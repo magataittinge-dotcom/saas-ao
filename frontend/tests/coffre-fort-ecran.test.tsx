@@ -54,7 +54,7 @@ test('P20 : plus de rubrique « (0) Aucun document » ; les rubriques sans pièc
 
 test('A10 : coffre-fort vide = ce qu’il fera, et un seul bouton', () => {
   const html = rendre([])
-  assert.ok(html.includes('Vos attestations (URSSAF, assurance, Kbis) vivent ici.'))
+  assert.ok(html.includes('Vos attestations (URSSAF, assurance, Kbis) se rangent ici.'))
   assert.ok(html.includes('Synorix les joint à chaque dossier et vous prévient avant la fin de leur validité.'))
   assert.equal(nb(html, /Déposer des documents/g), 1)
   assert.ok(!html.includes('À déposer</h2>'), 'pas de liste de trous sous l’état vide')

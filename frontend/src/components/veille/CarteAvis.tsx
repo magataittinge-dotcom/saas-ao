@@ -1,12 +1,13 @@
 // Un avis ouvert : l'objet, l'acheteur, le département, le délai (J−12), la procédure, les métiers,
-// et deux gestes : lire l'avis (lien externe) ou en faire un AO. Composants du système seulement ; aucun aplat ici :
+// et deux gestes : lire l'avis (lien externe) ou en faire un AO (« Préparer cet AO », le même verbe que sur Mes AO). Composants du système seulement ; aucun aplat ici :
 // l'action pleine de l'Accueil reste celle du prochain appel d'offres.
-import { ExternalLink, Plus, Sparkles } from 'lucide-react'
+import { ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { Bouton, classesBouton } from '@/components/ui/bouton'
 import { Infobulle } from '@/components/ui/infobulle'
 import { PastilleEtat } from '@/components/ui/pastille'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
-import { departementsAAfficher, jourMois, objetAvis, urlSure } from '@/lib/veille'
+import { jourCourt } from '@/lib/mesAO'
+import { departementsAAfficher, objetAvis, urlSure } from '@/lib/veille'
 import type { AvisVeille } from '@/services/veille'
 
 export interface PropsCarteAvis {
@@ -57,7 +58,7 @@ export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, zon
             <dt className="sr-only">Date limite</dt>
             <dd className="flex items-center gap-2">
               <DeadlinePill echeance={{ date: avis.date_limite }} />
-              <span>{jourMois(avis.date_limite)}</span>
+              <span>{jourCourt(new Date(avis.date_limite))}</span>
             </dd>
           </div>
         )}
@@ -78,7 +79,7 @@ export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, zon
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <Bouton onClick={() => onCreerAO(avis.id)} disabled={enCreation}>
-          <Plus aria-hidden strokeWidth={1.75} /> {enCreation ? 'Création…' : 'Créer l’AO'}
+          {enCreation ? 'Création…' : <>Préparer cet AO<ArrowRight aria-hidden strokeWidth={1.75} /></>}
         </Bouton>
         {lien && (
           <a href={lien} target="_blank" rel="noopener noreferrer" className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>

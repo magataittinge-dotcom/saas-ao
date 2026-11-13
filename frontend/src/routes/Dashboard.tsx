@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { useAplatReserve } from '@/stores/uiStore'
-import BandeAO, { COLONNES_BANDE, RANGEE_BANDE } from '@/components/dashboard/BandeAO'
+import BandeAO, { COLONNES_BANDE, GRILLE_BANDE, RANGEE_BANDE } from '@/components/dashboard/BandeAO'
 import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
 import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
 import { classesBouton } from '@/components/ui/bouton'
@@ -45,7 +45,7 @@ export function suiteDuJour(projets: readonly Project[], maintenant: Date = new 
   if (e.etat === 'aujourdhui') return next.current_step >= 6 ? 'remise aujourd’hui, dossier prêt' : 'remise aujourd’hui'
   if (e.etat === 'proche') return `prochaine remise dans ${pluriel(e.jours ?? 0, 'jour', 'jours')}`
   const quand = quandCourt(next)
-  return quand ? `prochaine remise ${quand}` : null
+  return quand ? `prochaine remise ${quand.replace(/ /g, '\u00a0')}` : null
 }
 
 /** Ce que Synorix dit sur l'Accueil : une phrase au plus, celle qui appelle un geste. Rien à dire : pas de visage. */
@@ -273,6 +273,7 @@ function BandeEnChargement() {
       <Squelette className="mb-4 h-5 w-64" />
       <Carte sansMarge>
         {/* la silhouette de la rangée réelle, sur la même grille : le nom et l'acheteur, le fil et l'étape, la remise, le bouton */}
+        <div className={GRILLE_BANDE}>
         {[0, 1, 2].map((i) => (
           <div key={i} className={`${RANGEE_BANDE} ${COLONNES_BANDE} min-h-[94px]`}>
             <div className="grid content-center gap-2"><Squelette className="h-4 w-3/5 max-sm:w-4/5" /><Squelette className="h-3.5 w-4/5" /></div>
@@ -281,6 +282,7 @@ function BandeEnChargement() {
             <Squelette className="h-11 w-52 rounded-lg max-sm:w-full lg:justify-self-end" />
           </div>
         ))}
+        </div>
       </Carte>
     </div>
   )

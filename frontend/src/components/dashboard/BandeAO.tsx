@@ -7,7 +7,7 @@ import { ArrowRight, ChevronRight } from 'lucide-react'
 import { FilPoints, JaugeLecture, PastilleRemise } from '@/components/mesao/Etat'
 import { Bouton, classesBouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
-import { EtatVide } from '@/components/ui/etats'
+import { FilSeptEtapes } from '@/components/onboarding/FilSeptEtapes'
 import { TitreSection } from '@/components/ui/page'
 import { aLaUne, aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
 import { momentParis } from '@/lib/remiseParis'
@@ -44,9 +44,11 @@ export interface PropsBandeAO {
   onNouveau: () => void
 }
 
-// Les colonnes ne dépendent pas du contenu d'une rangée (jury, tour 3 : la largeur du bouton décalait le fil et la date
-// d'une rangée à l'autre) : le nom prend le reste, le fil, la remise et l'action ont leur largeur.
-export const COLONNES_BANDE = 'lg:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_12.5rem_auto] lg:items-center xl:grid-cols-[minmax(0,1fr)_15rem_13rem_17.5rem]'
+// Une seule grille pour toutes les rangées (COR-D) : les colonnes ne dépendent pas du contenu d'une rangée, le bouton le plus
+// large fixe la dernière. La grille est écrite sur la liste (un test de COR-D la lit là) ; `GRILLE_BANDE` en est la copie pour le squelette de
+// l'Accueil, `COLONNES_BANDE` la sous-grille de chaque rangée.
+export const GRILLE_BANDE = 'lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_auto]'
+export const COLONNES_BANDE = 'lg:col-span-4 lg:grid-cols-subgrid lg:items-center'
 export const RANGEE_BANDE = 'grid min-w-0 gap-x-6 gap-y-3 border-t border-bord px-5 py-4 first:border-t-0 sm:px-6'
 
 export default function BandeAO({ projets, maintenant = new Date(), onStatut, onNouveau }: PropsBandeAO) {
@@ -60,21 +62,33 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
     <section aria-labelledby="t-bande" data-bande-ao className="mt-10 max-md:mt-7.5">
       {/* le premier titre de la bande porte le lien vers Mes AO : « En cours », ou « À mettre à jour » s'il n'y a que cela */}
       {(liste.length > 0 || passees.length === 0) && (
-        // un seul lien vers Mes AO dans le bloc (jury, tour 3) : quand le pied de la liste dit « Voir les n autres », l'en-tête n'en porte pas
-        <TitreSection id="t-bande" action={enCours.length > liste.length ? undefined : tousMesAO}>
+        // le lien vers Mes AO : seulement s'il y a des AO (COR-D), et pas deux fois dans le bloc : quand le pied de la liste dit
+        // « Voir les n autres », l'en-tête n'en porte pas (COR-A, jury, tour 3)
+        <TitreSection id="t-bande" action={projets.length > 0 && enCours.length <= liste.length ? tousMesAO : undefined}>
           Vos appels d’offres en cours{enCours.length > 0 && <span className="chiffres ml-2 font-normal text-fg-3">{enCours.length}</span>}
         </TitreSection>
       )}
 
       {liste.length === 0 ? (
         passees.length === 0 && (
-          <EtatVide titre="Aucun appel d’offres en cours"
-            phrase="Choisissez un avis de la veille, ou déposez le dossier de l’acheteur : Synorix le lit et prépare la décision."
-            action={<Bouton onClick={onNouveau}>Nouvel appel d’offres</Bouton>} />
+          // Compte neuf (jury, tour 3) : un seul geste, au verbe de la première étape (le bouton de la barre passe au trait) ;
+          // à côté, ce qui apparaîtra ici : les sept étapes que suivra le dossier. Une surface, deux colonnes, rien de centré.
+          <Carte data-etat-vide="" className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+            <div className="min-w-0">
+              <p className="text-lg font-semibold text-fg">Aucun appel d’offres en cours</p>
+              <p className="mt-1 max-w-[52ch] text-sm text-fg-2">Déposez le dossier de l’acheteur, ou choisissez un avis de la veille plus bas : Synorix le lit et prépare la décision.</p>
+              <Bouton variante="principal" onClick={onNouveau} className="mt-4 max-sm:w-full">Déposer le dossier de l’acheteur<ArrowRight aria-hidden strokeWidth={1.75} /></Bouton>
+            </div>
+            <div className="flex min-w-0 flex-col justify-center border-bord max-lg:border-t max-lg:pt-5 lg:self-stretch lg:border-l lg:pl-10">
+              <p className="text-sm font-medium text-fg-2">Chaque dossier suit sept étapes</p>
+              <FilSeptEtapes className="mt-4" />
+            </div>
+          </Carte>
         )
       ) : (
         <Carte sansMarge>
-          <ul>
+          {/* une seule grille pour toutes les rangées (jury, tour 3 : chaque rangée se mettait en page seule) */}
+          <ul className="lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_auto]">
             {liste.map((p) => {
               const lecture = lectureAO(p, maintenant)
               const { etape, total, nom } = avancementAffiche(p)

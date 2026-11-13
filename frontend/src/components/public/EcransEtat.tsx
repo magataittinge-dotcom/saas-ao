@@ -2,13 +2,13 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Page } from '@/components/ui/page'
 import { Bouton, classesBouton } from '@/components/ui/bouton'
-import { SynorixParle } from '@/components/ui/synorix-parle'
-import { PARTAGE_DES_ROLES } from '@/components/onboarding/FilSeptEtapes'
 
 /** Un écran qui dit ce qui se passe, en une phrase, et propose deux chemins : le premier est le geste attendu. */
 function EcranChemins({ titre, phrase, vers, libelle, autre, suite }: { titre: string; phrase: string; vers: string; libelle: string; autre?: ReactNode; suite?: ReactNode }) {
   return (
     <Page etroite titre={titre} sousTitre={<span className="block text-balance">{phrase}</span>}>
+      {/* le fil d'aurore, comme sur l'écran d'erreur et hors connexion : la même signature sur tous les écrans d'état (jury, tour 3) */}
+      <span aria-hidden className="fil-aurore mb-6 block" />
       <div className="flex flex-wrap gap-3">
         <Bouton asChild variante="principal" className="max-sm:w-full"><Link to={vers}>{libelle}</Link></Bouton>
         {autre}
@@ -22,7 +22,7 @@ function EcranChemins({ titre, phrase, vers, libelle, autre, suite }: { titre: s
  * Adresse inconnue (404). Le même gabarit dans la coquille connectée et sur le site : ce qui se passe, en une phrase, et le
  * geste pour repartir. Connecté : la phrase rassure sur les dossiers, le second chemin mène à « Mes AO ». Visiteur (jury,
  * tour 1) : il n'a pas de dossier, la phrase ne lui en parle pas ; « Tarifs » et « Se connecter » sont dans l'en-tête du
- * site ; sous le geste, Synorix dit en une phrase ce qu'il fait et montre le chemin (le bas de l'écran n'est plus un vide).
+ * site. Un seul chemin (jury, tour 3 : le slogan recollé sous un filet meublait, et « Voir comment ça marche » menait à la même page).
  */
 export function AdresseInconnue({ connecte }: { connecte: boolean }) {
   if (connecte) {
@@ -35,13 +35,7 @@ export function AdresseInconnue({ connecte }: { connecte: boolean }) {
   }
   return (
     <EcranChemins titre="Cette adresse n’existe pas" phrase="Aucune page de Synorix ne correspond à cette adresse."
-      vers="/" libelle="Revenir à l’accueil"
-      suite={(
-        <SynorixParle className="mt-12 border-t border-bord pt-8"
-          action={<a href="/#comment" className={classesBouton('lien')}>Voir comment ça marche</a>}>
-          {PARTAGE_DES_ROLES}
-        </SynorixParle>
-      )} />
+      vers="/" libelle="Revenir à l’accueil" />
   )
 }
 
