@@ -20,7 +20,7 @@ test('le jour même : « Aujourd’hui » jusqu’à l’heure limite compris
 test('passage de minuit : J−1 à 23h59 la veille, « Aujourd’hui » à 0h00', () => {
   assert.deepEqual(
     [etatEcheance(REMISE, le(9, 4, 23, 59)).etat, etatEcheance(REMISE, le(9, 4, 23, 59)).libelle],
-    ['proche', 'J−1'],
+    ['proche', 'J−1 · 1 jour ouvré'],
   )
   assert.equal(etatEcheance(REMISE, le(10, 4, 0, 0)).etat, 'aujourdhui')
 })
@@ -32,8 +32,8 @@ test('le lendemain et au-delà : toujours « Date de remise passée », jamai
 })
 
 test('J−7 encore « proche », J−8 « à venir »', () => {
-  assert.deepEqual([etatEcheance(REMISE, le(3, 4, 10)).etat, etatEcheance(REMISE, le(3, 4, 10)).libelle], ['proche', 'J−7'])
-  assert.deepEqual([etatEcheance(REMISE, le(2, 4, 10)).etat, etatEcheance(REMISE, le(2, 4, 10)).libelle], ['a_venir', 'J−8'])
+  assert.deepEqual([etatEcheance(REMISE, le(3, 4, 10)).etat, etatEcheance(REMISE, le(3, 4, 10)).libelle], ['proche', 'J−7 · 4 jours ouvrés'])
+  assert.deepEqual([etatEcheance(REMISE, le(2, 4, 10)).etat, etatEcheance(REMISE, le(2, 4, 10)).libelle], ['a_venir', 'J−8 · 5 jours ouvrés'])
 })
 
 test('sans heure connue : la limite est la fin du jour dit', () => {
@@ -45,7 +45,7 @@ test('sans heure connue : la limite est la fin du jour dit', () => {
 })
 
 test('sans date : état « sans date », pas de chiffre', () => {
-  assert.deepEqual(etatEcheance(null), { etat: 'sans_date', jours: null, libelle: '—', limite: null })
+  assert.deepEqual(etatEcheance(null), { etat: 'sans_date', jours: null, ouvres: null, libelle: '—', limite: null })
   assert.equal(etatEcheance({ date: 'vendredi' }).etat, 'sans_date')
 })
 
