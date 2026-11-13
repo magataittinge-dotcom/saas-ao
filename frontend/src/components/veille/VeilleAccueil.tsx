@@ -62,7 +62,7 @@ export default function VeilleAccueil() {
 
       {v.preferencesEnErreur ? (
         // Les préférences (zone, filtres) n'ont pas pu être lues : rien n'est montré comme vide, rien n'est enregistré.
-        <EtatErreur className="mt-6" titre="La veille n’a pas pu se charger" detail={'La connexion a été interrompue. Votre zone et vos filtres ne\u00a0sont\u00a0pas\u00a0touchés.'}
+        <EtatErreur className="mt-6 md:w-fit" titre="La veille n’a pas pu se charger" detail="La connexion a été interrompue. Votre zone et vos filtres sont conservés."
           onReessayer={v.recharger} enCours={v.rechargeEnCours} />
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
