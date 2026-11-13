@@ -26,7 +26,7 @@ export function ALaUne({ projet, maintenant = new Date() }: { projet: Project; m
   return (
     <section aria-labelledby="une-titre" data-a-la-une={projet.id}>
       <TitreSection>À la une <span className="font-normal text-fg-3">· la prochaine remise</span></TitreSection>
-      <Carte className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:items-center lg:gap-8">
+      <Carte className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-2.5">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
             <PastilleRemise libelle={lecture.echeance.libelle} niveau={niveauRemise(projet, maintenant)} />
@@ -55,7 +55,7 @@ export function ALaUne({ projet, maintenant = new Date() }: { projet: Project; m
           )}
         </div>
         {faits.length > 0 && (
-          <dl className="m-0 flex flex-col border-t border-bord pt-2 text-sm lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+          <dl className="m-0 flex flex-col border-t border-bord pt-2 text-sm lg:justify-center lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
             {faits.map((f, i) => (
               <div key={f.libelle} className={cn('flex justify-between gap-3 py-2.5', i > 0 && 'border-t border-bord')}>
                 <dt className="text-fg-2">{f.libelle}</dt>

@@ -25,7 +25,7 @@ import { VideMesAO } from '@/components/mesao/VideMesAO'
 import { aLaUne, aoDansEtat, comptesAO } from '@/lib/etatAO'
 import { messageErreur } from '@/lib/erreurs'
 import { aDecider } from '@/lib/intelligence/action'
-import { comparerParRemise, quandCourt, resumeMesAO, STATUTS_TERMINES } from '@/lib/mesAO'
+import { comparerParRemise, resumeMesAO, STATUTS_TERMINES } from '@/lib/mesAO'
 import { phaseRequete } from '@/lib/requete'
 import { cn } from '@/lib/utils'
 import { useAplatReserve } from '@/stores/uiStore'
@@ -55,23 +55,13 @@ export default function Projects() {
   // Aucun AO (et le serveur a répondu) : l'écran du premier dossier, qui porte son propre titre.
   if (phaseRequete(requete) === 'vide') return <VideMesAO />
   return (
-    <Page titre="Mes appels d’offres" sousTitre={<SousTitre projets={requete.data} enAttente={phaseRequete(requete) === 'chargement'} />}>
+    <Page titre="Mes appels d’offres" sousTitre="Vos dossiers, de l’analyse du dossier de l’acheteur au dépôt.">
       <EtatRequete requete={requete} squelette={<SqueletteMesAO />} vide={null}
         erreur={<EtatErreur className="md:w-fit" titre="Vos appels d’offres n’ont pas pu se charger" detail="La connexion a été interrompue. Vos dossiers sont intacts." onReessayer={() => { void requete.refetch() }} enCours={requete.isFetching} />}>
         {(projets) => <ListeMesAO projets={projets} />}
       </EtatRequete>
     </Page>
   )
-}
-
-/** La sous-ligne dit autre chose que la première case : la prochaine remise, quand il y en a une. */
-function SousTitre({ projets, enAttente }: { projets: Project[] | undefined; enAttente: boolean }) {
-  // pendant la lecture, la ligne garde sa place sans rien affirmer : elle ne se réécrit pas à l'arrivée des données (jury, tour 3)
-  if (enAttente) return '\u00a0'
-  const une = projets ? aLaUne(projets) : null
-  const quand = une ? quandCourt(une) : null
-  if (!une || !quand) return 'Vos dossiers, de l’analyse du dossier de l’acheteur au dépôt.'
-  return <>Prochaine remise <strong className="font-semibold text-fg">{quand}</strong>{quand.endsWith('.') ? '' : '.'}</>
 }
 
 /**

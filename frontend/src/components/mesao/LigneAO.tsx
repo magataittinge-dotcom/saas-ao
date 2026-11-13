@@ -74,7 +74,7 @@ function CelluleEtape({ projet }: { projet: Project }) {
     )
   }
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5 max-md:pt-1.5">
       <FilPoints fil={filDeLAO(projet)} className="max-w-[210px] max-md:max-w-none" />
       {/* le fil montre déjà où en est l'AO : le nom de l'étape seul, le rang est lu (jury, tour 3 : « étape 7 sur 7 » écrit 50 fois) */}
       <span className="whitespace-nowrap text-sm text-fg-2"><strong className="font-semibold text-fg">{nom}</strong><span className="sr-only"> · étape {etape} sur {total}</span></span>

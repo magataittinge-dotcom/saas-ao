@@ -60,7 +60,8 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
     <section aria-labelledby="t-bande" data-bande-ao className="mt-10 max-md:mt-7.5">
       {/* le premier titre de la bande porte le lien vers Mes AO : « En cours », ou « À mettre à jour » s'il n'y a que cela */}
       {(liste.length > 0 || passees.length === 0) && (
-        <TitreSection id="t-bande" action={tousMesAO}>
+        // un seul lien vers Mes AO dans le bloc (jury, tour 3) : quand le pied de la liste dit « Voir les n autres », l'en-tête n'en porte pas
+        <TitreSection id="t-bande" action={enCours.length > liste.length ? undefined : tousMesAO}>
           Vos appels d’offres en cours{enCours.length > 0 && <span className="chiffres ml-2 font-normal text-fg-3">{enCours.length}</span>}
         </TitreSection>
       )}
