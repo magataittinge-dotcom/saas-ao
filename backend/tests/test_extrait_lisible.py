@@ -42,6 +42,13 @@ def test_ne_coupe_jamais_dans_un_mot_et_finit_sur_points_de_suspension():
     assert _sans_mot_coupe(affiche, source)
 
 
+def test_ne_finit_pas_sur_un_mot_outil():
+    fenetre = ("Ce taux constitue un plafond pour l'avance consentie à l'entreprise ; elle peut toutefois en demander une "
+               "plus faible et l'acheteur la verse alors aux conditions de l'acompte, l'entreprise peut demander le vers")
+    affiche = extrait_lisible(fenetre)
+    assert affiche.endswith("peut demander…")
+
+
 def test_finit_a_la_fin_de_phrase_quand_elle_tient():
     fenetre = ("L'acheteur retient une somme de 120 € HT pour chaque jour calendaire de dépassement relevé par le "
                "maître d'œuvre. Ces retenues s'ajoutent aux autres sommes prév")

@@ -40,10 +40,20 @@ def _derniere_fin_de_phrase(texte: str, apres: int, avant: int) -> Optional[int]
     return max(fins) if fins else None
 
 
+_MOTS_OUTILS = {"le", "la", "les", "l'", "l’", "de", "des", "du", "d'", "d’", "à", "au", "aux", "et", "ou", "un",
+                "une", "en", "par", "pour", "sur", "que", "qui", "dans", "son", "sa", "ses", "leur", "leurs", "ce", "ces"}
+
+
 def _sans_dernier_mot(texte: str) -> str:
-    """Le texte jusqu'au dernier mot entier (le dernier mot d'une fenêtre est le plus souvent coupé)."""
+    """Le texte jusqu'au dernier mot entier (le dernier mot d'une fenêtre est le plus souvent coupé), sans finir sur un
+    mot-outil (« le titulaire peut solliciter le… » → « le titulaire peut solliciter… »)."""
     coupe = texte.rstrip().rsplit(" ", 1)
-    return coupe[0].rstrip(" ,;:–—-") if len(coupe) == 2 else texte
+    if len(coupe) != 2:
+        return texte
+    reste = coupe[0].rstrip(" ,;:–—-")
+    while " " in reste and reste.rsplit(" ", 1)[1].lower() in _MOTS_OUTILS:
+        reste = reste.rsplit(" ", 1)[0].rstrip(" ,;:–—-")
+    return reste
 
 
 def extrait_lisible(texte: Optional[str], limite: int = LIMITE) -> Optional[str]:
