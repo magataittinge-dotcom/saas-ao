@@ -31,7 +31,7 @@ interface RetenueResult {
 function phraseEchec(e: unknown): string {
   const status = (e as { response?: { status?: number } })?.response?.status
   if (status === 422) return 'Le calcul attend des valeurs positives : vérifiez le montant et les options.'
-  return 'Le calcul n’a pas abouti. Vos valeurs sont gardées : recommencez avec « Calculer ».'
+  return 'Le calcul n’a pas abouti : la connexion au serveur a échoué. Vos valeurs sont gardées, réessayez dans un instant.'
 }
 
 /** « 4,15 » (pour cent, tel qu'on le lit) → 0,0415 (ce que le calcul attend) ; vide = 0. */
@@ -112,9 +112,9 @@ export default function Tools() {
       {/* Le formulaire est seul sur la page : il se pose sur le papier, sans carte autour ; sa largeur est celle d'une saisie. */}
       <form className="grid max-w-xl gap-5" noValidate onSubmit={(e) => { e.preventDefault(); void calculer() }}>
         {/* le champ du montant garde son identifiant : les scénarios de capture le visent */}
-        <div className="grid content-start gap-1.5 sm:max-w-xs">
+        <div className="grid content-start gap-1.5">
           <label htmlFor="rg-montant" className="text-xs font-medium text-fg-2">Montant du marché</label>
-          <ChampNombre id="rg-montant" valeur={montantHt} onChange={(n) => { setMontantHt(n); setASaisir(false) }} unite="€ HT" min={0}
+          <ChampNombre id="rg-montant" valeur={montantHt} onChange={(n) => { setMontantHt(n); setASaisir(false) }} unite="€ HT" min={0} milliers placeholder="250 000"
             aria-invalid={aSaisir || undefined} aria-describedby={aSaisir ? 'rg-montant-erreur' : undefined} />
           {aSaisir && <p id="rg-montant-erreur" role="alert" className="text-xs font-medium text-rouge-ink">Saisissez le montant du marché, hors taxes.</p>}
         </div>
@@ -140,25 +140,25 @@ export default function Tools() {
           <div id="rg-options" className="grid gap-6 border-t border-bord pt-5">
             {/* deux calculs, chacun sur sa rangée : ce qui va ensemble se lit ensemble */}
             <fieldset className="grid min-w-0 gap-3 border-0 p-0">
-              <legend className="mb-3 text-sm font-semibold text-fg">Pénalités de retard</legend>
+              <legend className="mb-3 text-lg font-semibold text-fg">Pénalités de retard</legend>
               <p className="-mt-2 text-sm text-fg-2">Ce que le maître d’ouvrage retient si le chantier est livré en retard.</p>
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <GroupeChamp libelle="Retard d’exécution">
                   <ChampNombre valeur={joursRetard} onChange={setJoursRetard} unite="jours" min={0} />
                 </GroupeChamp>
-                <GroupeChamp libelle="Pénalité par jour : le montant divisé par" aide="3 000 dans les clauses générales des marchés de travaux.">
-                  <ChampNombre valeur={diviseur} onChange={setDiviseur} min={1} />
+                <GroupeChamp libelle="Pénalité par jour de retard" aide="Le montant du marché divisé par ce nombre : 3 000 dans les clauses générales des marchés de travaux.">
+                  <ChampNombre valeur={diviseur} onChange={setDiviseur} min={1} milliers />
                 </GroupeChamp>
               </div>
             </fieldset>
             <fieldset className="grid min-w-0 gap-3 border-0 p-0">
-              <legend className="mb-3 text-sm font-semibold text-fg">Intérêts moratoires</legend>
+              <legend className="mb-3 text-lg font-semibold text-fg">Intérêts moratoires</legend>
               <p className="-mt-2 text-sm text-fg-2">Ce qui vous est dû si le maître d’ouvrage vous paie en retard.</p>
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <GroupeChamp libelle="Retard de paiement">
                   <ChampNombre valeur={joursPaiement} onChange={setJoursPaiement} unite="jours" min={0} />
                 </GroupeChamp>
-                <GroupeChamp libelle="Taux de la BCE" aide="Le taux directeur en vigueur, par exemple 4,15.">
+                <GroupeChamp libelle="Taux de la BCE" aide="Le taux directeur en vigueur à la date du retard.">
                   <ChampNombre valeur={tauxBcePct} onChange={setTauxBcePct} unite="%" min={0} />
                 </GroupeChamp>
               </div>
@@ -166,13 +166,27 @@ export default function Tools() {
           </div>
         )}
 
-        {echec && <Message ton="erreur">{echec}</Message>}
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Bouton type="submit" variante="principal" enCours={enCours} libelleEnCours="Calcul…">Calculer</Bouton>
-          {!resultat && !echec && <p className="text-sm text-fg-2">Le montant retenu et le détail par poste s’affichent sous ce bouton.</p>}
+        {/* le bouton ne bouge pas : un échec se dit dessous, là où le résultat était attendu */}
+        <div>
+          <Bouton type="submit" variante="principal" className="max-sm:w-full" enCours={enCours} libelleEnCours="Calcul…">Calculer</Bouton>
         </div>
+        {echec && <Message ton="erreur">{echec}</Message>}
       </form>
+
+      {/* La place du résultat est dessinée dès l'ouverture : ce que le calcul rendra, avec un tiret tant qu'il n'est pas fait. */}
+      {!resultat && (
+        <section aria-label="Résultat, avant le calcul" data-resultat-attendu="" className="mt-10 max-w-xl max-md:mt-[30px]">
+          <TitreSection>Résultat</TitreSection>
+          <dl className="divide-y divide-bord border-y border-bord text-sm">
+            {['Montant TTC du marché', 'Retenue de garantie', 'Pénalités de retard', 'Intérêts moratoires'].map((ligne) => (
+              <div key={ligne} className="flex items-baseline justify-between gap-4 py-3">
+                <dt className="text-fg-2">{ligne}</dt>
+                <dd className="chiffres font-semibold text-fg-3" aria-label="Pas encore calculé">—</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       {resultat && (
         <section aria-live="polite">

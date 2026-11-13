@@ -19,7 +19,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; parentTo?: string; label: 
   '/outils':         { parent: 'Paramètres', parentTo: '/settings', label: 'Retenue de garantie' },
   '/memoire-config': { label: 'Mon entreprise' },
   '/company':        { label: 'Mon entreprise' },
-  '/entreprise/fiche': { parent: 'Mon entreprise', parentTo: '/company', label: 'Fiche à télécharger' },
+  '/entreprise/fiche': { parent: 'Mon entreprise', parentTo: '/company', label: 'Fiches' },
   '/team':           { label: 'Équipe' },
   '/settings':       { label: 'Paramètres' },
   '/pricing':        { label: 'Abonnement' },
@@ -27,6 +27,8 @@ const ROUTE_LABELS: Record<string, { parent?: string; parentTo?: string; label: 
   '/settings/billing': { parent: 'Paramètres', parentTo: '/settings', label: 'Abonnement' },
   '/design':         { label: 'Système de design' },
 }
+/** Les écrans qui portent toujours leur action principale : « Nouvel appel d'offres » y reste au trait, quel que soit l'état. */
+const ACTION_PROPRE = /^\/(company|entreprise\/fiche|vault|outils)(\/|$)/
 // Le nom de chaque étape au fil (source unique : STEPS ; « candidature » est l'ancien nom de Pièces).
 export const STEP_LABELS: Record<string, string> = { ...Object.fromEntries(STEPS.map((e) => [e.segment, e.label])), candidature: 'Pièces' }
 
@@ -74,7 +76,10 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
   }
   // Dans un AO, l'écran a toujours son action (celle de l'étape, « Réessayer », « Mettre à jour le statut ») : le bouton de la
   // barre y reste au trait, même pendant un chargement ou une erreur (jury, tour 1 : il repassait en aplat sur huit états).
-  const auTrait = aplatsEcran > 0 || Boolean(idAO)
+  // Même règle pour les écrans qui ont toujours leur propre action (« Enregistrer », « Télécharger la fiche », « Déposer des
+  // documents », « Calculer ») : le bouton ne change plus de style entre le chargement, l'erreur et
+  // l'écran chargé (jury, tour 3 : aplat pendant le squelette, au trait une fois la rubrique affichée).
+  const auTrait = aplatsEcran > 0 || Boolean(idAO) || ACTION_PROPRE.test(pathname)
 
   return (
     <header data-coquille="barre-haut" className="sticky top-0 z-30 shrink-0 max-[768px]:border-b max-[768px]:border-bord max-[768px]:bg-surface-0 min-[769px]:bg-transparent">

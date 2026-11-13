@@ -26,11 +26,11 @@ export const VAULT_CATEGORY_ORDER: VaultCategory[] = [
 ]
 
 export const VAULT_CATEGORY_LABELS: Record<VaultCategory, string> = {
-  attestations_sociales_fiscales: 'Attestations sociales & fiscales',
+  attestations_sociales_fiscales: 'Attestations sociales et fiscales',
   documents_legaux: 'Documents légaux',
   assurances: 'Assurances',
   qualifications: 'Qualifications',
-  references_moyens: 'Références & moyens',
+  references_moyens: 'Références et moyens',
   autres: 'Autres',
   unclassified: 'À ranger',
 }
@@ -46,8 +46,8 @@ export const CATEGORY_TYPES: Record<Exclude<VaultCategory, 'unclassified'>, Docu
 }
 
 export const DOC_TYPE_LABELS: Record<string, string> = {
-  urssaf: 'Attestation URSSAF', kbis: 'KBIS', decennale: 'Décennale',
-  rc_civile: 'RC Civile', qualibat: 'Qualibat RGE', pro_btp: 'PRO BTP',
+  urssaf: 'Attestation URSSAF', kbis: 'Kbis', decennale: 'Décennale',
+  rc_civile: 'Responsabilité civile', qualibat: 'Qualibat RGE', pro_btp: 'PRO BTP',
   cibtp: 'CIBTP', fiscal: 'Attestation fiscale', dc1: 'Lettre de candidature (DC1)', dc2: 'Déclaration du candidat (DC2)',
   rib: 'RIB', caces: 'CACES', amiante_ss4: 'Amiante SS4',
   declaration_honneur: "Déclaration sur l’honneur", pouvoir: 'Pouvoir habilité',

@@ -75,9 +75,9 @@ export default function ProfileFreeTextCard() {
   if (!proposed) {
     return (
       <div className="grid gap-3">
-        <p className="max-w-prose text-pretty text-sm text-fg-2">Écrivez quelques phrases sur votre entreprise : vos équipes, votre matériel, vos chantiers. Synorix les range en rubriques ; vous vérifiez avant que rien ne soit écrit.</p>
-        <ZoneTexte className="resize-none" rows={3} aria-label="Décrire avec vos mots" value={text} onChange={(e) => setText(e.target.value)}
-          placeholder="Ex. : On est une entreprise de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages…" />
+        <p className="max-w-2xl text-pretty text-sm text-fg-2">Écrivez quelques phrases sur votre entreprise : vos équipes, votre matériel, vos chantiers. Synorix les range en rubriques ; vous vérifiez avant que rien ne soit écrit.</p>
+        <ZoneTexte className="max-w-2xl resize-none" rows={3} aria-label="Décrire avec vos mots" value={text} onChange={(e) => setText(e.target.value)}
+          placeholder="On est une entreprise de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages…" />
         {error && <Message ton="attention">{error}</Message>}
         <div>
           <Bouton variante="secondaire" onClick={() => structure()} disabled={text.trim().length < 10} enCours={structuring} libelleEnCours="Rangement en cours…">

@@ -218,13 +218,13 @@ function ecran(donnees: FicheDonnees, cases?: CaseDefinition[]) {
     </QueryClientProvider>)
 }
 
-test('l’écran : un seul h1 (« Fiche à télécharger », une fois), les trois fiches, le choix PDF / Word / Excel et le téléchargement', () => {
+test('l’écran : un seul h1 (« Fiches de l’entreprise », une fois), les trois fiches, le choix PDF / Word / Excel et le téléchargement', () => {
   const html = ecran(moyens)
   assert.equal((html.match(/<h1/g) ?? []).length, 1)
-  assert.match(html, /<h1[^>]*>Fiche à télécharger<\/h1>/)
-  assert.equal((html.match(/Fiche à télécharger/g) ?? []).length, 1, 'le titre n’est pas répété')
+  assert.match(html, /<h1[^>]*>Fiches de l’entreprise<\/h1>/)
+  assert.equal((html.match(/Fiches de l’entreprise/g) ?? []).length, 1, 'le titre n’est pas répété')
   assert.match(html, /data-page="large"/, 'le conteneur et l’en-tête de page du système')
-  for (const t of ['Identité', 'Moyens', 'Références']) assert.ok(html.includes(`>${t}</a>`), t)
+  for (const t of ['Identité', 'Moyens humains et matériels', 'Certifications et références']) assert.ok(html.includes(`>${t}</a>`), t)
   assert.match(html, /<a(?=[^>]*aria-current="page")(?=[^>]*href="\/entreprise\/fiche\/moyens")[^>]*>/)
   assert.ok(html.includes('href="/entreprise/fiche/certifications"') && html.includes('href="/entreprise/fiche/identite"'))
   assert.match(html, /role="radiogroup" aria-label="Format du fichier"/)
@@ -252,7 +252,7 @@ test('lecture de la fiche : chargement → erreur → contenu par le motif du s
   const code = sansCommentaires(lire('src/routes/FicheEntreprise.tsx'))
   assert.match(code, /<Page\b/)
   assert.match(code, /<EtatRequete\b[\s\S]*requete=\{\{ data, isLoading, isError, refetch, isFetching \}\}/)
-  assert.match(code, /<EtatErreur\b[\s\S]*titre="La fiche n’a pas pu se charger"[\s\S]*onReessayer=/)
+  assert.match(code, /<EtatErreur\b[\s\S]*n’a pas pu se charger[\s\S]*onReessayer=/)
   assert.doesNotMatch(code, /EcranEnChargement|err\.message|error\.message/)
   // sans réponse du serveur : le titre et les trois fiches restent là, aucune zone n'est montée
   const html = renderToStaticMarkup(
@@ -261,7 +261,7 @@ test('lecture de la fiche : chargement → erreur → contenu par le motif du s
         <Routes><Route path="/entreprise/fiche/:rubrique" element={<FicheEntreprise />} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>)
-  assert.match(html, /<h1[^>]*>Fiche à télécharger<\/h1>/)
+  assert.match(html, /<h1[^>]*>Fiches de l’entreprise<\/h1>/)
   assert.ok(html.includes('aria-label="Fiches"') && html.includes('data-phase="chargement"') && html.includes('aria-busy="true"'))
   assert.ok(!html.includes('data-zone='))
 })
@@ -343,7 +343,7 @@ test('liens « champ » : Mon entreprise donne le focus au champ demandé (é
 
 test('colonne « Téléchargement » : d’abord le format expliqué et le bouton, puis le bordereau (titre, sous-titre, contact, logo, couleur) ; les lignes libres sont avec le contenu ; aucun contrôle natif visible', () => {
   const html = ecran(moyens)
-  assert.ok(html.includes('à envoyer tel quel') && html.includes('pour modifier avant d’envoyer') && html.includes('le tableau, pour trier ou compléter'))
+  assert.ok(html.includes('Prêt à envoyer') && html.includes('À modifier avant l’envoi') && html.includes('À trier ou à compléter'))
   assert.match(html, /<button[^>]*data-telecharger[^>]*>[\s\S]*?Télécharger la fiche[\s\S]*?· PDF/)
   assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'une seule action pleine sur l’écran')
   assert.ok(html.indexOf('data-formats') < html.indexOf('data-telecharger') && html.indexOf('data-telecharger') < html.indexOf('Personnaliser la fiche'), 'le geste de l’écran d’abord')

@@ -74,7 +74,7 @@ test('la jauge de la barre dit « % » : un « 0 » seul dans un rond ne veut ri
   const c = new QueryClient()
   c.setQueryData(['billing-quota'], { plan: 'free', period_start: null, period_end: null, analyses: { used: 0, limit: 1 }, memoires: { used: 0, limit: 1 } })
   const html = renderToStaticMarkup(<QueryClientProvider client={c}><MemoryRouter><QuotaRond /></MemoryRouter></QueryClientProvider>)
-  assert.ok(/>0 ?%<|>0&nbsp;%<|>0%</.test(html), 'le pourcentage est écrit avec son signe')
+  assert.ok(/>0 ?%<|>0&nbsp;%<|>0\u202f%<|>0%</.test(html), 'le pourcentage est écrit avec son signe')
 })
 
 test('fiche à télécharger : le hook reprend le contrôleur au montage (sinon, en développement, l\'aperçu reste « Mise à jour »)', () => {

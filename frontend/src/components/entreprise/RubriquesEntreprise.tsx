@@ -1,23 +1,30 @@
 import { useId, useRef } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { Check, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RUBRIQUES, avancement, libelleAvancement, type DonneesEntreprise, type RubriqueId } from '@/lib/entreprise/avancement'
 
-/** La jauge d'une rubrique : un trait d'encre sur une piste neutre ; verte quand tout est renseigné. La largeur est calculée. */
+/** La part remplie d'une jauge, en pour cent : jamais moins de 12 % dès qu'une information est saisie (un point de 8 px au
+ *  bout d'une piste se lisait comme un défaut de rendu), 0 quand rien ne l'est. */
+export const partJauge = (rempli: number, total: number): number => (total > 0 && rempli > 0 ? Math.max(12, Math.round((rempli / total) * 100)) : 0)
+
+/** La jauge d'une rubrique : un trait d'encre sur une piste neutre ; verte quand tout est renseigné. La même sur les trois
+ *  rangées (piste seule quand rien n'est saisi), au téléphone aussi, plus courte. */
 function Jauge({ rempli, total }: { rempli: number; total: number }) {
   const complete = total > 0 && rempli >= total
   return (
-    <span aria-hidden="true" className="block h-1.5 w-24 shrink-0 overflow-hidden rounded-pilule bg-surface-2 max-sm:hidden">
-      <span className={cn('block h-full rounded-pilule transition-[width] duration-pop ease-survol motion-reduce:transition-none', complete ? 'bg-vert-mark' : 'bg-fg-2')} style={{ width: `${total ? Math.round((rempli / total) * 100) : 0}%` }} />
+    <span aria-hidden="true" data-jauge="" className="block h-1.5 w-24 shrink-0 overflow-hidden rounded-pilule bg-surface-2 max-sm:w-14">
+      <span className={cn('block h-full rounded-pilule transition-[width] duration-pop ease-survol motion-reduce:transition-none', complete ? 'bg-vert-mark' : 'bg-fg-2')} style={{ width: `${partJauge(rempli, total)}%` }} />
     </span>
   )
 }
 
 /**
  * Les trois rubriques : UNE surface, trois rangées (plus de trois cartes identiques). Chaque rangée dit le nom de la
- * rubrique, où elle en est (« 4 informations sur 9 ») et porte une jauge fine ; la rubrique ouverte est marquée (fond
- * neutre, chevron vers le bas), son formulaire s'ouvre dessous, sur toute la largeur. Un champ vide n'est pas une alerte :
+ * rubrique, où elle en est (« 4 informations sur 9 ») et porte une jauge fine ; la rubrique choisie est marquée (fond
+ * neutre, texte plein, filet d'accent de 2 px comme l'entrée choisie de la barre de navigation) et ne porte pas de chevron :
+ * les deux autres gardent le leur, vers la droite (aucun chevron vers le bas : ce n'est pas un accordéon, le formulaire est
+ * sous la surface, sur toute la largeur). Un champ vide n'est pas une alerte :
  * aucun « À renseigner » ambre ici.
  * Clavier : flèches haut/bas (et gauche/droite) déplacent le choix, Début et Fin vont aux extrémités ; `aria-selected`
  * marque la rubrique ouverte. Un seul formulaire est monté, celui de la rubrique ouverte.
@@ -54,7 +61,6 @@ export default function RubriquesEntreprise({ donnees, rubrique, onChoisir, pann
         const ouverte = rubrique === r.id
         const av = avancement(donnees, r.id)
         const complete = av.total > 0 && av.rempli >= av.total
-        const Chevron = ouverte ? ChevronDown : ChevronRight
         return (
           <div
             key={r.id}
@@ -68,10 +74,12 @@ export default function RubriquesEntreprise({ donnees, rubrique, onChoisir, pann
             onClick={() => onChoisir(r.id)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onChoisir(r.id) } else auClavier(e, i) }}
             className={cn(
-              'flex min-h-16 cursor-pointer items-center gap-4 border-t border-bord px-5 py-3 text-left transition-colors duration-fast ease-survol first:border-t-0 hover:bg-surface-1 sm:px-6',
+              // le survol ne teinte qu'au bureau : au téléphone, une seule rangée a le fond de la rubrique choisie
+              'relative flex min-h-16 cursor-pointer items-center gap-4 border-t border-bord px-5 py-3 text-left transition-colors duration-fast ease-survol first:border-t-0 sm:px-6 sm:hover:bg-surface-1',
               ouverte && 'bg-surface-1',
             )}
           >
+            {ouverte && <span aria-hidden="true" data-marque-choisie="" className="absolute inset-y-3 left-0 w-0.5 rounded-pilule bg-accent-ui" />}
             <span className="min-w-0 flex-1">
               <span className={cn('block text-base text-fg', ouverte ? 'font-semibold' : 'font-medium')}>{r.titre}</span>
               <span className={cn('flex items-center gap-1.5 text-sm', complete ? 'text-vert-ink' : 'text-fg-2')}>
@@ -80,8 +88,8 @@ export default function RubriquesEntreprise({ donnees, rubrique, onChoisir, pann
                 <span>{av.rempli === 0 ? 'À commencer' : `${libelleAvancement(av)}${complete ? ' · complète' : ''}`}</span>
               </span>
             </span>
-            {av.rempli > 0 && <Jauge {...av} />}
-            <Chevron aria-hidden size={18} strokeWidth={1.5} className="shrink-0 text-fg-3" />
+            <Jauge {...av} />
+            <ChevronRight aria-hidden size={18} strokeWidth={1.5} className={cn('shrink-0 text-fg-3', ouverte && 'invisible')} />
           </div>
         )
       })}

@@ -127,7 +127,7 @@ test('Identité : un seul champ « Nom de l’entreprise » et un seul bouton
     const html = pageCompany(large)
     assert.equal(compte(html, /<label[^>]*>Nom de l’entreprise</g), 1, `nom (${large ? 'colonnes' : 'onglets'})`)
     // jury, tour 1 : « Enregistrer » est en haut (le seul aplat) et, au trait, à la fin du formulaire (la page fait plusieurs écrans au téléphone)
-    assert.equal(compte(html, />Enregistrer</g), 2, 'Enregistrer en haut et en bas')
+    assert.equal(compte(html, />Enregistrer</g), 1, 'un seul Enregistrer (jury, tour 3)')
     assert.equal(compte(html, /data-variante="principal"/g), 1, 'un seul aplat')
     assert.equal(compte(html, /<form/g), 1, 'un seul formulaire')
     assert.ok(!html.includes('Ancien nom'), 'nom_entreprise du profil n’est plus montré')
@@ -140,8 +140,8 @@ test('chaque rubrique : un seul formulaire et un seul bouton « Enregistrer �
   for (const el of [<FormIdentite donnees={DONNEES} />, <FormMoyens donnees={DONNEES} />, <FormCertifications donnees={DONNEES} />]) {
     const html = enveloppe(el)
     assert.equal(compte(html, /<form/g), 1)
-    assert.equal(compte(html, /type="submit"/g), 2)
-    assert.equal(compte(html, />Enregistrer</g), 2)
+    assert.equal(compte(html, /type="submit"/g), 1)
+    assert.equal(compte(html, />Enregistrer</g), 1)
     assert.equal(compte(html, /data-variante="principal"/g), 1)
   }
 })
