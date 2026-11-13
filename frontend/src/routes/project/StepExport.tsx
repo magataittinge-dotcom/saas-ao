@@ -25,6 +25,7 @@ import { messageErreur } from '@/lib/erreurs'
 import { Sigle } from '@/components/common/Sigle'
 import { developper } from '@/lib/lexique'
 import { noteDepot } from '@/lib/statutPiece'
+import { nomPiece } from '@/lib/nomsPieces'
 import ControleFichiers from '@/components/project/ControleFichiers'
 import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO, etatEcheance, type EcheanceSource } from '@/lib/echeance'
@@ -58,6 +59,8 @@ interface ChecklistExportItem {
   jointe: boolean
   piece_nom: string | null
   valable_jusqu_au: string | null
+  /** B7 — formulaire déposé à relire (serveur, même règle que Pièces) : il part dans le dossier, le motif est dans `details`. */
+  a_relire?: boolean
   // Lecture du RC (serveur) : statuts « Si concerné », « Facultatif », « Pour l'attribution »
   obligation?: 'obligatoire' | 'si_concerne' | 'facultatif'
   phase?: 'depot' | 'attribution'
@@ -170,9 +173,17 @@ export function SuiteDepot({ telecharge, phrase, avertissements, onDepose }: {
   )
 }
 
-/** Le nom d'une pièce : son libellé (le serveur n'y écrit plus de note du logiciel), sinon son type. */
-export const titrePiece = (item: { details: string | null; document_type_required: string }): string =>
-  (item.details || item.document_type_required).trim()
+type LignePiece = { details: string | null; document_type_required: string; source_kind?: string; a_relire?: boolean }
+
+/** Le nom d'une pièce. Un formulaire de l'acheteur : son nom, comme sur Pièces (`details` peut porter le motif de B7) ;
+ *  une pièce du coffre : son libellé, sinon son type. */
+export const titrePiece = (item: LignePiece): string =>
+  item.source_kind === 'dce_template' ? nomPiece(item.document_type_required, null)
+    : (item.details || item.document_type_required).trim()
+
+/** B7 — le motif d'un formulaire « À relire », écrit par le serveur dans `details` : une note sous le nom. */
+export const notePiece = (item: LignePiece): string | null =>
+  item.a_relire && item.details?.trim() ? item.details.trim() : null
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
@@ -545,6 +556,7 @@ export default function StepExport({ project }: Props) {
                       {g.pieces.map((item) => (
                         <li key={item.id} className="min-h-11 border-t border-bord px-4 py-2.5 sm:px-5">
                           <p className="break-words text-sm font-medium text-fg">{titrePiece(item)}</p>
+                          {notePiece(item) && <p className="max-w-prose text-xs text-fg-2">{notePiece(item)}</p>}
                           {noteDepot(item) && <p className="text-xs text-fg-3">{noteDepot(item)}</p>}
                           {phraseSourceSignature(item) && <p className="text-xs text-fg-3">{phraseSourceSignature(item)}</p>}
                         </li>
