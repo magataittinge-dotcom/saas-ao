@@ -147,6 +147,7 @@ def get_export_detail(
     from models.document import Document
     from services.ai.checklist_matcher import lire_obligation, lire_phase, signature_requise
     from services.checklist_builder import recaler_lignes_coffre
+    from schemas.compliance import formulaire_a_relire
     lies = {i.linked_document_id for i in checklist_items if i.linked_document_id}
     docs_lies = {}
     if lies:
@@ -185,8 +186,7 @@ def get_export_detail(
             # le gate d'export compte les mêmes lignes que le score serveur
             document_group=item.document_group or "fournir",
             jointe=jointe, piece_nom=piece_nom, valable_jusqu_au=valable_jusqu_au,
-            a_relire=(item.source_kind == "dce_template" and bool(item.completed_project_doc_id)
-                      and item.status == "warning"),
+            a_relire=formulaire_a_relire(item),   # B7 : la règle de Pièces (schemas/compliance)
             obligation=lire_obligation(item), phase=lire_phase(item),
             # « Déposé le … par … » et source de la signature lue dans le RC (bloc 9)
             depose_le=item.depose_le, depose_par=item.depose_par,

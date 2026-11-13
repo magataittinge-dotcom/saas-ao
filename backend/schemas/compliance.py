@@ -19,6 +19,15 @@ def sans_note_regroupement(texte: Optional[str]) -> Optional[str]:
     return _NOTE_SYNORIX.sub("", _NOTE_REGROUPEMENT.sub("", texte)).strip() if texte else texte
 
 
+def formulaire_a_relire(ligne) -> bool:
+    """B7 — règle unique de « À relire » (ligne de checklist en base ou réponse) : un formulaire rempli déposé que le
+    contrôle n'a pas pu relier à l'entreprise (PDF sans la raison sociale ni le SIRET du profil, scan sans texte, DPGF
+    avec des lignes sans prix) ; le motif est dans ``details``. Jamais bloquant : le fichier part dans le ZIP.
+    Lue par GET /checklist, la réponse du dépôt et GET /export/detail : les écrans Pièces et Export disent la même chose."""
+    return (ligne.source_kind == "dce_template" and bool(ligne.completed_project_doc_id)
+            and ligne.status == "warning")
+
+
 class ComplianceItemResponse(BaseModel):
     id: str
     project_id: str
@@ -107,8 +116,7 @@ class ChecklistItemResponse(BaseModel):
     def a_relire(self) -> bool:
         """B7 — formulaire rempli déposé mais à relire avant le dépôt (PDF sans la raison sociale ni le SIRET du
         profil, scan sans texte, DPGF avec des lignes sans prix) : le motif est dans ``details``. Jamais bloquant."""
-        return (self.source_kind == "dce_template" and bool(self.completed_project_doc_id)
-                and self.status == "warning")
+        return formulaire_a_relire(self)
 
 
 SourceKind = Literal["vault", "dce_template"]

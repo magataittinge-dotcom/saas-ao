@@ -53,8 +53,8 @@ class ChecklistExportItem(BaseModel):
     # Décision du 25/10 (point 3) : « Jointe » est un FAIT — le fichier part dans
     # le ZIP, valable et daté (pièce du coffre) ; avec son nom et sa date de fin.
     jointe: bool = False
-    # B7 — formulaire rempli déposé, à relire avant le dépôt (même règle que GET /checklist,
-    # schemas/compliance.ChecklistItemResponse.a_relire) : il part dans le ZIP, le motif est dans ``details``.
+    # B7 — formulaire rempli déposé, à relire avant le dépôt (règle unique, celle de GET /checklist :
+    # schemas.compliance.formulaire_a_relire) : il part dans le ZIP, le motif est dans ``details``.
     a_relire: bool = False
     piece_nom: Optional[str] = None
     valable_jusqu_au: Optional[date] = None
