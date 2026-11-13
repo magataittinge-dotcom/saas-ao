@@ -17,7 +17,7 @@ export default function ConfirmationLecture({ ouvert, onOuvert, nbLots, onConfir
       ouvert={ouvert}
       onOuvert={onOuvert}
       titre={titreConfirmationLecture(nbLots)}
-      description={detailConfirmationLecture()}
+      description={detailConfirmationLecture(nbLots)}
       libelleConfirmer={`Analyser les ${nbLots} lots`}
       onConfirmer={onConfirmer}
     />
