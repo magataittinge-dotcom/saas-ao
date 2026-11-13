@@ -105,9 +105,6 @@ export default function ExigencesDuDossier({
   const groupes = GROUPES_EXIGENCES.map((g) => ({ ...g, items: items.filter((i) => i.groupe === g.id) })).filter((g) => g.items.length > 0)
   return (
     <div>
-      <p className="border-b border-bord px-4 py-3 text-sm text-fg-2 sm:px-5">
-        Cochez les exigences que vous avez vérifiées, ou confirmez tout un groupe.
-      </p>
       {groupes.map((g, i) => (
         <Groupe
           key={g.id} label={g.label} items={g.items} ouvert={i === 0}
