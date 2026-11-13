@@ -101,8 +101,8 @@ export default function FiltresVeille({ filtres, onFiltres, tri, onTri, metiers 
         </div>
       )}
       {ouvert === 'metier' && (
-        <div id={idPanneau} data-choix-filtre="metier" role="group" aria-label="Métiers" className="grid max-h-[min(26rem,55vh)] gap-x-6 overflow-y-auto overscroll-contain sm:grid-cols-2 absolute inset-x-0 top-full z-20 mt-2 rounded-lg border border-bord bg-surface-pop px-4 py-2 shadow-flottant">
-          {/* par ordre alphabétique, « Autre » en dernier ; la liste garde une hauteur et défile (jury, tour 3 : elle sortait de la fenêtre) */}
+        <div id={idPanneau} data-choix-filtre="metier" role="group" aria-label="Métiers" className="grid gap-x-6 sm:grid-cols-2 absolute inset-x-0 top-full z-20 mt-2 rounded-lg border border-bord bg-surface-pop px-4 py-2 shadow-flottant">
+          {/* par ordre alphabétique, « Autre » en dernier (jury, tour 3 : on cherchait son métier) ; aucune hauteur bornée ici : la page défile, pas la liste */}
           {[...metiers].sort((a, b) => (a.libelle === 'Autre' ? 1 : b.libelle === 'Autre' ? -1 : a.libelle.localeCompare(b.libelle, 'fr'))).map((m) => (
             <CaseACocher key={m.code} libelle={m.libelle} coche={filtres.metiers.includes(m.code)}
               onChange={() => onFiltres({ metiers: basculerValeur(filtres.metiers, m.code) })} />
