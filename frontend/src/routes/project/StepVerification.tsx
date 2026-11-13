@@ -196,7 +196,7 @@ export default function StepVerification({ project }: Props) {
   // ── Chargement → erreur → rien à montrer → contenu (une erreur n'est jamais « le dossier n'est pas lu ») ──
   if (isLoading) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <div aria-busy="true"><SqueletteListe phrase="Synorix ouvre la liste des pièces demandées par le règlement." /></div>
+      <div aria-busy="true"><SqueletteListe parFamilles phrase="Synorix ouvre la liste des pièces demandées par le règlement." /></div>
     </GabaritEtape>
   )
 

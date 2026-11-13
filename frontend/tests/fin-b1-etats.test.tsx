@@ -73,8 +73,13 @@ test('bloquant « Le dossier est bien enregistré… Relancer » : un AO sans do
 
 test('chargement et erreur : un squelette du système et une phrase, « restent en place » (plus « ne sont pas touchés »)', () => {
   assert.match(decider, /Synorix ouvre l’analyse du dossier\./)
-  assert.match(decider, /<SqueletteCorpsEtape cases=\{2\} \/>/)
-  assert.match(pieces, /<SqueletteListe phrase="Synorix ouvre la liste des pièces demandées par le règlement\." \/>/)
+  // COR-B1 (jury, tour 3) : un squelette à la forme de chaque écran (plus celui d'un autre écran)
+  assert.match(decider, /<SqueletteDecider \/>/)
+  assert.match(decider, /data-squelette-decider=""/)
+  assert.match(pieces, /<SqueletteListe parFamilles phrase="Synorix ouvre la liste des pièces demandées par le règlement\." \/>/)
+  const squelettePieces = renderToStaticMarkup(<SqueletteListe parFamilles phrase="Synorix ouvre la liste." />)
+  assert.match(squelettePieces, /data-squelette-liste="familles"/)
+  assert.doesNotMatch(squelettePieces, /size-5 shrink-0 rounded"/, 'ni case à cocher ni numéro de lot dans le squelette des pièces')
   for (const src of [lots, decider, pieces]) {
     assert.doesNotMatch(src, /pas touché|<Squelette className="h-(28|32|56)/)
   }
