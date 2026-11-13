@@ -10,12 +10,13 @@
 //     (jamais « Télécharger », jamais « Exporter ») ;
 //   - « À la une » = la prochaine remise à venir ; aucune à venir : pas de bloc ;
 //   - la phrase et les faits viennent de la même source ; les accords suivent le nombre ;
-//   - un seul vocabulaire : étape Pièces = « Réunir les pièces », étape Export = « Télécharger le dossier ».
+//   - un seul vocabulaire : étape Pièces = « Réunir les pièces », étape Export = « Télécharger le dossier » ;
+//   - tant que des pièces restent à joindre, l'action d'un AO au mémoire écrit est « Réunir les pièces » (décision 110).
 //
 // Tout est déterministe (aucune IA) et lit GET /projects. `estEnCours` et `estEnCoursOuvert` (lib/echeance.ts) ne s'importent
 // plus ailleurs qu'ici : garde-fou « etat-ao-hors-module ».
 import { echeanceAO, etatEcheance, JOURS_PROCHE, STATUTS_EN_COURS, type Echeance } from '@/lib/echeance'
-import { actionEtape, texteEtape } from '@/lib/intelligence/action'
+import { actionEtape, ROUTES_ETAPES, texteEtape } from '@/lib/intelligence/action'
 import type { AvancementAO, Project, ProjectStatus } from '@/types'
 
 export type EtatAO = 'en_cours' | 'a_mettre_a_jour' | 'termine'
@@ -108,9 +109,14 @@ export function lectureAO(p: ProjetLu, maintenant: Date = new Date()): LectureAO
     }
   }
   const a = actionEtape(p)
+  // Décision 110 du fondateur : le mémoire est écrit mais des pièces restent à joindre → l'action mène à l'étape Pièces, à
+  // son verbe ; « Télécharger le dossier » revient quand plus aucune n'est à joindre. Le fil, lui, ne change pas.
+  const reste = a.segment === 'export' ? piecesAJoindre(p.avancement) : null
+  const action: ActionAO = reste && reste > 0
+    ? { verbe: 'Réunir les pièces', segment: ROUTES_ETAPES[3], statut: false }
+    : { verbe: a.verbe, segment: a.segment, statut: false }
   return {
-    etat, libelle: 'En cours', sens: 'bleu', echeance, correction: null,
-    action: { verbe: a.verbe, segment: a.segment, statut: false },
+    etat, libelle: 'En cours', sens: 'bleu', echeance, correction: null, action,
     phrase: a.segment === 'export' ? phraseExport(p) : texteEtape(p),
   }
 }
