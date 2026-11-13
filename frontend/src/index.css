@@ -847,6 +847,8 @@ p { text-wrap: pretty; }
     position: sticky; top: 6.5rem; max-height: calc(100svh - 16rem); min-height: 12rem;
     scroll-margin: 6.5rem 0 5rem;
   }
+  /* une vue en pages occupe toute la hauteur dès l'ouverture : la page se lit, le pied (pages, « Ouvrir la pièce ») reste à l'écran */
+  .source-panneau:is([data-vue="document"], [data-vue="page"]) { height: calc(100svh - 16rem); }
   .source-poignee, .source-voile { display: none; }
 }
 @media (max-width: 1023px) {

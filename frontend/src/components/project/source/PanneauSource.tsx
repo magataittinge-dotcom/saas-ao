@@ -109,6 +109,11 @@ export function PanneauSourceVue({
   const page = pageDoc ?? reponse?.page ?? 1
 
   const choisirVue = (v: VueSource) => { setVueChoisie(v); if (v === 'document') setPageDoc(reponse?.page ?? 1) }
+  // Une vue en pages (Page, Document) rend au panneau toute sa hauteur : il est ramené à l'écran, son pied compris.
+  useEffect(() => {
+    if (feuille || (vue !== 'document' && vue !== 'page')) return
+    panneauRef.current?.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+  }, [vue, feuille])
   const surTabs = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
     const i = vues.indexOf(vue as VueSource)
@@ -201,7 +206,9 @@ export function PanneauSourceVue({
           )}
           {reponse && (() => {
             if (route === 'tableur') {
-              return rendreTableur ? rendreTableur(reponse) : (
+              // l'écran peut ne rien avoir à dessiner pour cette source (un fait du résumé lu dans un classeur) : le panneau
+              // dit alors comment lire la pièce, il ne reste jamais blanc
+              return rendreTableur?.(reponse) ?? (
                 <VueSansPage reponse={reponse} lien={lienOuvrir}>
                   <p>Cette pièce est un tableur : ouvrez-la pour lire la ligne citée.</p>
                 </VueSansPage>
@@ -239,14 +246,14 @@ export function PanneauSourceVue({
   if (feuille) {
     return (
       <Sheet open onOpenChange={(ouvert) => { if (!ouvert) onFermer() }}>
-        <SheetContent side="bottom" aria-describedby={undefined} data-feuille="oui" className="source-panneau gap-0 p-0 pr-0">
+        <SheetContent side="bottom" aria-describedby={undefined} data-feuille="oui" data-vue={vue ?? undefined} className="source-panneau gap-0 p-0 pr-0">
           {interieur}
         </SheetContent>
       </Sheet>
     )
   }
   return (
-    <aside ref={panneauRef} className="source-panneau" role="dialog" aria-labelledby={idTitre} tabIndex={-1} data-feuille="non">
+    <aside ref={panneauRef} className="source-panneau" role="dialog" aria-labelledby={idTitre} tabIndex={-1} data-feuille="non" data-vue={vue ?? undefined}>
       {interieur}
     </aside>
   )
